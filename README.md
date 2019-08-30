@@ -1,4 +1,8 @@
 # aiokraken
+[![Build Status](https://travis-ci.org/asmodehn/aiokraken.svg?branch=master)](https://travis-ci.org/asmodehn/aiokraken)
+[![Updates](https://pyup.io/repos/github/asmodehn/aiokraken/shield.svg)](https://pyup.io/repos/github/asmodehn/aiokraken/)
+[![Python 3](https://pyup.io/repos/github/asmodehn/aiokraken/python-3-shield.svg)](https://pyup.io/repos/github/asmodehn/aiokraken/)
+
 Python asyncio client for Kraken REST and Websockets API
 
 ## Installation 
