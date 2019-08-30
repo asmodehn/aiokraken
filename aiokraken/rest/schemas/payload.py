@@ -1,3 +1,5 @@
+import types
+
 import marshmallow
 from marshmallow import fields, pre_load, post_load
 
@@ -17,12 +19,18 @@ def PayloadSchema(result_schema):
     """helper function to create payload schemas for various results
         returns a new instance of the class, creating the class if needed.
     """
+
+    def extract_result(self, data, **kwargs):
+        assert len(data.get('error', [])) == 0  # Errors should have raised exception previously !
+        return data.get('result')
+
     try:
         return _payload_schemas[result_schema]()
     except KeyError:
         _payload_schemas[result_schema] = type(f"Payload_{result_schema}", (BaseSchema,), {
             'error': ErrorsField(),
-            'result': fields.Nested(result_schema)
+            'result': fields.Nested(result_schema),
+            'make_result': marshmallow.post_load(pass_many=False)(extract_result)
         })
     finally:
         return _payload_schemas[result_schema]()
