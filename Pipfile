@@ -17,6 +17,9 @@ marshmallow = "*"
 pandas = "*"
 parameterized = "*"
 marshmallow-dataframe = "*"
+jupyterlab = "*"
+ipympl = "*"
+jupyterlab-git = "*"
 
 [requires]
 python_version = "3.7"
