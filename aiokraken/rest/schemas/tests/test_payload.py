@@ -7,11 +7,18 @@ import marshmallow
 from ..payload import PayloadSchema
 from ...exceptions import AIOKrakenException
 
+from ..base import BaseSchema
 
-class TestTimePayloadSchema(unittest.TestCase):
+
+# TODO : mock a schema ?
+class TestPayloadSchema(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.schema = PayloadSchema()
+
+        class AnswerSchema(BaseSchema):
+            answer = marshmallow.fields.Int()
+
+        self.schema = PayloadSchema(AnswerSchema)
 
     @parameterized.expand([
         # we make sure we are using a proper json string
@@ -20,7 +27,7 @@ class TestTimePayloadSchema(unittest.TestCase):
     def test_load_result(self, payload):
         """ Verifying that expected data parses properly """
         parsed = self.schema.loads(payload)
-        assert parsed == {'answer': 42}
+        assert parsed == {'error': [], 'result': {'answer': 42}}
 
     @parameterized.expand([
         # we make sure we are using a proper json string
@@ -28,7 +35,7 @@ class TestTimePayloadSchema(unittest.TestCase):
     ])
     def test_load_error(self, payload):
         """ Verifying that expected data parses properly """
-        with self.assertRaises(AIOKrakenException):
+        with self.assertRaises(marshmallow.exceptions.ValidationError):
             self.schema.loads(payload)
 
     @parameterized.expand([
