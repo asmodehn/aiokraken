@@ -1,15 +1,14 @@
 import pytest
 
-from aiokraken.rest.upl import k
+from aiokraken.rest.upl import Kraken
+from aiokraken.model.time import Time
+
 
 @pytest.mark.vcr()
 def test_time():
-    response = k.get_time()
+    response = Kraken(base_url="https://api.kraken.com/").get_time()
     print(response)
-    # asserting structure (but marshmallow could do it)
-    assert not response.get('error')
-    assert response.get('result').get('rfc1123')
-    assert response.get('result').get('unixtime')
+    assert isinstance(response, Time)
 
 
 if __name__ == '__main__':

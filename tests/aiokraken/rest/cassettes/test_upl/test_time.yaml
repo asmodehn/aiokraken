@@ -1,0 +1,51 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - '*/*'
+      Accept-Encoding:
+      - gzip, deflate
+      Connection:
+      - keep-alive
+      User-Agent:
+      - Uplink-Sample-App
+    method: GET
+    uri: https://api.kraken.com/0/public/Time
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAA6tWSi0qyi9SsoqO1VEqSi0uzSlRsqpWKs3LrCjJzE1VsjI0NTM3NLewMDAEyqcl
+        GxoaGStZKbkVZeooGBsoOJamKxhaKhiaWhmZWZkYKmgbAIFSbS0AFfAebVcAAAA=
+    headers:
+      CF-Cache-Status:
+      - MISS
+      CF-RAY:
+      - 50e7c8d3ed28d775-MRS
+      Cache-Control:
+      - no-cache,max-age=0
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - application/json; charset=utf-8
+      Date:
+      - Fri, 30 Aug 2019 15:26:41 GMT
+      Expect-CT:
+      - max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      Server:
+      - cloudflare
+      Set-Cookie:
+      - __cfduid=d234f6e25301bfeaebfacd5e27cbed7f21567178801; expires=Sat, 29-Aug-20
+        15:26:41 GMT; path=/; domain=.kraken.com; HttpOnly
+      Strict-Transport-Security:
+      - max-age=15768000
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Accept-Encoding
+    status:
+      code: 200
+      message: OK
+version: 1
