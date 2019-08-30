@@ -24,7 +24,8 @@ class TestOHLCSchema(unittest.TestCase):
     @parameterized.expand([
         # we make sure we are using a proper json string
         [json.dumps({'XXBTZEUR': [[1567041720, '8750.0', '8755.8', '8749.9', '8755.7', '8754.0', '3.98795136', 27],
-                                  [1567041780, '8755.7', '8755.7', '8753.7', '8755.7', '8755.2', '0.02458507', 2], ]})],
+                                  [1567041780, '8755.7', '8755.7', '8753.7', '8755.7', '8755.2', '0.02458507', 2], ],
+                     'last': 1567041780})],
     ])
     def test_load_ok(self, payload):
         """ Verifying that expected data parses properly """
