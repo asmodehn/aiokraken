@@ -2,11 +2,12 @@ import unittest
 from parameterized import parameterized
 import json
 import marshmallow
+import pandas as pd
 
 if __package__:
-    from ..ohlc import XXBTZEUR_OHLCDataFrameSchema
+    from ..ohlc import PairOHLCSchema
 else:
-    from aiokraken.rest.schemas.ohlc import XXBTZEUR_OHLCDataFrameSchema
+    from aiokraken.rest.schemas.ohlc import PairOHLCSchema
 
 """
 Test module.
@@ -18,7 +19,7 @@ For simple usecase examples, we should rely on doctests.
 class TestOHLCSchema(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.schema = XXBTZEUR_OHLCDataFrameSchema()
+        self.schema = PairOHLCSchema('XXBTZEUR')
 
     @parameterized.expand([
         # we make sure we are using a proper json string
@@ -27,8 +28,10 @@ class TestOHLCSchema(unittest.TestCase):
     ])
     def test_load_ok(self, payload):
         """ Verifying that expected data parses properly """
-        parsed = self.schema.loads(payload)
-        pass
+        parsed = self.schema.loads(json_data=payload)
+        assert 'XXBTZEUR' in parsed
+        assert isinstance(parsed.get('XXBTZEUR'), pd.DataFrame)
+
     # @parameterized.expand([
     #     # we make sure we are using a proper json string
     #     [json.dumps({"what": "isit"})],

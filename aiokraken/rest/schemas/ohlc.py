@@ -3,9 +3,13 @@ import typing
 import pandas as pd
 import numpy as np
 from marshmallow_dataframe import SplitDataFrameSchema
+from decimal import Decimal
+
+from .base import BaseSchema
 
 ohlc_df = pd.DataFrame(
     # Need some sample data to get proper dtypes...
+# TODO:    [[1567039620, Decimal('8746.4'), Decimal('8751.5'), Decimal('8745.7'), Decimal('8745.7'), Decimal('8749.3'), Decimal('0.09663298'), 8],
     [[1567039620, '8746.4', '8751.5', '8745.7', '8745.7', '8749.3', '0.09663298', 8],
      [1567039680, '8745.7', '8747.3', '8745.7', '8747.3', '8747.3', '0.00929540', 1]],
     # grab that from kraken documentation
@@ -68,12 +72,14 @@ class OHLCDataFrameSchema(SplitDataFrameSchema):
 
     @marshmallow.pre_load(pass_many=False)
     def add_implicit(self, data, **kwargs):
-        pass
-        return {
-            "data": data,
-            "columns": ohlc_df.columns,
-            "index": range(len(data)),
-        }
+        try:
+            return {
+                "data": data,
+                "columns": ohlc_df.columns,
+                "index": range(len(data)),
+            }
+        except Exception:
+            raise marshmallow.ValidationError("Cannot parse the DataFrame")
 
     # load or dump ?
     # @marshmallow.post_load(pass_many=False)
@@ -91,15 +97,20 @@ class OHLCDataFrameSchema(SplitDataFrameSchema):
 # XXBTZEUR_OHLCDataFrameSchema = pair_field_nested('XXBTZEUR', OHLCDataFrameSchema)
 
 
-# TMP to get it right...
-class XXBTZEUR_OHLCDataFrameSchema(marshmallow.Schema):
+#  a runtime cache of schemas (class !) for different pairs
+_pair_ohlc_schemas = {}
 
-    XXBTZEUR = marshmallow.fields.Nested(OHLCDataFrameSchema)
 
-    # @marshmallow.pre_load(pass_many=False)
-    # def add_implicit(self, data, **kwargs):
-    #     return {
-    #         "data": data,
-    #         "columns": ohlc_df.columns,
-    #         "index": [0],
-    #     }
+def PairOHLCSchema(pair):
+    """helper function to embed OHLC data frame parsing into a field with any name...
+        returns a new instance of the class, creating the class if needed
+    """
+    try:
+        return _pair_ohlc_schemas[pair]()
+    except KeyError:
+        _pair_ohlc_schemas[pair] = type(f"{pair}_OHLCSchema", (BaseSchema,), {
+            pair: marshmallow.fields.Nested(OHLCDataFrameSchema)
+        })
+    finally:
+        return _pair_ohlc_schemas[pair]()
+
