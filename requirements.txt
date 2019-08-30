@@ -1,3 +1,3 @@
 aiohttp==3.5.4
-aiodns
+aiodns==2.0.0
 cchardet
