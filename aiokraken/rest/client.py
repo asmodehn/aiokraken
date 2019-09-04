@@ -8,6 +8,8 @@ import aiohttp
 from aiokraken.utils import get_kraken_logger, get_nonce
 from aiokraken.rest.api import Server, API
 
+from aiokraken.rest.schemas.time import TimeSchema
+
 BASE_URL = 'https://api.kraken.com'
 LOGGER = get_kraken_logger(__name__)
 
@@ -106,4 +108,4 @@ for signame in ('SIGINT', 'SIGTERM'):
     )
 
 loop.run_until_complete(get_time())
-loop.run_until_complete(get_balance())
+#loop.run_until_complete(get_balance())

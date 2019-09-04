@@ -4,6 +4,7 @@ import urllib
 import base64
 from dataclasses import dataclass, asdict, field
 from ..utils import get_nonce
+from .response import Response
 import typing
 
 """
@@ -30,6 +31,7 @@ def _sign_message(data, url_path, secret):
     return sig_digest.decode()
 
 
+
 @dataclass(frozen=False)
 class Request:
     """
@@ -40,6 +42,7 @@ class Request:
     url: str = ""
     data: typing.Dict = field(default_factory=dict)
     headers: typing.Dict = field(default_factory=dict)
+    expected: typing.Optional[Response] = None
 
     async def __call__(self, response):
         """
@@ -54,6 +57,7 @@ class Request:
                 'error': response.status}
         else:
             res = await response.json(encoding='utf-8', content_type=None)
+            res['parsed'] = self.expected(response.status, res)  # validating response data
             res['request'] = asdict(self),
             res['error'] = "" if 'error' not in res else res['error']
             return res

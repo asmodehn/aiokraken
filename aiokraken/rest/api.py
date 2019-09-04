@@ -13,9 +13,16 @@ import typing
 if __package__:
     from .request import Request
     from ..utils import get_nonce, get_kraken_logger
+    from .schemas.payload import PayloadSchema
+    from .schemas.time import TimeSchema
+    from .schemas.balance import BalanceSchema
+    from .response import Response
 else:
     from aiokraken.rest.request import Request
     from aiokraken.utils import get_nonce, get_kraken_logger
+    from aiokraken.rest.schemas.payload import PayloadSchema
+    from aiokraken.rest.schemas.time import TimeSchema
+    from aiokraken.rest.response import Response
 
 
 def private(api, key, secret):
@@ -25,10 +32,10 @@ def private(api, key, secret):
     api.key = key
     api.secret = secret
 
-    def request(self, endpoint, headers=None, data=None):
+    def request(self, endpoint, headers=None, data=None, expected=None):
         h = headers or {}
         d = data or {}
-        r = Request(url=self.url + '/' + endpoint, headers=h, data=d)
+        r = Request(url=self.url + '/' + endpoint, headers=h, data=d, expected=expected)
         s = r.sign(key=key, secret = secret)
         return s
 
@@ -74,9 +81,9 @@ class API:
 
         return _headers
 
-    def request(self, endpoint, headers=None, data=None):
+    def request(self, endpoint, headers=None, data=None, expected=None):
         h = headers or {}
-        r = Request(url=self.url + '/' + endpoint, headers=h, data=data)
+        r = Request(url=self.url + '/' + endpoint, headers=h, data=data, expected=expected)
 
         return r
 
@@ -102,6 +109,7 @@ class Server:
         self.API['0'] = Version()
         self.API['0']['public'] = API('public')
         self.API['0']['private'] = private(api=API('private'), key=key, secret=secret)
+        # TODO : do this declaratively ???
 
     ###SHORTCUTS FOR CLIENT
     @property
@@ -114,10 +122,10 @@ class Server:
 
     ### REquests
     def time(self):
-        return self.public.request('Time', data=None)
+        return self.public.request('Time', data=None, expected=Response(status=200, schema=PayloadSchema(TimeSchema)))
 
     def balance(self):
-        return self.private.request('Balance', data=None)
+        return self.private.request('Balance', data=None, expected=Response(status=200, schema=PayloadSchema(BalanceSchema)))
 
 
 
