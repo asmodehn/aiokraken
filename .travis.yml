@@ -15,6 +15,7 @@ install:
 
 script:
   - python -m aiokraken.rest.schemas.tests
+  - python -m aiokraken.tests
   - pytest tests
 
 notifications:
