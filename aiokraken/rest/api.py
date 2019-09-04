@@ -37,7 +37,7 @@ def private(api, key, secret):
     def request(self, endpoint, headers=None, data=None, expected=None):
         h = headers or {}
         d = data or {}
-        r = Request(url=self.url + '/' + endpoint, headers=h, data=d, expected=expected)
+        r = Request(urlpath=self.url_path + '/' + endpoint, headers=h, data=d, expected=expected)
         s = r.sign(key=key, secret = secret)
         return s
 
@@ -73,6 +73,9 @@ class API:
         """
         return (self._parent.url + '/' + self.id) if self._parent is not None else self.id
 
+    @property
+    def url_path(self):
+        return (self._parent.url_path + '/' + self.id) if self._parent is not None else self.id
 
     def headers(self, endpoint= None):
         _headers = {
@@ -85,7 +88,7 @@ class API:
 
     def request(self, endpoint, headers=None, data=None, expected=None):
         h = headers or {}
-        r = Request(url=self.url + '/' + endpoint, headers=h, data=data, expected=expected)
+        r = Request(urlpath=self.url_path + '/' + endpoint, headers=h, data=data, expected=expected)
 
         return r
 
@@ -101,6 +104,9 @@ class Host(API):
     def __init__(self, hostname):
         super().__init__(URId=hostname)
 
+    @property
+    def url_path(self):
+        return ''  # for a host we do not want the hostname in hte url path
 
 
 class Server:
@@ -112,6 +118,10 @@ class Server:
         self.API['0']['public'] = API('public')
         self.API['0']['private'] = private(api=API('private'), key=key, secret=secret)
         # TODO : do this declaratively ???
+
+    @property
+    def url(self):
+        return self.API.url
 
     ###SHORTCUTS FOR CLIENT
     @property
@@ -135,7 +145,7 @@ class Server:
 
 
 
-# API DEFINITION - TODO - see uplink maybe ?
+# API DEFINITION - TODO
 
 # @kraken.resource(success = , error=)
 # def time(headers, data):

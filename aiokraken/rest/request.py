@@ -39,7 +39,7 @@ class Request:
     Idempotent call (or 'retry' semantic ? based on error code ?)
     """
 
-    url: str = ""
+    urlpath: str = ""
     data: typing.Dict = field(default_factory=dict)
     headers: typing.Dict = field(default_factory=dict)
     expected: typing.Optional[Response] = None
@@ -65,7 +65,7 @@ class Request:
     def sign(self, key, secret):
         self.data['nonce'] = get_nonce()
         self.headers['API-Key'] = key
-        self.headers['API-Sign'] = _sign_message(self.data, self.url, secret)
+        self.headers['API-Sign'] = _sign_message(self.data, self.urlpath, secret)
 
         return self
 
