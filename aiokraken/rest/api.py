@@ -18,15 +18,52 @@ else:
     from aiokraken.utils import get_nonce, get_kraken_logger
 
 
+def private(api, key, secret):
+    api.api_url = 'private/'
+
+    # TODO :call function (arg) to grab them from somewhere...
+    api.key = key
+    api.secret = secret
+
+    def request(self, endpoint, headers=None, data=None):
+        h = headers or {}
+        d = data or {}
+        r = Request(url=self.url + '/' + endpoint, headers=h, data=d)
+        s = r.sign(key=key, secret = secret)
+        return s
+
+    api.request = types.MethodType(request, api)
+    return api
+
+
 class API:
 
-    def __init__(self, base_url_path):
-        self.base_url_path =base_url_path
-        self.api_url = 'public/'
+    def __init__(self, URId):
+        self.id = URId  # the id of this api (as in 'URI')
+        self._parent = None
+        self._subapis = dict()
+
+    def __setitem__(self, key, value):
+        assert isinstance(value, API)
+        value._parent = self
+        self._subapis[key] = value
+
+    def __getitem__(self, item):
+        return self._subapis[item]
 
     @property
-    def url_path(self):
-        return self.base_url_path + self.api_url
+    def url(self):
+        """
+        determine the full url of this API by climbing up the tree
+        >>> api = API('base')
+        >>> api['bob'] = API('bobby')
+        >>> api.url
+        'base'
+        >>> api['bob'].url
+        'base/bobby'
+        """
+        return (self._parent.url + '/' + self.id) if self._parent is not None else self.id
+
 
     def headers(self, endpoint= None):
         _headers = {
@@ -39,56 +76,43 @@ class API:
 
     def request(self, endpoint, headers=None, data=None):
         h = headers or {}
-        r = Request(url=self.url_path + endpoint, headers=h, data=data)
+        r = Request(url=self.url + '/' + endpoint, headers=h, data=data)
 
         return r
 
 
-def private(api, key, secret):
-    api.api_url = 'private/'
+class Version(API):
+    """ A somewhat specific API """
+    def __init__(self, version='0'):
+        super().__init__(URId=version)
 
-    # TODO :call function (arg) to grab them from somewhere...
-    api.key = key
-    api.secret = secret
 
-    def request(self, endpoint, headers=None, data=None):
-        h = headers or {}
-        d = data or {}
-        r = Request(url=self.url_path + endpoint, headers=h, data=d)
-        s = r.sign(key=key, secret = secret)
-        return s
+class Host(API):
+    """ A somewhat specific API """
+    def __init__(self, hostname):
+        super().__init__(URId=hostname)
 
-    api.request = types.MethodType(request, api)
-    return api
 
 
 class Server:
-    """ Class representing a SErver API"""
 
     def __init__(self, key=None, secret=None):
-        self.key = key
-        self.secret = secret
-        self.versions = ['0']
-        self.current_version = self.versions[0]
-        self._public = None
-        self._private = None
+        # building the API structure as a dict
+        self.API = Host(hostname='api.kraken.com')
+        self.API['0'] = Version()
+        self.API['0']['public'] = API('public')
+        self.API['0']['private'] = private(api=API('private'), key=key, secret=secret)
 
-    @property
-    def url_path(self):
-        return '/' + self.current_version + '/'
-
+    ###SHORTCUTS FOR CLIENT
     @property
     def public(self):
-        if self._public is None:
-            self._public = API(base_url_path=self.url_path)
-        return self._public
+        return self.API['0']['public']
 
     @property
     def private(self):
-        if self._private is None:
-            self._private = private(self.public, key = self.key, secret=self.secret)
-        return self._private
+        return self.API['0']['private']
 
+    ### REquests
     def time(self):
         return self.public.request('Time', data=None)
 
@@ -96,7 +120,9 @@ class Server:
         return self.private.request('Balance', data=None)
 
 
-# API DEFINITION
+
+
+# API DEFINITION - TODO - see uplink maybe ?
 
 # @kraken.resource(success = , error=)
 # def time(headers, data):
@@ -105,104 +131,3 @@ class Server:
 #         400: error,
 #     }
 
-
-import aiohttp
-
-LOGGER = get_kraken_logger(__name__)
-
-
-# MINIMAL CLIENT (only control flow & IO)
-class RestClient:
-
-    def __init__(self, host, api, protocol = "https://"):
-        self.host = host
-        self.api = api
-        self.protocol = protocol
-
-        _headers = {
-            'User-Agent': (
-                'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/74.0.3729.131 Safari/537.36'
-            )
-        }
-
-        self.session = aiohttp.ClientSession(headers=_headers, raise_for_status=True, trust_env=True)
-
-    async def time(self):
-        """ make public requests to kraken api"""
-
-        kt = self.api.time()
-
-        try:  # TODO : pass protocol & host into the request url in order to have it displayed when erroring !
-            async with self.session.post(self.protocol + self.host + kt.url, headers=kt.headers, data=kt.data) as response:
-
-                return await kt(response)
-
-        except aiohttp.ClientResponseError as err:
-            LOGGER.error(err)
-            return {'error': err}
-
-    async def balance(self):
-        """ make public requests to kraken api"""
-
-        kt = self.api.balance()
-
-        try:
-            async with self.session.post(self.protocol + self.host + kt.url, headers=kt.headers, data=kt.data) as response:
-
-                return await kt(response)
-
-        except aiohttp.ClientResponseError as err:
-            LOGGER.error(err)
-            return {'error': err}
-
-
-
-    async def close(self):
-        """ Close aiohttp session """
-        await self.session.close()
-
-
-
-# EXAMPLE CODE
-
-
-async def get_time():
-    """ get kraken time"""
-    rest_kraken = RestClient(host='api.kraken.com', api = Server())
-    try:
-        response = await rest_kraken.time()
-        print(f'response is {response}')
-    finally:
-        await rest_kraken.close()
-
-
-async def get_balance():
-    """Start kraken websockets api
-    """
-    from aiokraken.rest import krak_key
-    rest_kraken = RestClient(host='api.kraken.com',
-                             api = Server(key=krak_key.key,
-                                          secret=krak_key.secret))
-    response = await rest_kraken.balance()
-    await rest_kraken.close()
-    print(f'response is {response}')
-
-
-@asyncio.coroutine
-def ask_exit(sig_name):
-    print("got signal %s: exit" % sig_name)
-    yield from asyncio.sleep(1.0)
-    asyncio.get_event_loop().stop()
-
-
-loop = asyncio.get_event_loop()
-
-
-for signame in ('SIGINT', 'SIGTERM'):
-    loop.add_signal_handler(
-        getattr(signal, signame),
-        lambda: asyncio.ensure_future(ask_exit(signame))
-    )
-
-#loop.run_until_complete(get_time())
-loop.run_until_complete(get_balance())

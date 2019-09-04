@@ -1,21 +1,30 @@
 import pytest
 
-from aiokraken.rest.api import Request
+from aiokraken.rest.api import API, Server
 
 
-def test_request():
-
-    r = Request(url='proto://some/url', headers={}, data={})
-
-    assert hasattr(r, 'url')
-    assert hasattr(r, 'headers')
-    assert hasattr(r, 'data')
+""" Test module for API structure """
 
 
-@pytest.mark.vcr()
-def test_iana():
-    response = urlopen('http://www.iana.org/domains/reserved').read()
-    assert b'Example domains' in response
+def test_api_as_dict_behavior():
+
+    api = API('base')
+    api['bob'] = API('bobby')
+
+    assert api.url == 'base'
+    assert api['bob'].url == 'base/bobby'
+
+# TODO  : test public and private request
+
+
+def test_server():
+
+    s = Server()
+    assert s.public.url == 'api.kraken.com/0/public'
+    assert s.private.url == 'api.kraken.com/0/private'
+
+
+
 
 
 
