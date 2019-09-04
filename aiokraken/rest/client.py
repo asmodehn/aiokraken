@@ -43,6 +43,20 @@ class RestClient:
             LOGGER.error(err)
             return {'error': err}
 
+    async def ohlc(self):
+        """ make public requests to kraken api"""
+
+        kt = self.server.ohlc()   # returns the request to be made for this API.
+        print(kt.url)
+        try:  # TODO : pass protocol & host into the request url in order to have it displayed when erroring !
+            async with self.session.post(self.protocol + kt.url, headers=kt.headers, data=kt.data) as response:
+
+                return await kt(response)
+
+        except aiohttp.ClientResponseError as err:
+            LOGGER.error(err)
+            return {'error': err}
+
     async def balance(self):
         """ make public requests to kraken api"""
 
@@ -79,6 +93,14 @@ async def get_time():
     finally:
         await rest_kraken.close()
 
+async def get_ohlc():
+    """ get kraken time"""
+    rest_kraken = RestClient(server=Server())
+    try:
+        response = await rest_kraken.ohlc()
+        print(f'response is {response}')
+    finally:
+        await rest_kraken.close()
 
 async def get_balance():
     """Start kraken websockets api
@@ -107,5 +129,6 @@ for signame in ('SIGINT', 'SIGTERM'):
         lambda: asyncio.ensure_future(ask_exit(signame))
     )
 
-loop.run_until_complete(get_time())
+#loop.run_until_complete(get_time())
+loop.run_until_complete(get_ohlc())
 #loop.run_until_complete(get_balance())

@@ -15,6 +15,7 @@ if __package__:
     from ..utils import get_nonce, get_kraken_logger
     from .schemas.payload import PayloadSchema
     from .schemas.time import TimeSchema
+    from .schemas.ohlc import PairOHLCSchema
     from .schemas.balance import BalanceSchema
     from .response import Response
 else:
@@ -22,6 +23,7 @@ else:
     from aiokraken.utils import get_nonce, get_kraken_logger
     from aiokraken.rest.schemas.payload import PayloadSchema
     from aiokraken.rest.schemas.time import TimeSchema
+    from aiokraken.rest.schemas.ohlc import PairOHLCSchema
     from aiokraken.rest.response import Response
 
 
@@ -123,6 +125,9 @@ class Server:
     ### REquests
     def time(self):
         return self.public.request('Time', data=None, expected=Response(status=200, schema=PayloadSchema(TimeSchema)))
+
+    def ohlc(self):
+        return self.public.request('OHLC', data={'pair': 'XBTEUR'}, expected=Response(status=200, schema=PayloadSchema(PairOHLCSchema('XXBTZEUR'))))
 
     def balance(self):
         return self.private.request('Balance', data=None, expected=Response(status=200, schema=PayloadSchema(BalanceSchema)))
