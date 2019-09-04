@@ -3,10 +3,11 @@ import asyncio
 import signal
 from aiokraken import RestClient
 from aiokraken.utils import get_kraken_logger
-
-from aiokraken.rest import krak_key
-KEY = krak_key.key
-SECRET = krak_key.secret
+from aiokraken.rest.api import Server
+from aiokraken.config import load_api_keyfile
+kf = load_api_keyfile()
+KEY =  kf.get('key')
+SECRET = kf.get('secret')
 LOGGER = get_kraken_logger(__name__)
 
 
@@ -14,7 +15,7 @@ LOGGER = get_kraken_logger(__name__)
 async def get_balance():
     """Start kraken websockets api
     """
-    rest_kraken = RestClient(KEY, SECRET)
+    rest_kraken = RestClient(Server( KEY, SECRET))
     response = await rest_kraken.balance()
     await rest_kraken.close()
     print(f'response is {response}')
@@ -23,7 +24,7 @@ async def get_balance():
 async def get_trade_balance():
     """ get account trade balance
     """
-    rest_kraken = RestClient(KEY, SECRET)
+    rest_kraken = RestClient(Server( KEY, SECRET))
     data = {
         'asset': 'XXBT'
     }
@@ -37,7 +38,7 @@ async def get_trade_balance():
 async def get_trade_volume():
     """ get account trade volume
     """
-    rest_kraken = RestClient(KEY, SECRET)
+    rest_kraken = RestClient(Server( KEY, SECRET))
 
     data = {
         'pair': 'all'
@@ -52,7 +53,7 @@ async def get_trade_volume():
 async def get_ledgers():
     """
     """
-    rest_kraken = RestClient(KEY, SECRET)
+    rest_kraken = RestClient(Server( KEY, SECRET))
 
     response = await rest_kraken.ledgers()
     print(f'response is {response}')
@@ -62,7 +63,7 @@ async def get_ledgers():
 async def get_ledgers():
     """
     """
-    rest_kraken = RestClient(KEY, SECRET)
+    rest_kraken = RestClient(Server( KEY, SECRET))
 
     response = await rest_kraken.ledgers()
     print(f'response is {response}')
@@ -72,7 +73,7 @@ async def get_ledgers():
 async def get_open_orders():
     """
     """
-    rest_kraken = RestClient(KEY, SECRET)
+    rest_kraken = RestClient(Server( KEY, SECRET))
     response = await rest_kraken.open_orders()
     open_orders = response['open']
     for key, order in open_orders.items():
@@ -87,7 +88,7 @@ async def get_open_orders():
 async def get_closed_orders():
     """
     """
-    rest_kraken = RestClient(KEY, SECRET)
+    rest_kraken = RestClient(Server( KEY, SECRET))
     response = await rest_kraken.closed_orders()
     LOGGER.info(response)
     await rest_kraken.close()
@@ -96,7 +97,7 @@ async def get_closed_orders():
 async def get_orders_info():
     """
     """
-    rest_kraken = RestClient(KEY, SECRET)
+    rest_kraken = RestClient(Server( KEY, SECRET))
     response = await rest_kraken.orders_info()
     LOGGER.info(response)
     await rest_kraken.close()
@@ -118,7 +119,7 @@ async def add_order():
         # "expiretm": "+5",
         "validate": True
     }
-    rest_kraken = RestClient(KEY, SECRET)
+    rest_kraken = RestClient(Server(KEY, SECRET))
     response = await rest_kraken.add_order(data)
     LOGGER.info(response)
     await rest_kraken.close()
@@ -133,7 +134,7 @@ async def place_ioc_order():
         "price": "0.00001729",
         "volume": "7900"
     }
-    rest_kraken = RestClient(KEY, SECRET)
+    rest_kraken = RestClient(Server(KEY, SECRET))
     response = await rest_kraken.ioc_order(data)
     LOGGER.info(response)
     await rest_kraken.close()
@@ -144,7 +145,7 @@ async def test_ioc_order():
      Buy maximum amount of doge with BTC available using a ioc type of order
     :return:
     """
-    rest_kraken = RestClient(KEY, SECRET)
+    rest_kraken = RestClient(Server(KEY, SECRET))
     balance = await rest_kraken.balance()
     btc_balance = float(balance['result']['XXBT'])
     LOGGER.info(f'btc balance is {btc_balance}')
@@ -187,7 +188,7 @@ async def cancel_order(txid):
     :return:
     """
 
-    rest_kraken = RestClient(KEY, SECRET)
+    rest_kraken = RestClient(Server(KEY, SECRET))
     response = await rest_kraken.cancel_order(txid)
     LOGGER.info(response)
     await rest_kraken.close()
@@ -196,7 +197,7 @@ async def cancel_order(txid):
 # PUBLIC REQUEST EXAMPLES
 async def get_time():
     """ get kraken time"""
-    rest_kraken = RestClient()
+    rest_kraken = RestClient(Server())
     response = await rest_kraken.time()
     await rest_kraken.close()
     print(f'response is {response}')
@@ -204,7 +205,7 @@ async def get_time():
 
 async def get_assets():
     """ get kraken time"""
-    rest_kraken = RestClient()
+    rest_kraken = RestClient(Server())
 
     # with options
     data = {
@@ -225,7 +226,7 @@ async def get_asset_pairs_v1():
         Make request using public_request method
         Allows more freedom than using the wrapper methods
     """
-    rest_kraken = RestClient()
+    rest_kraken = RestClient(Server())
     data = {
         "info": "fees",
         "pair": "ADACAD"
@@ -238,7 +239,7 @@ async def get_asset_pairs_v1():
 async def get_asset_pairs_v2():
     """ Get asset pairs using the wrapper method
     """
-    rest_kraken = RestClient()
+    rest_kraken = RestClient(Server())
     data = {
         "info": "fees",
         "pair": "ADACAD, ADAEUR"
@@ -252,7 +253,7 @@ async def get_asset_pairs_v2():
 async def get_ohlc():
     """ Get asset pairs using the wrapper method
     """
-    rest_kraken = RestClient()
+    rest_kraken = RestClient(Server())
     data = {
         "pair": "ADACAD",
         "interval": 240
@@ -266,7 +267,7 @@ async def get_ohlc():
 async def get_depth():
     """ Get asset pairs using the wrapper method
     """
-    rest_kraken = RestClient()
+    rest_kraken = RestClient(Server())
     data = {
         "pair": "ADACAD",
         "count": 500  # this appers to be the maximum accepted value
