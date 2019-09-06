@@ -3,7 +3,10 @@
 """
 An Entity ( as in Entity Component System design ).
 """
+import signal
+import asyncio
 import uuid
+import enum
 
 
 class Entity:  # Should be a very simple record.
@@ -29,4 +32,60 @@ class Entity:  # Should be a very simple record.
 
     # TODO : getattr to component dict...
 
-#TODO : World as a collection of identities + event loop management...
+# Idea : world is tied to process/interpreter execution lifecycle
+
+
+
+_reset = []
+
+
+def reset(coro):
+    """ decorator declaring a reset coroutine"""
+
+    _reset.append(coro)
+    return coro
+
+# Note we need reset for coroutines.
+# But for usual functions, they can be run on import if they are used as decorators in code.
+
+
+def on_signal(*sigs: enum.Enum, loop=None):
+    loop = loop or asyncio.get_event_loop()
+
+    # Note we make this a coro to be use in reset (and be generic)
+    def on_signal_decorator(coro):
+        for sig in sigs:
+            loop.add_signal_handler(sig,  # Note : sig must be an enum (since python 3.5)
+                # Even if we setup reset *functions*, we need to call coroutines to schedule them in the loop....
+                callback = lambda: asyncio.ensure_future(coro(sig))
+            )
+
+    # Note on_signal_decorator is run on import -> no need to add to reset list.
+    return on_signal_decorator
+
+
+
+# This is setup on import as mandatory default for safety
+# Note : redefining could override ? or not ? TODO
+@on_signal(signal.SIGINT, signal.SIGTERM)
+async def ask_exit(sig_name):
+    print("got signal %s: exit" % sig_name)
+    await asyncio.sleep(2.0)
+    asyncio.get_event_loop().stop()
+
+
+if __name__ == '__main__':
+    # very basic, doing nothing world running...
+
+    ## integration with OS (should be done by a specific system)
+
+    loop = asyncio.get_event_loop()
+
+    # reset
+    for rc in _reset:  # should be empty for this example
+        loop.create_task(rc)
+
+    # lifeloop
+    loop.run_forever()
+
+    # signal handler should kill this
