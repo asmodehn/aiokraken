@@ -16,16 +16,16 @@ import unittest
 
 
 class TestReset(unittest.TestCase):
-
-    def test_added_to_reset_list(self):
-
-        @reset
-        async def mycoro():  # TODO : mock ?
-            await asyncio.sleep(0.1)
-
-        from ..entities import _reset
-        # verifying that just declaring a reset coro stores it in the list.
-        assert mycoro in _reset
+    raise NotImplementedError
+    # TODO : how to ? tasks are not accessible if eventloop not running... in asyncio
+    # def test_reset_task_created(self):
+    #
+    #     @reset()
+    #     async def mycoro():  # TODO : mock ?
+    #         await asyncio.sleep(0.1)
+    #
+    #     # verifying that just declaring a reset coro stores it in the list.
+    #     assert mycoro in asyncio.all_tasks()
 
 
 class TestOnSignal(unittest.TestCase):

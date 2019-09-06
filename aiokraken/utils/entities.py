@@ -35,15 +35,15 @@ class Entity:  # Should be a very simple record.
 # Idea : world is tied to process/interpreter execution lifecycle
 
 
+def reset(*entities, loop=None):
+    loop = loop or asyncio.get_event_loop()
 
-_reset = []
+    def reset_decorator(coro):
+        """ decorator declaring a reset coroutine"""
 
+        return loop.create_task(coro(*entities))
 
-def reset(coro):
-    """ decorator declaring a reset coroutine"""
-
-    _reset.append(coro)
-    return coro
+    return reset_decorator
 
 # Note we need reset for coroutines.
 # But for usual functions, they can be run on import if they are used as decorators in code.
@@ -77,15 +77,9 @@ async def ask_exit(sig_name):
 if __name__ == '__main__':
     # very basic, doing nothing world running...
 
-    ## integration with OS (should be done by a specific system)
-
-    loop = asyncio.get_event_loop()
-
-    # reset
-    for rc in _reset:  # should be empty for this example
-        loop.create_task(rc)
+    print("entities.py running event loop... use SIGTERM | SIGINT to stop it.")
 
     # lifeloop
-    loop.run_forever()
+    asyncio.get_event_loop().run_forever()
 
     # signal handler should kill this

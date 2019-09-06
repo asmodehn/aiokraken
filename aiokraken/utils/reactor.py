@@ -4,7 +4,7 @@ import types
 import time
 from dataclasses import dataclass
 
-from entity import Entity
+from entities import Entity
 
 """
 An type of System ( as in Entity Component System design ).
@@ -22,7 +22,11 @@ def reactor(component_class):
             nonlocal last_time
             t = time.time()
             dt = t - last_time
-            r = await fun(*(e[component_class] for e in entities), deltatime = dt)
+            r = []  # generator currently makes problems with how the world turns around...
+            # plus doing all entities at once for one system can make sense...
+            # TODO: should ultimately be up to the world...
+            for e in entities:
+                r.append(await fun(e[component_class], deltatime = dt))
             last_time = t
             return r
 
@@ -34,8 +38,6 @@ def reactor(component_class):
 if __name__ == '__main__':
 
     import asyncio
-    import signal
-    from collections import namedtuple
 
     # Usage example
     # Basic component definition
@@ -45,33 +47,20 @@ if __name__ == '__main__':
 
     # Basic system definition
     @reactor(Compo)
-    async def reacdemo(*comps, **kwargs):  # kwargs is used to pass around "side-effect" stuff... (scheduling, memory, profiling, etc.)
-        for c in comps:
-            print(c)
+    async def reacdemo(comp, **kwargs):  # kwargs is used to pass around "side-effect" stuff... (scheduling, memory, profiling, etc.)
+        print(comp)
         await asyncio.sleep(0.1)
-
-
-    # boiler plate code (would be handled by World somehow)
-    @asyncio.coroutine
-    def ask_exit(sig_name):
-        print("got signal %s: exit" % sig_name)
-        yield from asyncio.sleep(2.0)
-        asyncio.get_event_loop().stop()
 
     loop = asyncio.get_event_loop()
 
-    for signame in ('SIGINT', 'SIGTERM'):
-        loop.add_signal_handler(
-            getattr(signal, signame),
-            lambda: asyncio.ensure_future(ask_exit(signame))
-        )
+    world = [Entity(Compo('51')), ]
 
-    # scheduling call just once for testing...
+    # scheduling call just once, for testing...
     loop.run_until_complete(  # loop
         reacdemo(  # system update as coroutine
-            Entity(Compo('51'))  # passing one entity only
+            Entity(Compo('51'))  # passing one entity only (decorator will extract the components)
         )
     )
-
+    # normally, a reactor would be called by the environment instead...
 
 
