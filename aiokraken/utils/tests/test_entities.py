@@ -15,8 +15,8 @@ import unittest
 #     pass
 
 
-class TestReset(unittest.TestCase):
-    raise NotImplementedError
+# class TestReset(unittest.TestCase):
+#     raise NotImplementedError
     # TODO : how to ? tasks are not accessible if eventloop not running... in asyncio
     # def test_reset_task_created(self):
     #
@@ -39,7 +39,7 @@ class TestOnSignal(unittest.TestCase):
             nonlocal value
             value=51
 
-        # returns true if a signal handler was removed
+        # returns true if a signal handler was removed (as per the doc)
         assert asyncio.get_event_loop().remove_signal_handler(signal.SIGUSR1)
 
         # TODO : an integration test to test outside the package (wth POpen and hte like...)

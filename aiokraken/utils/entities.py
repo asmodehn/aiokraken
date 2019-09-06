@@ -23,10 +23,11 @@ class Entity:  # Should be a very simple record.
         """ Unique Id for entity """
         return hash((self.id, self.components))
 
-    # iterable interface, but access via type
+    # iterable interface over values
     def __iter__(self):
         return (c for c in self.components.values())
 
+    # but item access via type
     def __getitem__(self, item):
         return self.components.get(item)
 
