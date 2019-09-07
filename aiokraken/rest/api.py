@@ -18,6 +18,7 @@ if __package__:
     from .schemas.ohlc import PairOHLCSchema
     from .schemas.balance import BalanceSchema
     from .response import Response
+    from ..model.ohlc import OHLC
 else:
     from aiokraken.rest.request import Request
     from aiokraken.utils import get_nonce, get_kraken_logger
@@ -25,6 +26,7 @@ else:
     from aiokraken.rest.schemas.time import TimeSchema
     from aiokraken.rest.schemas.ohlc import PairOHLCSchema
     from aiokraken.rest.response import Response
+    from aiokraken.model.ohlc import OHLC
 
 
 def private(api, key, secret):
@@ -108,12 +110,19 @@ class Host(API):
     def url_path(self):
         return ''  # for a host we do not want the hostname in hte url path
 
+# Kraken specific
+pairs_id = {
+    'XBTEUR': 'XXBTZEUR',
+    'ETHEUR': 'XETHZEUR'
+}
+
+
 
 class Server:
 
     def __init__(self, key=None, secret=None):
         # building the API structure as a dict
-        self.API = Host(hostname='api.kraken.com')
+        self.API = Host(hostname='api.kraken.com')  # TODO : pass as argument ?
         self.API['0'] = Version()
         self.API['0']['public'] = API('public')
         self.API['0']['private'] = private(api=API('private'), key=key, secret=secret)
@@ -136,11 +145,25 @@ class Server:
     def time(self):
         return self.public.request('Time', data=None, expected=Response(status=200, schema=PayloadSchema(TimeSchema)))
 
-    def ohlc(self):
-        return self.public.request('OHLC', data={'pair': 'XBTEUR'}, expected=Response(status=200, schema=PayloadSchema(PairOHLCSchema('XXBTZEUR'))))
+    def ohlc(self, pair='XBTEUR'):  # TODO : use a model to typecheck pair symbols
+        return self.public.request('OHLC',
+                                   data={'pair': pair},
+                                   expected=Response(status=200,
+                                                     schema=PayloadSchema(
+                                                        result_schema=PairOHLCSchema(
+                                                            pair=pairs_id.get(pair, pair))
+                                                        )
+                                                     )
+                                   )
 
     def balance(self):
-        return self.private.request('Balance', data=None, expected=Response(status=200, schema=PayloadSchema(BalanceSchema)))
+        return self.private.request('Balance',
+                                    data=None,
+                                    expected=Response(status=200,
+                                                      schema=PayloadSchema(
+                                                          result_schema=BalanceSchema
+                                                      ))
+                                    )
 
 
 

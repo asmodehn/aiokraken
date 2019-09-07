@@ -33,7 +33,7 @@ class RestClient:
         """ make public requests to kraken api"""
 
         kt = self.server.time()   # returns the request to be made for this API.
-        print(kt.url)
+        print(kt.urlpath)
         try:  # TODO : pass protocol & host into the request url in order to have it displayed when erroring !
             async with self.session.post(self.protocol + self.server.url + kt.urlpath, headers=kt.headers, data=kt.data) as response:
 
@@ -43,11 +43,10 @@ class RestClient:
             LOGGER.error(err)
             return {'error': err}
 
-    async def ohlc(self):
+    async def ohlc(self, pair='XBTEUR'):
         """ make public requests to kraken api"""
 
-        kt = self.server.ohlc()   # returns the request to be made for this API.
-        print(kt.url)
+        kt = self.server.ohlc(pair=pair)   # returns the request to be made for this API.)
         try:  # TODO : pass protocol & host into the request url in order to have it displayed when erroring !
             async with self.session.post(self.protocol + self.server.url + kt.urlpath, headers=kt.headers, data=kt.data) as response:
 
@@ -101,7 +100,7 @@ if __name__ == '__main__':
         rest_kraken = RestClient(server=Server())
         try:
             response = await rest_kraken.ohlc()
-            print(f'response is {response}')
+            print(f'response is {response.head()}')
         finally:
             await rest_kraken.close()
 
@@ -134,5 +133,5 @@ if __name__ == '__main__':
         )
 
     #loop.run_until_complete(get_time())
-    #loop.run_until_complete(get_ohlc())
-    loop.run_until_complete(get_balance())
+    loop.run_until_complete(get_ohlc())
+    #loop.run_until_complete(get_balance())

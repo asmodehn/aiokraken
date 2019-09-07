@@ -50,17 +50,9 @@ class Request:
         returning possible responses, and how to deal with them
         :return:
         """
-
-        if response.status not in (200, 201, 202):
-            return {
-                'request': asdict(self),
-                'error': response.status}
-        else:
-            res = await response.json(encoding='utf-8', content_type=None)
-            res['parsed'] = self.expected(response.status, res)  # validating response data
-            res['request'] = asdict(self),
-            res['error'] = "" if 'error' not in res else res['error']
-            return res
+        res = await response.json(encoding='utf-8', content_type=None)
+        parsed_res = self.expected(status=response.status, data=res, request_data=asdict(self))  # validating response data
+        return parsed_res
 
     def sign(self, key, secret):
         self.data['nonce'] = get_nonce()
