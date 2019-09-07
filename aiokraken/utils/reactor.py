@@ -13,31 +13,39 @@ It is passive and wait to be scheduled by someone else...
 """
 
 
+class ReactorWrapper:
+
+    def __init__(self, fun, *component_classes):
+        self.fun = fun
+        self.component_classes = component_classes
+        self.last_time = time.time()
+
+    async def __call__(self, *entities, **kwargs):
+        t = time.time()
+        dt = t - self.last_time
+        # This gives the best control to teh developer:
+        # - all entities at once, logically.
+        # - awaitable coro for managing systems/entities update synchronization in one place.
+        r = await self.fun(
+                # filtering to pass only relevant entities to the system.
+                *(e for e in entities if all(c in e.components.keys() for c in self.component_classes)),
+                deltatime=dt,
+                entities=entities,
+                **kwargs
+            )
+        last_time = t
+        # this syntax supports both one element and iterable (meaning system call can be either)
+        return [r]  # generator cannot be returned at the highest level
+        # This is actually where the call is run (need to wait to build the list...)
+        # TODO : Meaning this is where we can introduce some profiling later (and not in users code) !
+
+
+
 def reactor(*component_classes):
 
     def reactor_decorator(fun):
-        last_time = time.time()
 
-        async def reactor_wrapper(*entities, **kwargs):
-            nonlocal last_time
-            t = time.time()
-            dt = t - last_time
-            # This gives the best control to teh developer:
-            # - all entities at once, logically.
-            # - awaitable coro for managing systems/entities update synchronization in one place.
-            r = await fun(
-                    # filtering to pass only relevant entities to the system.
-                    *(e for e in entities if all(c in e.components.keys() for c in component_classes)),
-                    deltatime=dt,
-                    entities=entities
-                )
-            last_time = t
-            # this syntax supports both one element and iterable (meaning system call can be either)
-            return [r]  # generator cannot be returned at the highest level
-            # This is actually where the call is run (need to wait to build the list...)
-            # TODO : Meaning this is where we can introduce some profiling later (and not in users code) !
-
-        return reactor_wrapper  # returning Reactor doesnt work ??
+        return ReactorWrapper(fun, *component_classes)
 
     return reactor_decorator
 

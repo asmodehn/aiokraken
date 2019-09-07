@@ -31,6 +31,9 @@ class Entity:  # Should be a very simple record.
     def __getitem__(self, item):
         return self.components.get(item)
 
+    def __setitem__(self, key, value):
+        self.components[key] = value  # TODO : should we simply allow erasing here ???
+
     # TODO : getattr to component dict...
 
 # Idea : world is tied to process/interpreter execution lifecycle
