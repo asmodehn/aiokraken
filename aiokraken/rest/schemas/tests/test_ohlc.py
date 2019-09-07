@@ -5,9 +5,9 @@ import marshmallow
 import pandas as pd
 
 if __package__:
-    from ..ohlc import PairOHLCSchema
+    from ..ohlc import PairOHLCSchema, OHLC
 else:
-    from aiokraken.rest.schemas.ohlc import PairOHLCSchema
+    from aiokraken.rest.schemas.ohlc import PairOHLCSchema, OHLC
 
 """
 Test module.
@@ -30,8 +30,7 @@ class TestOHLCSchema(unittest.TestCase):
     def test_load_ok(self, payload):
         """ Verifying that expected data parses properly """
         parsed = self.schema.loads(json_data=payload)
-        assert 'XXBTZEUR' in parsed
-        assert isinstance(parsed.get('XXBTZEUR'), pd.DataFrame)
+        assert isinstance(parsed, OHLC)
 
     # @parameterized.expand([
     #     # we make sure we are using a proper json string
