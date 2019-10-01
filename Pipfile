@@ -4,6 +4,7 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+pytest-recording = "*"
 
 [packages]
 aiohttp = "*"
@@ -11,7 +12,6 @@ aiodns = "*"
 cchardet = "*"
 pytest = "*"
 aiokraken = {path = ".",editable = true}
-pytest-vcr = "*"
 uplink = "*"
 marshmallow = "*"
 pandas = "*"
@@ -20,6 +20,12 @@ marshmallow-dataframe = "*"
 jupyterlab = "*"
 ipympl = "*"
 jupyterlab-git = "*"
+ta-lib = "*"  #TODO : include this only with extension addon, somehow...
+pandas-ta = "*"
+pyjanitor = "*"
 
 [requires]
 python_version = "3.7"
+
+[pipenv]
+allow_prereleases = true
