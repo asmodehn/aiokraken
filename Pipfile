@@ -5,6 +5,7 @@ verify_ssl = true
 
 [dev-packages]
 pytest-recording = "*"
+pytest-asyncio = "*"
 
 [packages]
 aiohttp = "*"
@@ -12,7 +13,7 @@ aiodns = "*"
 cchardet = "*"
 pytest = "*"
 aiokraken = {path = ".",editable = true}
-uplink = "*"
+uplink = "*"  # TODO : remove...
 marshmallow = "*"
 pandas = "*"
 parameterized = "*"
