@@ -17,14 +17,17 @@ if __package__:
     from .schemas.time import TimeSchema
     from .schemas.ohlc import PairOHLCSchema
     from .schemas.balance import BalanceSchema
+    from .schemas.order import OrderSchema, AddOrderResponseSchema
     from .response import Response
     from ..model.ohlc import OHLC
+    from ..model.order import (ask, bid, buy, sell, cancel, Order, MarketOrder, LimitOrder, TakeProfitOrder, StopLossOrder, TrailingStopOrder)
 else:
     from aiokraken.rest.request import Request
     from aiokraken.utils import get_nonce, get_kraken_logger
     from aiokraken.rest.schemas.payload import PayloadSchema
     from aiokraken.rest.schemas.time import TimeSchema
     from aiokraken.rest.schemas.ohlc import PairOHLCSchema
+    from aiokraken.rest.schemas.order import OrderSchema, AddOrderResponseSchema
     from aiokraken.rest.response import Response
     from aiokraken.model.ohlc import OHLC
 
@@ -165,8 +168,28 @@ class Server:
                                                       ))
                                     )
 
+    def bid(self, order: Order):
+        return self.private.request('AddOrder',
+                                    data=OrderSchema().dump(bid(order)),
+                                    expected=Response(status=200,
+                                                      schema=PayloadSchema(
+                                                          result_schema=AddOrderResponseSchema
+                                                      ))
+                                    )
 
+    def ask(self, order: Order):
+        return self.private.request('AddOrder',
+                                    data=OrderSchema().dump(ask(order)),
+                                    expected=Response(status=200,
+                                                      schema=PayloadSchema(
+                                                          result_schema=AddOrderResponseSchema
+                                                      ))
+                                    )
 
+    # def cancel(self, order: Order):
+    #     return self.private.request('CancelOrder',
+    #                                 data=cancel(order.txid)  # TODO : produce dict ! (marshmallow...)
+    #                                 )
 
 # API DEFINITION - TODO
 

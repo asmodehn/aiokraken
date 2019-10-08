@@ -5,7 +5,8 @@ class Order:
 
         self.pair = pair
         self.volume = volume
-        self.leverage = leverage
+        if leverage: # this is optional member...
+            self.leverage = leverage
 
         self.starttm = '+' + str(relative_starttm) if relative_starttm > 0 else '0'
         self.expiretm = '+' + str(relative_expiretm) if relative_expiretm > 0 else '0'
@@ -17,7 +18,8 @@ class Order:
             self.oflags.append('nompp')
 
         self.validate = not execute
-        self.userref = userref
+        if userref:  # this is optional member
+            self.userref = userref
 
         self.close = close
 
@@ -30,12 +32,14 @@ class Order:
 class MarketOrder(Order):
 
     def __init__(self, **kwargs):
+        self.ordertype='market'
         super(MarketOrder, self).__init__(**kwargs)
 
 
 class LimitOrder(Order):
 
     def __init__(self, limit_price, **kwargs):
+        self.ordertype='limit'
         self.price = limit_price
         super(LimitOrder, self).__init__(**kwargs)
 
@@ -43,6 +47,7 @@ class LimitOrder(Order):
 class StopLossOrder(Order):
 
     def __init__(self, stop_loss_price, **kwargs):
+        self.ordertype='stop-loss'
         self.price = stop_loss_price
         super(StopLossOrder, self).__init__(**kwargs)
 
@@ -50,6 +55,7 @@ class StopLossOrder(Order):
 class TakeProfitOrder(Order):
 
     def __init__(self, take_profit_price, **kwargs):
+        self.ordertype='take-profit'
         self.price = take_profit_price
         super(TakeProfitOrder, self).__init__(**kwargs)
 
@@ -57,6 +63,7 @@ class TakeProfitOrder(Order):
 class StopLossProfitOrder(Order):
 
     def __init__(self, stop_loss_price, take_profit_price, **kwargs):
+        self.ordertype='stop-loss-profit'
         self.price = stop_loss_price
         self.price2 = take_profit_price
         super(StopLossProfitOrder, self).__init__(**kwargs)
@@ -65,6 +72,7 @@ class StopLossProfitOrder(Order):
 class StopLossProfitLimitOrder(Order):
 
     def __init__(self, stop_loss_price, take_profit_price, **kwargs):
+        self.ordertype='stop-loss-profit-limit'
         self.price = stop_loss_price
         self.price2 = take_profit_price
         super(StopLossProfitLimitOrder, self).__init__(**kwargs)
@@ -73,6 +81,7 @@ class StopLossProfitLimitOrder(Order):
 class StopLossLimitOrder(Order):
 
     def __init__(self, stop_loss_trigger_price, triggered_limit_price, **kwargs):
+        self.ordertype='stop-loss-limit'
         self.price = stop_loss_trigger_price
         self.price2 = triggered_limit_price
         super(StopLossLimitOrder, self).__init__(**kwargs)
@@ -81,6 +90,7 @@ class StopLossLimitOrder(Order):
 class TakeProfitLimit(Order):
 
     def __init__(self, take_profit_trigger_price, triggered_limit_price, **kwargs):
+        self.ordertype='take-profit-limit'
         self.price = take_profit_trigger_price
         self.price2 = triggered_limit_price
         super(TakeProfitLimit, self).__init__(**kwargs)
@@ -89,6 +99,7 @@ class TakeProfitLimit(Order):
 class TrailingStopOrder(Order):
 
     def __init__(self, trailing_stop_offset, **kwargs):
+        self.ordertype='trailing-stop'
         self.price = trailing_stop_offset
         super(TrailingStopOrder, self).__init__(**kwargs)
 
@@ -96,6 +107,7 @@ class TrailingStopOrder(Order):
 class TrailingStopLimit(Order):
 
     def __init__(self, trailing_stop_offset, triggered_limit_offset, **kwargs):
+        self.ordertype='trailing-stop-limit'
         self.price = trailing_stop_offset
         self.price2 = triggered_limit_offset
         super(TrailingStopLimit, self).__init__(**kwargs)
@@ -103,6 +115,7 @@ class TrailingStopLimit(Order):
 
 class StopLossAndLimitOrder(Order):
     def __init__(self, stop_loss_price, limit_price, **kwargs):
+        self.ordertype='stop-loss-and-limit'
         self.price = stop_loss_price
         self.price2 = limit_price
         super(StopLossAndLimitOrder, self).__init__(**kwargs)
@@ -110,6 +123,7 @@ class StopLossAndLimitOrder(Order):
 
 class SettlePositionOrder(Order):
     def __init__(self, **kwargs):
+        self.ordertype='settle-position'
         super(SettlePositionOrder, self).__init__(**kwargs)
 
 

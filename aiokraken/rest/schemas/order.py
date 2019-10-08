@@ -11,6 +11,9 @@ class OrderSchema(BaseSchema):
 
     """ Schema to produce dict from model"""
 
+    type = fields.Str(required=True)
+    ordertype = fields.Str(required=True)
+
     pair = fields.Str(required=True)
     volume = fields.Number(required=True)
     leverage = fields.Str()
@@ -28,3 +31,12 @@ class OrderSchema(BaseSchema):
     price = fields.Str()
     price2 = fields.Str()
 
+
+class OrderDescriptionSchema(BaseSchema):
+    order = fields.Str(required=True)  # order description
+    close = fields.Str()  # conditional close order description (if conditional close set)
+
+
+class AddOrderResponseSchema(BaseSchema):
+    descr = fields.Nested(OrderDescriptionSchema)
+    txid = fields.Integer(many=True)  #array of transaction ids for order (if order was added successfully)
