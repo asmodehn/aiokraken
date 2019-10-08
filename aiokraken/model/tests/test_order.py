@@ -11,6 +11,7 @@ class TestOrder(unittest.TestCase):
     ])
     def test_init(self, pair, volume):
         o = Order(pair = pair, volume=volume, )
+        assert o.validate
         assert o.pair == pair
         assert o.volume == volume
 
@@ -25,6 +26,7 @@ class TestMarketOrder(unittest.TestCase):
     ])
     def test_init(self, pair, volume):
         o = MarketOrder(pair=pair, volume=volume, )
+        assert o.validate
         assert o.pair == pair
         assert o.volume == volume
 
@@ -36,6 +38,7 @@ class TestLimitOrder(unittest.TestCase):
     ])
     def test_init(self, pair, volume, price):
         o = LimitOrder(pair=pair, volume=volume, limit_price=price )
+        assert o.validate
         assert o.pair == pair
         assert o.volume == volume
         assert o.price == price
