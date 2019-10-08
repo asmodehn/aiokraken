@@ -42,3 +42,16 @@ class TestLimitOrder(unittest.TestCase):
         assert o.pair == pair
         assert o.volume == volume
         assert o.price == price
+
+
+class TestStopLossOrder(unittest.TestCase):
+
+    @parameterized.expand([
+        ['MYPAIR', 'Volume', 'price'],
+    ])
+    def test_init(self, pair, volume, price):
+        o = StopLossOrder(pair=pair, volume=volume, stop_loss_price=price)
+        assert o.validate
+        assert o.pair == pair
+        assert o.volume == volume
+        assert o.price == price
