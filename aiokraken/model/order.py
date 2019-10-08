@@ -113,21 +113,30 @@ class SettlePositionOrder(Order):
         super(SettlePositionOrder, self).__init__(**kwargs)
 
 
-
 # Declaring intent via functions
-
 
 def bid(order: Order):
     order.type = 'buy'
     return order
 
+
 buy = bid
+
 
 def ask(order: Order):
     order.type = 'sell'
     return order
 
+
 sell = ask
+
+
+def cancel(order: Order):
+    return order.txid
+
+
+# TODO : have some confirmation call that produce a trade...
+
 
 
 if __name__ == '__main__':
