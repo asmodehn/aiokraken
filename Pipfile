@@ -20,7 +20,6 @@ marshmallow-dataframe = "*"
 jupyterlab = "*"
 ipympl = "*"
 jupyterlab-git = "*"
-ta-lib = "*"  #TODO : include this only with extension addon, somehow...
 pandas-ta = "*"
 pyjanitor = "*"
 
