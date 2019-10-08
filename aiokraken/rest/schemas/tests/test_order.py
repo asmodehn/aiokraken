@@ -30,14 +30,12 @@ class TestOrderSchema(unittest.TestCase):
         """ Verifying that expected data parses properly """
         serialized = self.schema.dump(model)
         expected = {
-            "userref": None,
             "oflags": ["fcib"],
             "pair": "SMTHG/ELSE",
             "close": None,
             "starttm": "0",
             "validate": True,
             "expiretm": "0",
-            "leverage": None,
             "volume": 42
         }
         # check equality on dicts with usual python types, but display strings.
