@@ -11,7 +11,7 @@ python:
 
 
 install:
-  - pipenv install --dev --pre --skip-lock
+  - pipenv install --dev --pre --skip-lock --verbose
 
 script:
   - python -m aiokraken.model.tests
