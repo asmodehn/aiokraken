@@ -14,7 +14,11 @@ install:
   - pipenv install --dev --pre --skip-lock
 
 script:
-  - python -m aiokraken.rest.schemas.tests && python -m aiokraken.tests && pytest tests
+  - python -m aiokraken.model.tests
+  - python -m aiokraken.utils.tests
+  - python -m aiokraken.rest.schemas.tests
+  - python -m aiokraken.tests
+  - pytest tests
 
 notifications:
   email: false

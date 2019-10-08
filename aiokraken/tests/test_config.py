@@ -7,6 +7,8 @@ else:
     from..config import load_api_keyfile
 
 
+# This is a kind of integration test for the user environment...
+# Need to test user environment (and not CI)
 class TestLoadKeyFile(unittest.TestCase):
 
     def test_load_api_keyfile(self):

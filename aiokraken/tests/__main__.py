@@ -17,8 +17,14 @@ loader = unittest.TestLoader()
 suite = unittest.TestSuite()
 
 # add tests to the test suite
-suite.addTests(loader.loadTestsFromModule(test_config))
+#TODO : some rgument to prevent running on CI ?
+#suite.addTests(loader.loadTestsFromModule(test_config))
 
 # initialize a runner, pass it your suite and run it
 runner = unittest.TextTestRunner(verbosity=3)
 result = runner.run(suite)
+
+if result.wasSuccessful():
+    exit(0)
+else:
+    exit(1)
