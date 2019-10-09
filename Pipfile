@@ -13,7 +13,6 @@ aiodns = "*"
 cchardet = "*"
 pytest = "*"
 aiokraken = {path = ".",editable = true}
-uplink = "*"  # TODO : remove...
 marshmallow = "*"
 pandas = "*"
 parameterized = "*"
