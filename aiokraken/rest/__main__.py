@@ -103,5 +103,5 @@ for signame in ('SIGINT', 'SIGTERM'):
 
 from aiokraken.model.order import MarketOrder
 
-loop.run_until_complete(bid(MarketOrder(pair='XBTEUR', volume='0.01', )))
-loop.run_until_complete(ask(MarketOrder(pair='XBTEUR', volume='0.01', )))
+#loop.run_until_complete(bid(MarketOrder(pair='XBTEUR', volume='0.01', )))
+#loop.run_until_complete(ask(MarketOrder(pair='XBTEUR', volume='0.01', )))

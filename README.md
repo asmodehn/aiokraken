@@ -8,6 +8,13 @@ Python asyncio client for Kraken REST and Websockets API
 ## Installation 
     pip install aiokraken
 
+## Running packaged tests
+    python -m aiokraken.model.tests
+    
+## Running integration tests (developer)
+    pytest tests/aiokraken/rest   # for replay using cassettes
+    pytest tests/aiokraken/rest --with-keyfile --record-mode=all  # for actual server integration test
+
 ## [REST example](https://github.com/dantimofte/aiokraken/blob/master/aiokraken/examples/rest_example.py)
 
     from aiokraken import RestClient

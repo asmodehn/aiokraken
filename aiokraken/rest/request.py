@@ -55,9 +55,14 @@ class Request:
         return parsed_res
 
     def sign(self, key, secret):
+
         self.data['nonce'] = get_nonce()
-        self.headers['API-Key'] = key
-        self.headers['API-Sign'] = _sign_message(self.data, self.urlpath, secret)
+        # If key OR secret are none, we do not sign...
+        # Maybe dangerous ? But we need something similar to be able to test private URL without signing (when we work with cassettes)
+        if key is not None:
+            self.headers['API-Key'] = key
+        if secret is not None:
+            self.headers['API-Sign'] = _sign_message(self.data, self.urlpath, secret)
 
         return self
 
