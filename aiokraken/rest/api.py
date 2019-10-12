@@ -11,13 +11,15 @@ from dataclasses import dataclass, asdict, field
 import typing
 
 if __package__:
+    # TODO : find a clean way to do these imports, package or not...
     from .request import Request
     from ..utils import get_nonce, get_kraken_logger
     from .schemas.payload import PayloadSchema
     from .schemas.time import TimeSchema
     from .schemas.ohlc import PairOHLCSchema
     from .schemas.balance import BalanceSchema
-    from .schemas.order import OrderSchema, AddOrderResponseSchema
+    from .schemas.order import OrderSchema, AddOrderResponseSchema, CancelOrderResponseSchema, OpenOrdersResponseSchema
+    from .schemas.ticker import TickerSchema, PairTickerSchema
     from .response import Response
     from ..model.ohlc import OHLC
     from ..model.order import (ask, bid, buy, sell, cancel, Order, MarketOrder, LimitOrder, TakeProfitOrder, StopLossOrder, TrailingStopOrder)
@@ -27,7 +29,8 @@ else:
     from aiokraken.rest.schemas.payload import PayloadSchema
     from aiokraken.rest.schemas.time import TimeSchema
     from aiokraken.rest.schemas.ohlc import PairOHLCSchema
-    from aiokraken.rest.schemas.order import OrderSchema, AddOrderResponseSchema
+    from aiokraken.rest.schemas.order import OrderSchema, AddOrderResponseSchema, CancelOrderResponseSchema, OpenOrdersResponseSchema
+    from aiokraken.rest.schemas.ticker import PairTickerSchema
     from aiokraken.rest.response import Response
     from aiokraken.model.ohlc import OHLC
 
@@ -122,6 +125,7 @@ pairs_id = {
 
 
 class Server:
+    # TODO : LOG actual requests. Important for usage and for testing...
 
     def __init__(self, key=None, secret=None):
         # building the API structure as a dict
@@ -168,6 +172,30 @@ class Server:
                                                       ))
                                     )
 
+    def ticker(self, pair='XBTEUR'):  # TODO : use a model to typecheck pair symbols
+        return self.public.request('Ticker',
+                                   data={'pair': pair},
+                                   expected=Response(status=200,
+                                                     schema=PayloadSchema(
+                                                        result_schema=PairTickerSchema(
+                                                            pair=pairs_id.get(pair, pair))
+                                                        )
+                                                     )
+                                   )
+
+    def openorders(self, trades=False, userref=None):
+        data = {'trades': trades}
+        if userref is not None:
+            data.update({'userref': userref})
+        return self.private.request('OpenOrders',
+                                   data=data,
+                                   expected=Response(status=200,
+                                                     schema=PayloadSchema(
+                                                        result_schema=OpenOrdersResponseSchema
+                                                        )
+                                                     )
+                                   )
+
     def bid(self, order: Order):
         return self.private.request('AddOrder',
                                     data=OrderSchema().dump(bid(order)),
@@ -186,10 +214,14 @@ class Server:
                                                       ))
                                     )
 
-    # def cancel(self, order: Order):
-    #     return self.private.request('CancelOrder',
-    #                                 data=cancel(order.txid)  # TODO : produce dict ! (marshmallow...)
-    #                                 )
+    def cancel(self, txid_userref):
+        return self.private.request('CancelOrder',
+                                    data={'txid': txid_userref},  # TODO : produce dict from marshmallow...
+                                    expected = Response(status=200,
+                                                        schema=PayloadSchema(
+                                                            result_schema=CancelOrderResponseSchema
+                                                        ))
+                                )
 
 # API DEFINITION - TODO
 

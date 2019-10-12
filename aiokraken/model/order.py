@@ -5,7 +5,7 @@ class Order:
 
         self.pair = pair
         self.volume = volume
-        if leverage: # this is optional member...
+        if leverage:  # this is optional member...
             self.leverage = leverage
 
         self.starttm = '+' + str(relative_starttm) if relative_starttm > 0 else '0'
@@ -17,11 +17,12 @@ class Order:
         if not market_price_protection:
             self.oflags.append('nompp')
 
-        self.validate = not execute
+        if not execute:
+            self.validate = True
         if userref:  # this is optional member
             self.userref = userref
-
-        self.close = close
+        if close:
+            self.close = close
 
     def __repr__(self):
         # TODO : find better / cleaner way ?

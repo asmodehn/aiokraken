@@ -119,12 +119,14 @@ async def basicbot(loop, pair= 'XBTEUR'):
         pm = Position(rest_client=rest_kraken,
                       enter_order=bid(MarketOrder(pair=pair, volume='0.01')),
                       stoploss=StopLossOrder(pair=pair, stop_loss_price="-5"))
-        pm.settle(leave_order=ask(MarketOrder))
+        # force settling without waiting
+        pm.settle(leave_order=ask(MarketOrder(pair=pair, volume='0.01')))
         pm = None
 
         # SelfTest sell case quickly
         pm=Position(
         )
+        # force settling without waiting
         pm.settle()
         pm = None
 

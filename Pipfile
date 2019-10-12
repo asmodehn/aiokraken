@@ -6,6 +6,7 @@ verify_ssl = true
 [dev-packages]
 pytest-recording = "*"
 pytest-asyncio = "*"
+pytest-dependency = "*"
 
 [packages]
 aiohttp = "*"
