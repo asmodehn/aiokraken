@@ -3,7 +3,7 @@ interactions:
     body:
       close: null
       expiretm: '0'
-      nonce: 1570544879842
+      nonce: 1570901998505
       oflags:
       - fcib
       ordertype: market
@@ -23,15 +23,15 @@ interactions:
       string: '{"error":[],"result":{"descr":{"order":"buy 0.01000000 XBTEUR @ market"}}}'
     headers:
       CF-Cache-Status: DYNAMIC
-      CF-RAY: 5228cc7baa55cdcb-CDG
+      CF-RAY: 524adb33081ecdb3-CDG
       Connection: keep-alive
       Content-Encoding: gzip
       Content-Type: application/json; charset=utf-8
-      Date: Tue, 08 Oct 2019 14:28:00 GMT
+      Date: Sat, 12 Oct 2019 17:39:58 GMT
       Expect-CT: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
       Server: cloudflare
-      Set-Cookie: __cfduid=db968ff85f4374b9f5464385adf8dfa471570544879; expires=Wed,
-        07-Oct-20 14:27:59 GMT; path=/; domain=.kraken.com; HttpOnly
+      Set-Cookie: __cfduid=d0e78d7de06ff59c5382b6a3871bc25811570901998; expires=Sun,
+        11-Oct-20 17:39:58 GMT; path=/; domain=.kraken.com; HttpOnly
       Transfer-Encoding: chunked
       Vary: Accept-Encoding
       strict-transport-security: max-age=15768000

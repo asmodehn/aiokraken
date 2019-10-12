@@ -1,0 +1,45 @@
+interactions:
+- request:
+    body:
+      close: null
+      expiretm: '0'
+      nonce: 1570901998887
+      oflags:
+      - fcib
+      ordertype: limit
+      pair: XBTEUR
+      price: '1234.0'
+      starttm: '+60'
+      type: buy
+      userref: 54321
+      validate: true
+      volume: 0.01
+    headers:
+      User-Agent:
+      - Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML,
+        like Gecko) Chrome/74.0.3729.131 Safari/537.36
+    method: POST
+    uri: https://api.kraken.com/0/private/AddOrder
+  response:
+    body:
+      string: '{"error":[],"result":{"descr":{"order":"buy 0.01000000 XBTEUR @ limit
+        1234.0"}}}'
+    headers:
+      CF-Cache-Status: DYNAMIC
+      CF-RAY: 524adb355dec69aa-CDG
+      Connection: keep-alive
+      Content-Encoding: gzip
+      Content-Type: application/json; charset=utf-8
+      Date: Sat, 12 Oct 2019 17:39:59 GMT
+      Expect-CT: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      Server: cloudflare
+      Set-Cookie: __cfduid=d50cba0b4aa36b1eafeb61f1b907801e51570901998; expires=Sun,
+        11-Oct-20 17:39:58 GMT; path=/; domain=.kraken.com; HttpOnly
+      Transfer-Encoding: chunked
+      Vary: Accept-Encoding
+      strict-transport-security: max-age=15768000
+    status:
+      code: 200
+      message: OK
+    url: https://api.kraken.com/0/private/AddOrder
+version: 1
