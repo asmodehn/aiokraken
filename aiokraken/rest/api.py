@@ -197,8 +197,10 @@ class Server:
                                    )
 
     def bid(self, order: Order):
+        data=OrderSchema().dump(bid(order))
+        print(f"Serialized Order: {data}")
         return self.private.request('AddOrder',
-                                    data=OrderSchema().dump(bid(order)),
+                                    data=data,
                                     expected=Response(status=200,
                                                       schema=PayloadSchema(
                                                           result_schema=AddOrderResponseSchema
@@ -206,8 +208,10 @@ class Server:
                                     )
 
     def ask(self, order: Order):
+        data=OrderSchema().dump(ask(order))
+        print(f"Serialized Order: {data}")
         return self.private.request('AddOrder',
-                                    data=OrderSchema().dump(ask(order)),
+                                    data=data,
                                     expected=Response(status=200,
                                                       schema=PayloadSchema(
                                                           result_schema=AddOrderResponseSchema
@@ -215,6 +219,7 @@ class Server:
                                     )
 
     def cancel(self, txid_userref):
+        # TODO : integration tests !!! Kraken seems to temporary lockout by hanging on this one....
         return self.private.request('CancelOrder',
                                     data={'txid': txid_userref},  # TODO : produce dict from marshmallow...
                                     expected = Response(status=200,

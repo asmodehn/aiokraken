@@ -77,15 +77,20 @@ async def test_add_buy_limit_order_execute_low(keyfile):
         assert tickerresponse
         print(tickerresponse)
         # computing realistic price, but unlikely to be filled, even after relative_starttm delay.
-        low_price = tickerresponse.bid.price * 0.8
+        # and even if it is filled it s probably a good thing ;)
+        # Ref : https://support.kraken.com/hc/en-us/articles/360000919926-Does-Kraken-offer-a-Test-API-or-Sandbox-Mode-
+        low_price = tickerresponse.bid.price * 0.5
         # delayed market order
-        bidresponse = await rest_kraken.bid(order=bid(LimitOrder(pair='XBTEUR', volume='0.01', limit_price=low_price, relative_starttm=60, execute=True, userref=12345)))
+        bidresponse = await rest_kraken.bid(order=bid(LimitOrder(
+            pair='XBTEUR',
+            volume='0.01',
+            limit_price=low_price,
+            relative_expiretm=15,  # expire in 15 seconds (better than cancelling since cancelling too often can lock us out)
+            execute=True,
+            # userref=12345
+        )))
         assert bidresponse
         print(bidresponse)
-        # cancel order (via userref) before activating...
-        cancelresponse = await rest_kraken.cancel(txid_userref=12345)
-        assert cancelresponse
-        print(cancelresponse)
     finally:
         await rest_kraken.close()
 

@@ -15,7 +15,7 @@ class OrderSchema(BaseSchema):
     ordertype = fields.Str(required=True)
 
     pair = fields.Str(required=True)
-    volume = fields.Number(required=True)
+    volume = fields.Decimal(required=True, as_string=True)
     leverage = fields.Str()
 
     starttm = fields.Str()
@@ -39,7 +39,7 @@ class OrderDescriptionSchema(BaseSchema):
 
 class AddOrderResponseSchema(BaseSchema):
     descr = fields.Nested(OrderDescriptionSchema)
-    txid = fields.Integer(many=True)  #array of transaction ids for order (if order was added successfully)
+    txid = fields.List(fields.Str())  #array of transaction ids for order (if order was added successfully)
 
 
 class CancelOrderResponseSchema(BaseSchema):

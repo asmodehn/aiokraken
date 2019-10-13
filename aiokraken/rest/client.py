@@ -79,7 +79,9 @@ class RestClient:
             async with self.session.post(self.protocol + self.server.url + kt.urlpath, headers=kt.headers, data=kt.data) as response:
 
                 return await kt(response)
-
+        except aiohttp.ClientConnectorError as err:
+            LOGGER.error(err)
+            return {'error': err}
         except aiohttp.ClientResponseError as err:
             LOGGER.error(err)
             return {'error': err}
