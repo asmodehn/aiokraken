@@ -31,7 +31,7 @@ class Order:
 
     def __repr__(self):
         # TODO : find better / cleaner way ?
-        return f"Order: pair: {self.pair} volume: {self.volume} close: {repr(self.close)}"
+        return f"Order: pair: {self.pair} volume: {self.volume}"
 
 
 
