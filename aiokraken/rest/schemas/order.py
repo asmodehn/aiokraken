@@ -53,13 +53,13 @@ class OrderInfoSchema(BaseSchema):
     ordertype = fields.Str()  #(See Add standard order)
     price =fields.Number()
     price2 = fields.Number()
-    leverage = fields.Number()
+    leverage = fields.Str()  # ???
     order = fields.Str()
     close = fields.Str()
 
 
 class OpenOrderSchema(BaseSchema):
-    refid = fields.Integer()
+    refid = fields.Integer(allow_none=True)
     userref = fields.Integer()
     status = fields.Str()
         # pending = order pending book entry
@@ -67,9 +67,9 @@ class OpenOrderSchema(BaseSchema):
         # closed = closed order
         # canceled = order canceled
         # expired = order expired
-    opentm = fields.Str()
-    starttm = fields.Str()
-    expiretm = fields.Str()
+    opentm = fields.Number()
+    starttm = fields.Number()
+    expiretm = fields.Number()
     descr = fields.Nested(OrderInfoSchema)
     vol = fields.Number()  #(base currency unless viqc set in oflags)
     vol_exec = fields.Number() #(base currency unless viqc set in oflags)
@@ -92,4 +92,4 @@ class OpenOrderSchema(BaseSchema):
 
 
 class OpenOrdersResponseSchema(BaseSchema):
-    open = fields.Nested(OpenOrderSchema)
+    open = fields.Dict(keys=fields.Str(), values=fields.Nested(OpenOrderSchema()))

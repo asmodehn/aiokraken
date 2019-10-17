@@ -37,21 +37,20 @@ async def test_openorders_one_high_limit_sell(keyfile):
         assert tickerresponse
         print(tickerresponse)
         # pass high limit sell order
-        ask_high_price = tickerresponse.ask.price * 1.20
-        askresponse = await rest_kraken.ask(
-            LimitOrder(pair='XBTEUR', volume='0.01', limit_price=ask_high_price, relative_starttm=60, execute=True,
-                       userref=12345))
+        ask_high_price = tickerresponse.ask.price * 1.5
+        askresponse = await rest_kraken.ask(order=ask(LimitOrder(
+            pair='XBTEUR',
+            volume='0.01',
+            limit_price=ask_high_price,
+            relative_expiretm=15,
+            execute=True
+        )))
         assert askresponse
         print(askresponse)
-        try:
-            # get open orders to make sure we can find it
-            response = await rest_kraken.openorders()
-            print(f'response is {response}')
-        finally:
-            # cancel order (via userref) before activating...
-            cancelresponse = await rest_kraken.cancel(txid_userref=12345)
-            assert cancelresponse
-            print(cancelresponse)
+
+        # get open orders to make sure we can find it
+        response = await rest_kraken.openorders()
+        print(f'response is {response}')
     finally:
         await rest_kraken.close()
     print(f'response is {response}')
@@ -73,20 +72,20 @@ async def test_openorders_one_low_limit_buy(keyfile):
         assert tickerresponse
         print(tickerresponse)
         # computing realistic price, but unlikely to be filled, even after relative_starttm delay.
-        low_price = tickerresponse.bid.price * 0.8
+        low_price = tickerresponse.bid.price * 0.5
         # delayed market order
-        bidresponse = await rest_kraken.bid(order=bid(
-            LimitOrder(pair='XBTEUR', volume='0.01', limit_price=low_price, relative_starttm=60, execute=True, userref=12345)))
+        bidresponse = await rest_kraken.bid(order=bid(LimitOrder(
+            pair='XBTEUR',
+            volume='0.01',
+            limit_price=low_price,
+            relative_expiretm=15,
+            execute=True
+        )))
         assert bidresponse
         print(bidresponse)
-        try:
-            response = await rest_kraken.openorders()
-            print(f'response is {response}')
-        finally:
-            # cancel order (via userref) before activating...
-            cancelresponse = await rest_kraken.cancel(txid_userref=12345)
-            assert cancelresponse
-            print(cancelresponse)
+
+        response = await rest_kraken.openorders()
+        print(f'response is {response}')
     finally:
         await rest_kraken.close()
 
@@ -94,6 +93,7 @@ async def test_openorders_one_low_limit_buy(keyfile):
 
 
 if __name__ == '__main__':
+    # replay
     pytest.main(['-s', __file__, '--block-network'])
     # record run
     #pytest.main(['-s', __file__, '--with-keyfile', '--record-mode=new_episodes'])
