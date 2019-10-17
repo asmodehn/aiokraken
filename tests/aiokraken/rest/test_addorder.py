@@ -134,7 +134,7 @@ async def test_add_sell_limit_order_execute_high(keyfile):
         # computing realistic price, but unlikely to be filled, even after relative_starttm delay.
         # and even if it is filled it s probably a good thing ;)
         # Ref : https://support.kraken.com/hc/en-us/articles/360000919926-Does-Kraken-offer-a-Test-API-or-Sandbox-Mode-
-        high_price = tickerresponse.bid.price * 1.5
+        high_price = tickerresponse.ask.price * 1.5
         # delayed market order
         bidresponse = await rest_kraken.ask(order=ask(LimitOrder(
             pair='XBTEUR',
@@ -189,6 +189,7 @@ async def test_add_sell_stop_order(keyfile):
 
 
 if __name__ == '__main__':
-    #pytest.main(['-s', __file__, '--block-network'])
+    # replay run
+    pytest.main(['-s', __file__, '--block-network'])
     # record run
-    pytest.main(['-s', __file__, '--with-keyfile', '--record-mode=new_episodes'])
+    #pytest.main(['-s', __file__, '--with-keyfile', '--record-mode=new_episodes'])
