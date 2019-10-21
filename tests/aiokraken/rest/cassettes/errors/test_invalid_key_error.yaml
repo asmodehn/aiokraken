@@ -1,0 +1,33 @@
+interactions:
+- request:
+    body:
+      nonce: 1570868553226
+      trades: false
+    headers:
+      User-Agent:
+      - Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML,
+        like Gecko) Chrome/74.0.3729.131 Safari/537.36
+    method: POST
+    uri: https://api.kraken.com/0/private/OpenOrders
+  response:
+    body:
+      string: '{"error":["EAPI:Invalid key"]}'
+    headers:
+      CF-Cache-Status: DYNAMIC
+      CF-RAY: 5247aab3da3968dc-CDG
+      Connection: keep-alive
+      Content-Encoding: gzip
+      Content-Type: application/json; charset=utf-8
+      Date: Sat, 12 Oct 2019 08:22:35 GMT
+      Expect-CT: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      Server: cloudflare
+      Set-Cookie: __cfduid=d14f07d2c96ff673ecad6d613c2fa2a2c1570868554; expires=Sun,
+        11-Oct-20 08:22:34 GMT; path=/; domain=.kraken.com; HttpOnly
+      Transfer-Encoding: chunked
+      Vary: Accept-Encoding
+      strict-transport-security: max-age=15768000
+    status:
+      code: 200
+      message: OK
+    url: https://api.kraken.com/0/private/OpenOrders
+version: 1
