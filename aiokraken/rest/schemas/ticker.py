@@ -205,15 +205,7 @@ def PairTickerSchema(pair):
 
     def build_model(self, data, **kwargs):
         assert len(data.get('error', [])) == 0  # Errors should have raised exception previously !
-        return Ticker(bid=data.get('pair').get('b'),
-                      ask=data.get('pair').get('a'),
-                      low=data.get('pair').get('l'),
-                      volume_weighted_average_price=data.get('pair').get('p'),
-                      high=data.get('pair').get('h'),
-                      last_trade_closed=data.get('pair').get('c'),
-                      todays_opening=data.get('pair').get('o'),
-                      number_of_trades=data.get('pair').get('t'),
-                      volume=data.get('pair').get('v'))
+        return data.get('pair')
 
 
     try:

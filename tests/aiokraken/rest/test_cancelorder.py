@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 
 from aiokraken.rest.api import API, Server
@@ -29,7 +31,7 @@ async def test_cancel_limit_order_id_execute(keyfile):
         # computing realistic price, but unlikely to be filled, even after relative_starttm delay.
         # and even if it is filled it s probably a good thing ;)
         # Ref : https://support.kraken.com/hc/en-us/articles/360000919926-Does-Kraken-offer-a-Test-API-or-Sandbox-Mode-
-        high_price = tickerresponse.ask.price * 1.5
+        high_price = tickerresponse.ask.price * Decimal(1.5)
         # delayed market order
         bidresponse = await rest_kraken.ask(order=ask(LimitOrder(
             pair='XBTEUR',
@@ -77,7 +79,7 @@ async def test_cancel_limit_order_userref_execute(keyfile):
         # computing realistic price, but unlikely to be filled, even after relative_starttm delay.
         # and even if it is filled it s probably a good thing ;)
         # Ref : https://support.kraken.com/hc/en-us/articles/360000919926-Does-Kraken-offer-a-Test-API-or-Sandbox-Mode-
-        high_price = tickerresponse.ask.price * 1.5
+        high_price = tickerresponse.ask.price * Decimal(1.5)
         # delayed market order
         bidresponse = await rest_kraken.ask(order=ask(LimitOrder(
             pair='XBTEUR',

@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 
 from aiokraken.rest.api import API, Server
@@ -37,7 +39,7 @@ async def test_openorders_one_high_limit_sell(keyfile):
         assert tickerresponse
         print(tickerresponse)
         # pass high limit sell order
-        ask_high_price = tickerresponse.ask.price * 1.5
+        ask_high_price = tickerresponse.ask.price * Decimal(1.5)
         askresponse = await rest_kraken.ask(order=ask(LimitOrder(
             pair='XBTEUR',
             volume='0.01',
@@ -72,7 +74,7 @@ async def test_openorders_one_low_limit_buy(keyfile):
         assert tickerresponse
         print(tickerresponse)
         # computing realistic price, but unlikely to be filled, even after relative_starttm delay.
-        low_price = tickerresponse.bid.price * 0.5
+        low_price = tickerresponse.bid.price * Decimal(0.5)
         # delayed market order
         bidresponse = await rest_kraken.bid(order=bid(LimitOrder(
             pair='XBTEUR',
