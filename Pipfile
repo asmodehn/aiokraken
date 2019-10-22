@@ -4,7 +4,7 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-pytest-recording = "*"
+pytest-recording = "==0.3.3"  # 0.3.4 is breaking on --block-network it seems
 pytest-asyncio = "*"
 pytest-dependency = "*"
 
