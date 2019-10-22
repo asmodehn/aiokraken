@@ -3,6 +3,7 @@ import unittest
 from parameterized import parameterized
 import json
 import marshmallow
+import decimal
 
 from ..order import OrderSchema, Order
 from ...exceptions import AIOKrakenException
@@ -30,13 +31,9 @@ class TestOrderSchema(unittest.TestCase):
         """ Verifying that expected data parses properly """
         serialized = self.schema.dump(model)
         expected = {
-            "oflags": ["fcib"],
             "pair": "SMTHG/ELSE",
-            "close": None,
-            "starttm": "0",
             "validate": True,
-            "expiretm": "0",
-            "volume": 42
+            "volume": '42'
         }
         # check equality on dicts with usual python types, but display strings.
         assert serialized == expected, print(str(serialized) + '\n' + str(expected))
@@ -50,7 +47,8 @@ class TestOrderSchema(unittest.TestCase):
     ])
     def test_dump_fail(self, model):
         """ Verifying that unexpected data fails properly """
-        with self.assertRaises((AIOKrakenException, marshmallow.exceptions.ValidationError, ValueError)):
+        # TODO : cleanup error flow...
+        with self.assertRaises((AIOKrakenException, marshmallow.exceptions.ValidationError, ValueError, decimal.InvalidOperation )):
             self.schema.dump(model)
 
 

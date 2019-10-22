@@ -1,0 +1,68 @@
+interactions:
+- request:
+    body:
+      pair: XBTEUR
+    headers:
+      User-Agent:
+      - Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML,
+        like Gecko) Chrome/74.0.3729.131 Safari/537.36
+    method: POST
+    uri: https://api.kraken.com/0/public/Ticker
+  response:
+    body:
+      string: '{"error":[],"result":{"XXBTZEUR":{"a":["7562.50000","1","1.000"],"b":["7561.60000","1","1.000"],"c":["7561.00000","0.01210004"],"v":["1477.50736707","2788.15566314"],"p":["7554.63497","7552.93522"],"t":[6914,14686],"l":["7506.80000","7470.00000"],"h":["7647.90000","7647.90000"],"o":"7576.10000"}}}'
+    headers:
+      CF-Cache-Status: DYNAMIC
+      CF-RAY: 52624649ec35a855-CDG
+      Cache-Control: no-cache,max-age=0
+      Connection: keep-alive
+      Content-Encoding: gzip
+      Content-Type: application/json; charset=utf-8
+      Date: Tue, 15 Oct 2019 13:52:37 GMT
+      Expect-CT: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      Server: cloudflare
+      Set-Cookie: __cfduid=dc808ee505133eeadc5d9e2cf916ed9fb1571147557; expires=Wed,
+        14-Oct-20 13:52:37 GMT; path=/; domain=.kraken.com; HttpOnly
+      Transfer-Encoding: chunked
+      Vary: Accept-Encoding
+      strict-transport-security: max-age=15768000
+    status:
+      code: 200
+      message: OK
+    url: https://api.kraken.com/0/public/Ticker
+- request:
+    body:
+      expiretm: '+15'
+      nonce: 1571147557698
+      ordertype: limit
+      pair: XBTEUR
+      price: '11342.4'
+      type: sell
+      volume: '0.01'
+    headers:
+      User-Agent:
+      - Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML,
+        like Gecko) Chrome/74.0.3729.131 Safari/537.36
+    method: POST
+    uri: https://api.kraken.com/0/private/AddOrder
+  response:
+    body:
+      string: '{"error":[],"result":{"descr":{"order":"sell 0.01000000 XBTEUR @ limit
+        11342.4"},"txid":["O3AGK4-NGLJR-MMBQVY"]}}'
+    headers:
+      CF-Cache-Status: DYNAMIC
+      CF-RAY: 5262464b9f20a855-CDG
+      Connection: keep-alive
+      Content-Encoding: gzip
+      Content-Type: application/json; charset=utf-8
+      Date: Tue, 15 Oct 2019 13:52:37 GMT
+      Expect-CT: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      Server: cloudflare
+      Transfer-Encoding: chunked
+      Vary: Accept-Encoding
+      strict-transport-security: max-age=15768000
+    status:
+      code: 200
+      message: OK
+    url: https://api.kraken.com/0/private/AddOrder
+version: 1

@@ -2,30 +2,36 @@
 
 class Order:
     def __init__(self,  pair, volume, leverage = None, relative_starttm = 0, relative_expiretm = 0, fee_currency_base=True, market_price_protection=True, userref = None, execute=False, close= None):
-
+        # Note we probably want to minimize data stored here, if it matches default behavior on kraken, in order to side step potential formatting issues...
         self.pair = pair
         self.volume = volume
-        if leverage: # this is optional member...
+        if leverage:  # this is optional member...
             self.leverage = leverage
 
-        self.starttm = '+' + str(relative_starttm) if relative_starttm > 0 else '0'
-        self.expiretm = '+' + str(relative_expiretm) if relative_expiretm > 0 else '0'
+        if relative_starttm > 0:
+            self.starttm = '+' + str(relative_starttm)
+        if relative_expiretm > 0:
+            self.expiretm = '+' + str(relative_expiretm)
 
-        self.oflags = [
-            'fcib' if fee_currency_base else 'fciq'
-        ]
+        # using default if nothing explicitely asked for
+        if False:  # TMP : oflags via params ?
+            self.oflags = [
+                'fcib' if fee_currency_base else 'fciq'
+            ]  # WARNING : oflags formatting used to cause "InvalidkeyError" from the exchange...
+            # TODO : address this...
         if not market_price_protection:
             self.oflags.append('nompp')
 
-        self.validate = not execute
+        if not execute:
+            self.validate = True
         if userref:  # this is optional member
             self.userref = userref
-
-        self.close = close
+        if close:
+            self.close = close
 
     def __repr__(self):
         # TODO : find better / cleaner way ?
-        return f"Order: pair: {self.pair} volume: {self.volume} close: {repr(self.close)}"
+        return f"Order: pair: {self.pair} volume: {self.volume}"
 
 
 

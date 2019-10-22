@@ -18,7 +18,7 @@ script:
   - python -m aiokraken.utils.tests
   - python -m aiokraken.rest.schemas.tests
   - python -m aiokraken.tests
-  - pytest tests
+  - pytest -s tests --block-network
 
 notifications:
   email: false

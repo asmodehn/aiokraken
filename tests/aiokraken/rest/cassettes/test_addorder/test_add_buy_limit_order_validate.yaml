@@ -3,14 +3,15 @@ interactions:
     body:
       close: null
       expiretm: '0'
-      nonce: 1570544880633
+      nonce: 1570901998887
       oflags:
       - fcib
       ordertype: limit
       pair: XBTEUR
-      price: '1234'
-      starttm: '0'
+      price: '1234.0'
+      starttm: '+60'
       type: buy
+      userref: 54321
       validate: true
       volume: 0.01
     headers:
@@ -25,15 +26,15 @@ interactions:
         1234.0"}}}'
     headers:
       CF-Cache-Status: DYNAMIC
-      CF-RAY: 5228cc804e5ab7bd-CDG
+      CF-RAY: 524adb355dec69aa-CDG
       Connection: keep-alive
       Content-Encoding: gzip
       Content-Type: application/json; charset=utf-8
-      Date: Tue, 08 Oct 2019 14:28:00 GMT
+      Date: Sat, 12 Oct 2019 17:39:59 GMT
       Expect-CT: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
       Server: cloudflare
-      Set-Cookie: __cfduid=d00d7e8236d4502c5dbd124087fb5f4991570544880; expires=Wed,
-        07-Oct-20 14:28:00 GMT; path=/; domain=.kraken.com; HttpOnly
+      Set-Cookie: __cfduid=d50cba0b4aa36b1eafeb61f1b907801e51570901998; expires=Sun,
+        11-Oct-20 17:39:58 GMT; path=/; domain=.kraken.com; HttpOnly
       Transfer-Encoding: chunked
       Vary: Accept-Encoding
       strict-transport-security: max-age=15768000

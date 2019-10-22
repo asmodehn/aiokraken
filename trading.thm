@@ -1,0 +1,42 @@
+<?xml version="1.0"?>
+<alloy>
+
+<view nodetheme="Martha">
+
+<defaultnode/>
+
+<defaultedge/>
+
+<node>
+   <type name="BuyOrder"/>
+   <type name="Int"/>
+   <type name="Order"/>
+   <type name="SellOrder"/>
+   <type name="String"/>
+   <type name="univ"/>
+   <type name="seq/Int"/>
+</node>
+
+<node shape="Dbl Octagon" color="Red">
+   <type name="MarketBuy"/>
+</node>
+
+<node shape="Ellipse" color="Blue">
+   <type name="Market"/>
+</node>
+
+<node shape="Hexagon" color="Yellow">
+   <type name="LimitBuy"/>
+</node>
+
+<node shape="Octagon" color="Green">
+   <type name="LimitSell"/>
+</node>
+
+<node shape="Tpl Octagon" color="Gray">
+   <type name="MarketSell"/>
+</node>
+
+</view>
+
+</alloy>

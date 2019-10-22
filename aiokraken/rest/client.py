@@ -71,6 +71,34 @@ class RestClient:
             LOGGER.error(err)
             return {'error': err}
 
+    async def ticker(self, pair='XBTEUR'):  # TODO : model currency pair/'market' in ccxt (see crypy)
+        """ make public requests to kraken api"""
+
+        kt = self.server.ticker(pair=pair)   # returns the request to be made for this API.)
+        try:  # TODO : pass protocol & host into the request url in order to have it displayed when erroring !
+            async with self.session.post(self.protocol + self.server.url + kt.urlpath, headers=kt.headers, data=kt.data) as response:
+
+                return await kt(response)
+        except aiohttp.ClientConnectorError as err:
+            LOGGER.error(err)
+            return {'error': err}
+        except aiohttp.ClientResponseError as err:
+            LOGGER.error(err)
+            return {'error': err}
+
+    async def openorders(self, trades=False):  # TODO : trades
+        """ make public requests to kraken api"""
+
+        kt = self.server.openorders(trades=trades)   # returns the request to be made for this API.)
+        try:  # TODO : pass protocol & host into the request url in order to have it displayed when erroring !
+            async with self.session.post(self.protocol + self.server.url + kt.urlpath, headers=kt.headers, data=kt.data) as response:
+
+                return await kt(response)
+
+        except aiohttp.ClientResponseError as err:
+            LOGGER.error(err)
+            return {'error': err}
+
     async def bid(self, order):
         """ make public requests to kraken api"""
 
@@ -79,7 +107,7 @@ class RestClient:
         try:
             async with self.session.post(self.protocol + self.server.url + kt.urlpath, headers=kt.headers,
                                          data=kt.data) as response:
-
+                # todo : Return instance of order model (with orderid), validated from hte return of the response
                 return await kt(response)
 
         except aiohttp.ClientResponseError as err:
@@ -90,6 +118,21 @@ class RestClient:
         """ make public requests to kraken api"""
 
         kt = self.server.ask(order = order)
+        print(kt.urlpath)
+        try:
+            async with self.session.post(self.protocol + self.server.url + kt.urlpath, headers=kt.headers,
+                                         data=kt.data) as response:
+                # todo : Return instance of order model (with orderid), validated from hte return of the response
+                return await kt(response)
+
+        except aiohttp.ClientResponseError as err:
+            LOGGER.error(err)
+            return {'error': err}
+
+    async def cancel(self, txid_userref):
+        """ make public requests to kraken api"""
+        # TODO : accept order, (but only use its userref or id)
+        kt = self.server.cancel(txid_userref = txid_userref)
         print(kt.urlpath)
         try:
             async with self.session.post(self.protocol + self.server.url + kt.urlpath, headers=kt.headers,
