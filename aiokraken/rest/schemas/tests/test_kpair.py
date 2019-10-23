@@ -7,8 +7,9 @@ import json
 import marshmallow
 import decimal
 
-from ..kpair import PairModel, PairField, Currency, Fiat, Crypto, Alt
+from ..kpair import PairModel, PairStrategy, PairStringStrategy, PairField, Currency, Fiat, Crypto, Alt
 from ...exceptions import AIOKrakenException
+from hypothesis import given
 
 """
 Test module.
@@ -19,15 +20,13 @@ For simple usecase examples, we should rely on doctests.
 
 class TestPairModel(unittest.TestCase):
 
-    def setUp(self) -> None:
-        # TODO : hypothesis strategy
-        self.model = PairModel(base=Fiat.EUR, quote=Crypto.BTC)
-        # some values are already accessible in model
-        assert self.model.base is Fiat.EUR
-        assert self.model.quote is Crypto.BTC
+    @given(PairStrategy())
+    def test_repr(self, model):
+        assert repr(model) == f"{model.base}/{model.quote}"
 
-    def test_repr(self):
-        assert repr(self.model) == f"{self.model.base}/{self.model.quote}"
+    @given(PairStrategy())
+    def test_str(self, model):
+        assert str(model) == f"{model.base}{model.quote}"
 
 
 class TestPairField(unittest.TestCase):
@@ -35,23 +34,14 @@ class TestPairField(unittest.TestCase):
     def setUp(self) -> None:
         self.field = PairField()
 
-    @parameterized.expand([
-        # we make sure we are using a proper json string
-        ['EURBTC'],
-    ])
+    @given(PairStringStrategy())
     def test_deserialize(self, pairstr):
         p = self.field.deserialize(pairstr)
         assert isinstance(p, PairModel)
-        assert p.base == Fiat.EUR
-        assert p.quote == Crypto.BTC
+        assert isinstance(p.base, Currency)
+        assert isinstance(p.quote, Currency)
 
-    @parameterized.expand([
-        # we make sure we are using a proper json string
-        [PairModel(
-            base=Fiat.EUR,
-            quote=Crypto.BTC
-        )],
-    ])
+    @given(PairStrategy())
     def test_serialize(self, pairmodel):
         p = self.field.serialize('pair', {'pair': pairmodel})
-        assert p == 'EURBTC', p
+        assert p == str(pairmodel), p

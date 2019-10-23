@@ -7,6 +7,7 @@ from .base import BaseSchema
 
 from ..exceptions import AIOKrakenException
 from ...model.currency import Currency, Fiat, Crypto, Alt
+from hypothesis import given, strategies as st
 
 
 @dataclass(frozen=True)
@@ -28,6 +29,11 @@ class PairModel:
     def __str__(self):
         # or using .value ?? see other stringenums like ordertype...
         return f"{self.base}{self.quote}"
+
+
+def PairStrategy(base=st.one_of(st.sampled_from(Fiat), st.sampled_from(Crypto), st.sampled_from(Alt)),
+                  quote=st.one_of(st.sampled_from(Fiat), st.sampled_from(Crypto), st.sampled_from(Alt))):
+    return st.builds(PairModel, base=base, quote=quote)
 
 
 class PairField(fields.Field):
@@ -83,3 +89,11 @@ class PairField(fields.Field):
         :return: The serialized value
         """
         return str(value)
+
+
+@st.composite
+def PairStringStrategy(draw,base=st.one_of(st.sampled_from(Fiat), st.sampled_from(Crypto), st.sampled_from(Alt)),
+                  quote=st.one_of(st.sampled_from(Fiat), st.sampled_from(Crypto), st.sampled_from(Alt))):
+    model = draw(PairStrategy(base=base, quote=quote))
+    field = PairField()
+    return field.serialize('a', {'a': model})
