@@ -1,7 +1,9 @@
+import functools
 import typing
 from enum import Enum
 
 from marshmallow import fields
+from hypothesis import given, strategies as st
 
 
 if __package__:
@@ -34,6 +36,10 @@ class KTypeModel(StringEnum):
     """
     buy = 'buy'
     sell = 'sell'
+
+
+# Using partial call here to delay evaluation (and get same semantics as potentially more complex strategies)
+KTypeStrategy = functools.partial(st.sampled_from, KTypeModel)
 
 
 class KTypeField(fields.Field):
@@ -75,6 +81,13 @@ class KTypeField(fields.Field):
         :return: The serialized value
         """
         return value.value
+
+
+@st.composite
+def KTypeStringStrategy(draw):
+    model = draw(KTypeStrategy())
+    field = KTypeField()
+    return field.serialize('a', {'a': model})
 
 
 if __name__ == "__main__":

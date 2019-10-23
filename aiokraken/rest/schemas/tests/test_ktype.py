@@ -7,8 +7,9 @@ import json
 import marshmallow
 import decimal
 
-from ..ktype import KTypeModel, KTypeField
+from ..ktype import KTypeModel, KTypeField, KTypeStrategy, KTypeStringStrategy
 from ...exceptions import AIOKrakenException
+from hypothesis import given
 
 """
 Test module.
@@ -20,18 +21,14 @@ For simple usecase examples, we should rely on doctests.
 class TestTypeModel(unittest.TestCase):
 
     def test_unknown(self):
+        """simple error verification"""
         with self.assertRaises(ValueError):
             KTypeModel('unknown')
 
-    def test_buy(self):
+    @given(KTypeStrategy())
+    def test_enum(self, model):
         # TODO : hypothesis strategy
-        self.model = KTypeModel('buy')
-        assert self.model == KTypeModel.buy
-
-    def test_sell(self):
-        # TODO : hypothesis strategy
-        self.model = KTypeModel('sell')
-        assert self.model == KTypeModel.sell
+        assert str(model) in ['buy', 'sell']
 
 
 class TestOrderTypeField(unittest.TestCase):
@@ -39,21 +36,12 @@ class TestOrderTypeField(unittest.TestCase):
     def setUp(self) -> None:
         self.field = KTypeField()
 
-    @parameterized.expand([
-        # we make sure we are using a proper json string
-        ['buy', KTypeModel.buy],
-        ['sell', KTypeModel.sell],
-    ])
-    def test_deserialize(self, typestr, expectedmodel):
+    @given(KTypeStringStrategy())
+    def test_deserialize(self, typestr):
         t = self.field.deserialize(typestr)
         assert isinstance(t, KTypeModel)
-        assert t is expectedmodel, t
 
-    @parameterized.expand([
-        # we make sure we are using a proper json string
-        [KTypeModel.buy, 'buy'],
-        [KTypeModel.sell, 'sell'],
-    ])
-    def test_serialize(self, typemodel, expectedstr):
-        t = self.field.serialize('type', {'type': typemodel})
-        assert t == expectedstr, t
+    @given(KTypeStrategy())
+    def test_serialize(self, typemodel):
+        t = self.field.serialize('t', {'t': typemodel})
+        assert t == str(typemodel), t
