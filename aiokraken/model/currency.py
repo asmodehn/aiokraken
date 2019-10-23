@@ -94,23 +94,6 @@ def currency(c: str) -> typing.Optional[Currency]:
         raise CurrencyError
 
 
-@dataclass(frozen=True)
-class Pair:
-    """
-    >>> p=Pair(base="EUR", quote="XBT")
-    >>> p.base
-    EUR
-    >>> p.quote
-    XBT
-    """
-
-    base: typing.Union[Fiat, Crypto, Alt]
-    quote: typing.Union[Fiat, Crypto, Alt]
-
-    def __repr__(self):
-        return f"{self.base}/{self.quote}"
-
-
 if __name__ == "__main__":
     import pytest
     pytest.main(['-s', '--doctest-modules', '--doctest-continue-on-failure', __file__])
