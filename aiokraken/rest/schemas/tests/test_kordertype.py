@@ -7,8 +7,9 @@ import json
 import marshmallow
 import decimal
 
-from ..kordertype import KOrderTypeModel, KOrderTypeField
+from ..kordertype import KOrderTypeModel, KOrderTypeField, KOrderTypeStrategy, KOrderTypeStringStrategy
 from ...exceptions import AIOKrakenException
+from hypothesis import given
 
 """
 Test module.
@@ -23,25 +24,22 @@ class TestOrderTypeModel(unittest.TestCase):
         with self.assertRaises(ValueError):
             KOrderTypeModel('unknown')
 
-    def test_market(self):
-        # TODO : hypothesis strategy
-        self.model = KOrderTypeModel('market')
-        assert self.model == KOrderTypeModel.market
-
-    def test_limit(self):
-        # TODO : hypothesis strategy
-        self.model = KOrderTypeModel('limit')
-        assert self.model == KOrderTypeModel.limit
-
-    def test_stop_loss(self):
-        # TODO : hypothesis strategy
-        self.model = KOrderTypeModel('stop-loss')
-        assert self.model == KOrderTypeModel.stop_loss
-
-    def test_take_profit(self):
-        # TODO : hypothesis strategy
-        self.model = KOrderTypeModel('take-profit')
-        assert self.model == KOrderTypeModel.take_profit
+    @given(KOrderTypeStrategy())
+    def test_enum(self, model):
+        assert model.value in [
+            'market',
+            'limit',
+            'stop-loss',
+            'take-profit',
+            'stop-loss-profit',
+            'stop-loss-profit-limit',
+            'stop-loss-limit',
+            'take-profit-limit',
+            'trailing-stop',
+            'trailing-stop-limit',
+            'stop-loss-and-limit',
+            'settle-position',
+        ], model.value
 
 
 class TestOrderTypeField(unittest.TestCase):
@@ -49,25 +47,12 @@ class TestOrderTypeField(unittest.TestCase):
     def setUp(self) -> None:
         self.field = KOrderTypeField()
 
-    @parameterized.expand([
-        # we make sure we are using a proper json string
-        ['market', KOrderTypeModel.market],
-        ['limit', KOrderTypeModel.limit],
-        ['stop-loss', KOrderTypeModel.stop_loss],
-        ['take-profit', KOrderTypeModel.take_profit]
-    ])
-    def test_deserialize(self, ordertypestr, expectedmodel):
+    @given(KOrderTypeStringStrategy())
+    def test_deserialize(self, ordertypestr):
         p = self.field.deserialize(ordertypestr)
         assert isinstance(p, KOrderTypeModel)
-        assert p is expectedmodel
 
-    @parameterized.expand([
-        # we make sure we are using a proper json string
-        [KOrderTypeModel.market, 'market'],
-        [KOrderTypeModel.limit, 'limit'],
-        [KOrderTypeModel.stop_loss, 'stop-loss'],
-        [KOrderTypeModel.take_profit, 'take-profit']
-    ])
-    def test_serialize(self, ordertypemodel, expectedstr):
+    @given(KOrderTypeStrategy())
+    def test_serialize(self, ordertypemodel):
         ot = self.field.serialize('ordertype', {'ordertype': ordertypemodel})
-        assert ot == expectedstr, ot
+        assert ot == ordertypemodel.value, ot

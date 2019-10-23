@@ -27,8 +27,7 @@ class TestTypeModel(unittest.TestCase):
 
     @given(KTypeStrategy())
     def test_enum(self, model):
-        # TODO : hypothesis strategy
-        assert str(model) in ['buy', 'sell']
+        assert model.value in ['buy', 'sell']
 
 
 class TestOrderTypeField(unittest.TestCase):
@@ -44,4 +43,4 @@ class TestOrderTypeField(unittest.TestCase):
     @given(KTypeStrategy())
     def test_serialize(self, typemodel):
         t = self.field.serialize('t', {'t': typemodel})
-        assert t == str(typemodel), t
+        assert t == typemodel.value, t

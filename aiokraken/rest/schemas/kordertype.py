@@ -1,8 +1,10 @@
+import functools
 import typing
 
 from enum import (IntEnum)
 
 from marshmallow import fields
+from hypothesis import given, strategies as st
 
 if __package__:
     from ...utils.stringenum import StringEnum
@@ -40,6 +42,10 @@ class KOrderTypeModel(StringEnum):
     trailing_stop_limit = 'trailing-stop-limit'
     stop_loss_and_limit = 'stop-loss-and-limit'
     settle_position = 'settle-position'
+
+
+# Using partial call here to delay evaluation (and get same semantics as potentially more complex strategies)
+KOrderTypeStrategy = functools.partial(st.sampled_from, KOrderTypeModel)
 
 
 class KOrderTypeField(fields.Field):
@@ -81,6 +87,13 @@ class KOrderTypeField(fields.Field):
         :return: The serialized value
         """
         return value.value
+
+
+@st.composite
+def KOrderTypeStringStrategy(draw):
+    model = draw(KOrderTypeStrategy())
+    field = KOrderTypeField()
+    return field.serialize('a', {'a': model})
 
 
 if __name__ == "__main__":
