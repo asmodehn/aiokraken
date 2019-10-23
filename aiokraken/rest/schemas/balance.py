@@ -1,32 +1,53 @@
+from dataclasses import dataclass
+
 import marshmallow
+import typing
 from marshmallow import fields, pre_load, post_load
 from decimal import Decimal
 
+from aiokraken.rest.schemas.kcurrency import KCurrency
+from .base import BaseOptionalSchema
 from ..exceptions import AIOKrakenException
 from ...model.time import Time
 
+@dataclass(frozen=True, init=False)
+class Balance:
 
-class BalanceSchema(marshmallow.Schema):
-    class Meta:
-        # Pass EXCLUDE as Meta option to keep marshmallow 2 behavior
-        # ref: https://marshmallow.readthedocs.io/en/stable/upgrading.html#upgrading-to-3-0
-        unknown = getattr(marshmallow, "EXCLUDE", None)
+    accounts: typing.Dict[KCurrency, Decimal]
 
-    # """ Schema to parse the string received"""
-    # unixtime = marshmallow.fields.Int(required=True)
-    # # rfc1123 ??
+    def __init__(self, **accounts):
+        object.__setattr__(self, 'accounts', {})
+        for c, a in accounts.items():
+            try:
+                self.accounts[KCurrency(c)] = Decimal(a)  # todo : change to "money" to embed currency in there...
+            except Exception as e:
+                raise e  # TODO : handle properly
 
-    ZEUR = marshmallow.fields.Decimal(default=Decimal(0.0))
-    XXBT = marshmallow.fields.Decimal(default=Decimal(0.0))
-    XXRP = marshmallow.fields.Decimal(default=Decimal(0.0))
+    def __repr__(self):
+        """ Unambiguous internal representation"""
+        return repr([f"{c}: {a}" for c, a in self.accounts.items()])
 
 
-    @marshmallow.pre_load(pass_many=False)
-    def get_data(self, data, **kwargs):
-        return data
+# Generating a Balance Schema dynamically from the set of known currencies
+# Unknown currencies are simply ignored.
+def _balance_schema_helper():
+    """helper function to create balance schemas from the KCurrency enum
+    """
 
-    @marshmallow.post_load(pass_many=False)
     def make_balance(self, data, **kwargs):
-        return data
-        #return Time(data.get("unixtime"))
+        # Note : data is supposed to be a dict
+        assert isinstance(data, dict)
+        return Balance(**data)
 
+    # build fields
+    fields_dict = {}
+    for _, c in KCurrency.__members__.items():
+        # CAREFUL : we want the kraken valid string as field name
+        fields_dict.setdefault(c.value, marshmallow.fields.Decimal(default=Decimal(0.0)))
+
+    fields_dict.update({'make_balance': marshmallow.post_load(pass_many=False)(make_balance)})
+
+    return type(f"BalanceSchema", (BaseOptionalSchema, ), fields_dict)
+
+
+BalanceSchema = _balance_schema_helper()

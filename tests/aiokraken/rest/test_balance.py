@@ -2,7 +2,7 @@ import pytest
 
 from aiokraken.rest.api import API, Server
 from aiokraken.rest.client import RestClient
-#from aiokraken.model. import Balance
+from aiokraken.rest.schemas.balance import Balance, BalanceSchema
 
 
 @pytest.mark.asyncio
@@ -17,10 +17,10 @@ async def test_balance(keyfile):
         rest_kraken = RestClient(server=Server())
     try:
         response = await rest_kraken.balance()
-        await rest_kraken.close()
-        print(f'response is {response}')
 
-        # TODO : assert smthg ?
+        assert isinstance(response, Balance)
+        print(response)
+
 
     finally:
         await rest_kraken.close()

@@ -35,27 +35,36 @@ To use types to filter out what we are not interested in.
 # Unknown currencies will be ignored
 class KCurrency(Enum):
     """
-    >>> KCurrency('EUR')
+    >>> KCurrency('ZEUR')
     EUR
-    >>> KCurrency('XBT')
+
+    >>> KCurrency('XXBT')
     BTC
     >>> KCurrency.XBT == KCurrency.BTC
     True
-    >>> str(KCurrency('XBT'))
-    'XBT'
+    >>> str(KCurrency('XXBT'))
+    'XXBT'
+
+    >>> KCurrency('XXRP')
+    XRP
     """
     # Fiat
-    EUR = 'EUR'
+    EUR = 'ZEUR'
     USD = 'USD'
     CAD = 'CAD'
     KRW = 'KRW'
     JPY = 'JPY'
     # Crypto (aliases allowed)
-    BTC = 'XBT'
-    XBT = 'XBT'
-    ETC = 'ETC'
-    ETH = 'ETC'
-    XRP = 'XRP'
+    BTC = 'XXBT'
+    XBT = 'XXBT'
+    ETC = 'XETC'
+    ETH = 'XETC'
+    XRP = 'XXRP'
+    EOS = 'EOS'
+    BCH = 'BCH'
+    ADA = 'ADA'
+    XTZ = 'XTZ'
+    BSV = 'BSV'
 
     def __str__(self) -> str:
         """Kraken representation"""
