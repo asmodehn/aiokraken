@@ -26,8 +26,8 @@ class PairModel:
         return f"{self.base}/{self.quote}"
 
     def __str__(self):
+        # or using .value ?? see other stringenums like ordertype...
         return f"{self.base}{self.quote}"
-
 
 
 class PairField(fields.Field):
@@ -54,7 +54,9 @@ class PairField(fields.Field):
         for k in ['base', 'quote']:
             while i <= len(value):
                 # some kind of pattern matching... for python 3.7
-                # TODO : is there a better way ? Overload enum ?
+                # TODO : is there a better way ? Overload enum ? try/except ?
+                # Ref : https://pypi.org/project/algebraic-data-types/
+                # Ref : https://github.com/python/mypy/issues/2464
                 if value[:i] in Fiat.__members__:
                     p.setdefault(k, Fiat(value[:i]))
                 elif value[:i] in Crypto.__members__:
