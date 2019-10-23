@@ -7,7 +7,7 @@ import json
 import marshmallow
 import decimal
 
-from ..kpair import PairModel, PairStrategy, PairStringStrategy, PairField, Currency, Fiat, Crypto, Alt
+from ..kpair import PairModel, PairStrategy, PairStringStrategy, PairField, KCurrency
 from ...exceptions import AIOKrakenException
 from hypothesis import given
 
@@ -22,7 +22,7 @@ class TestPairModel(unittest.TestCase):
 
     @given(PairStrategy())
     def test_repr(self, model):
-        assert repr(model) == f"{model.base}/{model.quote}"
+        assert repr(model) == f"{repr(model.base)}/{repr(model.quote)}"
 
     @given(PairStrategy())
     def test_str(self, model):
@@ -38,8 +38,8 @@ class TestPairField(unittest.TestCase):
     def test_deserialize(self, pairstr):
         p = self.field.deserialize(pairstr)
         assert isinstance(p, PairModel)
-        assert isinstance(p.base, Currency)
-        assert isinstance(p.quote, Currency)
+        assert isinstance(p.base, KCurrency)
+        assert isinstance(p.quote, KCurrency)
 
     @given(PairStrategy())
     def test_serialize(self, pairmodel):

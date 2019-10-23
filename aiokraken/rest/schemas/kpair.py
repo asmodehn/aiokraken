@@ -6,33 +6,32 @@ from marshmallow import fields, pre_load, post_load
 from .base import BaseSchema
 
 from ..exceptions import AIOKrakenException
-from ...model.currency import Currency, Fiat, Crypto, Alt
+from .kcurrency import KCurrency, KCurrencyStrategy
 from hypothesis import given, strategies as st
 
 
 @dataclass(frozen=True)
 class PairModel:
     """
-    >>> p=PairModel(base=Fiat("EUR"), quote=Crypto("XBT"))
+    >>> p=PairModel(base=KCurrency("EUR"), quote=KCurrency("XBT"))
     >>> p.base
     EUR
     >>> p.quote
     XBT
     """
 
-    base: typing.Union[Fiat, Crypto, Alt]
-    quote: typing.Union[Fiat, Crypto, Alt]
+    base: KCurrency
+    quote: KCurrency
 
     def __repr__(self):
-        return f"{self.base}/{self.quote}"
+        return f"{repr(self.base)}/{repr(self.quote)}"
 
     def __str__(self):
         # or using .value ?? see other stringenums like ordertype...
         return f"{self.base}{self.quote}"
 
 
-def PairStrategy(base=st.one_of(st.sampled_from(Fiat), st.sampled_from(Crypto), st.sampled_from(Alt)),
-                  quote=st.one_of(st.sampled_from(Fiat), st.sampled_from(Crypto), st.sampled_from(Alt))):
+def PairStrategy(base=KCurrencyStrategy(), quote=KCurrencyStrategy()):
     return st.builds(PairModel, base=base, quote=quote)
 
 
@@ -63,18 +62,14 @@ class PairField(fields.Field):
                 # TODO : is there a better way ? Overload enum ? try/except ?
                 # Ref : https://pypi.org/project/algebraic-data-types/
                 # Ref : https://github.com/python/mypy/issues/2464
-                if value[:i] in Fiat.__members__:
-                    p.setdefault(k, Fiat(value[:i]))
-                elif value[:i] in Crypto.__members__:
-                    p.setdefault(k, Crypto(value[:i]))
-                elif value[:i] in Alt.__members__:
-                    p.setdefault(k, Alt(value[:i]))
-                if value[:i] in [v for v in Fiat.__members__] + [v for v in Crypto.__members__] + [v for v in Alt.__members__]:
+
+                try:
+                    p.setdefault(k, KCurrency(value[:i]))
                     value = value[i:]
                     i=1
                     break
-                else:
-                    i+=1
+                except Exception as e:
+                    i += 1
 
         return PairModel(base=p['base'], quote=p['quote'])
 
@@ -92,8 +87,7 @@ class PairField(fields.Field):
 
 
 @st.composite
-def PairStringStrategy(draw,base=st.one_of(st.sampled_from(Fiat), st.sampled_from(Crypto), st.sampled_from(Alt)),
-                  quote=st.one_of(st.sampled_from(Fiat), st.sampled_from(Crypto), st.sampled_from(Alt))):
+def PairStringStrategy(draw,base=KCurrencyStrategy(), quote=KCurrencyStrategy()):
     model = draw(PairStrategy(base=base, quote=quote))
     field = PairField()
     return field.serialize('a', {'a': model})
