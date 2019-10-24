@@ -33,33 +33,57 @@ To use types to filter out what we are not interested in.
 
 # Enum to store accepted currencies.
 # Unknown currencies will be ignored
+# Ref : https://support.kraken.com/hc/en-us/articles/360000678446
+# Ref : https://support.kraken.com/hc/en-us/articles/360001185506
 class KCurrency(Enum):
     """
-    >>> KCurrency('ZEUR')
+    >>> KCurrency('EUR')
     EUR
 
+    >>> KCurrency('XBT')
+    XBT
+
+    Careful, aliases are not handled when parsing
+    >>> KCurrency('BTC')
+    Traceback (most recent call last):
+        ...
+    ValueError: 'BTC' is not a valid KCurrency
+
+    However:
+    >>> KCurrency.BTC
+    XBT
+
+    Similarly:
     >>> KCurrency('XXBT')
-    BTC
+    Traceback (most recent call last):
+        ...
+    ValueError: 'XXBT' is not a valid KCurrency
+
     >>> KCurrency.XBT == KCurrency.BTC
     True
-    >>> str(KCurrency('XXBT'))
-    'XXBT'
 
-    >>> KCurrency('XXRP')
-    XRP
+    str() returns the value for serializing
+    >>> str(KCurrency.BTC)
+    'XBT'
+
+    repr() returns the (first in the list) name for internal usage
+    >>> repr(KCurrency.BTC)
+    'XBT'
+
     """
     # Fiat
-    EUR = 'ZEUR'
+    EUR = 'EUR'
     USD = 'USD'
     CAD = 'CAD'
     KRW = 'KRW'
     JPY = 'JPY'
-    # Crypto (aliases allowed)
-    BTC = 'XXBT'
-    XBT = 'XXBT'
-    ETC = 'XETC'
-    ETH = 'XETC'
-    XRP = 'XXRP'
+    # Crypto (name aliases allowed. value must be unique, as per the desired semantic)
+    # Maybe ? https://www.notinventedhere.org/articles/python/how-to-use-strings-as-name-aliases-in-python-enums.html
+    XBT = 'XBT'
+    BTC = 'XBT'
+    ETC = 'ETC'
+    ETH = 'ETH'
+    XRP = 'XRP'
     EOS = 'EOS'
     BCH = 'BCH'
     ADA = 'ADA'
@@ -67,13 +91,12 @@ class KCurrency(Enum):
     BSV = 'BSV'
 
     def __str__(self) -> str:
-        """Kraken representation"""
+        """Kraken default representation for sending data."""
         return f'{self.value}'
 
     def __repr__(self) -> str:
-        """Internal representation"""
+        """Internal representation, unique."""
         return f'{self.name}'
-
 
 
 # Using partial call here to delay evaluation (and get same semantics as potentially more complex strategies)
@@ -88,8 +111,21 @@ class KCurrencyField(fields.Field):
     'EUR'
     >>> KCurrencyField().deserialize('EUR')
     EUR
-
     """
+
+    _alias_map = {
+        # Fiat
+        'EUR': ['EUR', 'ZEUR'],
+        'GBP': ['GBP', 'ZGBP'],
+        'USD': ['USD', 'ZUSD'],
+        # Crypto
+        'XBT': ['XBT', 'BTC', 'XXBT'],
+        'ETH': ['ETH', 'XETH'],
+        'ETC': ['ETC', 'XETC'],
+        'XRP': ['XRP', 'XXRP'],
+
+    }
+
     def _deserialize(
             self,
             value: typing.Any,
@@ -106,7 +142,20 @@ class KCurrencyField(fields.Field):
         :raise ValidationError: In case of formatting or validation failure.
         :return: The deserialized value.
         """
-        return KCurrency(value)
+
+        c = None
+        try:
+            c = KCurrency(value)
+        except ValueError as ve:
+            # value not using recognisable name. maybe alias ?
+            for k, v in self._alias_map.items():
+                if value in v:
+                    c = KCurrency(k)
+
+        if c is None:
+            raise ValueError(f"'{value}' is not a valid KCurrency, nor a known alias")
+        else:
+            return c
 
     def _serialize(self, value: typing.Any, attr: str, obj: typing.Any, **kwargs):
         """Serializes ``value`` to a basic Python datatype. Noop by default.
@@ -118,6 +167,7 @@ class KCurrencyField(fields.Field):
         :param dict kwargs: Field-specific keyword arguments.
         :return: The serialized value
         """
+        # serializing with default data
         return value.value
 
 

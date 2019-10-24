@@ -19,6 +19,13 @@ class TMModel:
     def __str__(self)-> str:
         return ("+" if self.relative else "") + str(self.value)
 
+    def __bool__(self) -> bool:
+        # truthy if meaningful ( != not expired )
+        if self.relative:
+            return self.value > 0
+        else:
+            return bool(self.value)  # any value here is meaningful
+
     def expired(self) -> bool:
         if self.relative:
             return self.value <= 0  # TODO This requires a reference time...

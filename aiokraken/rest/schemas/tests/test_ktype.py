@@ -7,7 +7,7 @@ import json
 import marshmallow
 import decimal
 
-from ..ktype import KTypeModel, KTypeField, KTypeStrategy, KTypeStringStrategy
+from ..ktype import KABTypeModel, KABTypeField, KABTypeStrategy, KABTypeStringStrategy
 from ...exceptions import AIOKrakenException
 from hypothesis import given
 
@@ -23,9 +23,9 @@ class TestTypeModel(unittest.TestCase):
     def test_unknown(self):
         """simple error verification"""
         with self.assertRaises(ValueError):
-            KTypeModel('unknown')
+            KABTypeModel('unknown')
 
-    @given(KTypeStrategy())
+    @given(KABTypeStrategy())
     def test_enum(self, model):
         assert model.value in ['buy', 'sell']
 
@@ -33,14 +33,14 @@ class TestTypeModel(unittest.TestCase):
 class TestOrderTypeField(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.field = KTypeField()
+        self.field = KABTypeField()
 
-    @given(KTypeStringStrategy())
+    @given(KABTypeStringStrategy())
     def test_deserialize(self, typestr):
         t = self.field.deserialize(typestr)
-        assert isinstance(t, KTypeModel)
+        assert isinstance(t, KABTypeModel)
 
-    @given(KTypeStrategy())
+    @given(KABTypeStrategy())
     def test_serialize(self, typemodel):
         t = self.field.serialize('t', {'t': typemodel})
         assert t == typemodel.value, t

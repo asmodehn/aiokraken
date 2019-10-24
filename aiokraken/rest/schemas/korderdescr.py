@@ -4,7 +4,7 @@ from decimal import Decimal
 from enum import (IntEnum)
 from dataclasses import dataclass, field, asdict
 
-from marshmallow import fields, post_load, pre_dump, post_dump
+from marshmallow import fields, post_load, pre_dump, post_dump, pre_load
 from hypothesis import strategies as st
 
 if not __package__:
@@ -12,7 +12,7 @@ if not __package__:
 
 from .base import BaseSchema
 from .kpair import PairModel, PairField, PairStrategy
-from .ktype import KTypeModel, KTypeField, KTypeStrategy
+from .ktype import KABTypeModel, KABTypeField, KABTypeStrategy
 from .kordertype import KOrderTypeModel, KOrderTypeField, KOrderTypeStrategy
 from ...utils.stringenum import StringEnum
 
@@ -20,7 +20,7 @@ from ...utils.stringenum import StringEnum
 @dataclass(init=False, repr=False)
 class KOrderDescrModel:
     pair: PairModel
-    type: KTypeModel
+    abtype: KABTypeModel
     ordertype: KOrderTypeModel
     order: str
     price: typing.Optional[Decimal]
@@ -28,12 +28,12 @@ class KOrderDescrModel:
     leverage: Decimal  # TODO
     close: typing.Optional[str]  # TODO
 
-    def __init__(self, pair: PairModel, type: KTypeModel, ordertype: KOrderTypeModel, price:typing.Optional[Decimal]=None, price2:typing.Optional[Decimal]=None, leverage:Decimal=Decimal(0), close=None, order:str=''):
+    def __init__(self, pair: PairModel, abtype: KABTypeModel, ordertype: KOrderTypeModel, price:typing.Optional[Decimal]=None, price2:typing.Optional[Decimal]=None, leverage:Decimal=Decimal(0), close=None, order:str= ''):
         """
         Initializes a Order Description.
         price and price2 are optional. consistency with ordertype is handled in code here.
         :param pair: The pair for this order
-        :param type: the direction of order (buy/sell)
+        :param abtype: the direction of order (buy/sell)
         :param ordertype: the type of order (market, limit, stoploss, etc.)
         :param price: the price (depends on ordertype - see API doc)
         :param price2: the price2 (depends on ordertype - see API doc)
@@ -41,7 +41,7 @@ class KOrderDescrModel:
         :param close: the close order related to this one
         """
         self.pair = pair
-        self.type = type
+        self.abtype = abtype
         self.ordertype = ordertype
 
         #     limit (price = limit price)
@@ -72,23 +72,23 @@ class KOrderDescrModel:
         self.leverage = leverage
         self.close = close
 
-        self.order = order or f"{self.type} @ {self.price} {self.ordertype}"  # TODO : match that onto kraken returned order descr
+        self.order = order or f"{self.abtype} @ {self.price} {self.ordertype}"  # TODO : match that onto kraken returned order descr
 
     def __repr__(self):
-        return self.order
+        return f"{self.pair}: {self.order}"
 
 
 @st.composite
 def KOrderDescrStrategy(draw,
-        pair=PairStrategy(),
-        type=KTypeStrategy(),
-        ordertype=KOrderTypeStrategy(),
-        order= None,  # can be overriden by caller # TODO :refine this...
-        price= None,  # can be overriden by caller
-        price2= None,  # can be overriden by caller
-        leverage= st.decimals(allow_nan=False, allow_infinity=False),  # TODO
-        close= st.one_of(st.text(max_size=5), st.none()),  # TODO
-):
+                        pair=PairStrategy(),
+                        abtype=KABTypeStrategy(),
+                        ordertype=KOrderTypeStrategy(),
+                        order= None,  # can be overriden by caller # TODO :refine this...
+                        price= None,  # can be overriden by caller
+                        price2= None,  # can be overriden by caller
+                        leverage= st.decimals(allow_nan=False, allow_infinity=False),  # TODO
+                        close= st.one_of(st.text(max_size=5), st.none()),  # TODO
+                        ):
     # Logic to get correct assignement (as per API documentation)  of price and price2
     if order is None:
         order = st.none()  # same logic as for price : None === st.none() generator...
@@ -114,7 +114,7 @@ def KOrderDescrStrategy(draw,
             price2 = st.none()
 
     return KOrderDescrModel(pair=draw(pair),
-                            type =draw(type),
+                            abtype=draw(abtype),
                             ordertype=ot,
                             order=draw(order),
                             price=draw(price),
@@ -125,13 +125,20 @@ def KOrderDescrStrategy(draw,
 
 class KOrderDescrSchema(BaseSchema):
     pair = PairField()
-    type = KTypeField()
+    abtype = KABTypeField(data_key='type')  # need rename to not confuse python on this...
     ordertype = KOrderTypeField()
     price = fields.Decimal(required=False, as_string=True)
     price2 = fields.Decimal(required=False, as_string=True)
-    leverage = fields.Decimal(required=False, as_string=True)  # ???
+    leverage = fields.Decimal(required=False, as_string=True)  # Kraken returns none on this (cf cassettes)...
     order = fields.Str()
     close = fields.Str(required=False)  # ???
+
+    @pre_load
+    def filter_dict(self, data, **kwargs):
+        # filtering None fields
+        if data.get('leverage') in ['none', 'None']:
+            data.pop('leverage')
+        return data
 
     @post_load
     def build_model(self, data, **kwargs):
@@ -142,11 +149,12 @@ class KOrderDescrSchema(BaseSchema):
         data = {k: v for k, v in data.items() if v is not None}
         return data
 
+
 @st.composite
 def KOrderDescrDictStrategy(draw,
                             # Here we mirror arguments for the model strategy
                             pair=PairStrategy(),
-                            type=KTypeStrategy(),
+                            abtype=KABTypeStrategy(),
                             ordertype=KOrderTypeStrategy(),
                             order= None,  # TODO :refine this...
                             price=None,
@@ -154,7 +162,7 @@ def KOrderDescrDictStrategy(draw,
                             leverage= st.decimals(allow_nan=False, allow_infinity=False),  # TODO
                             close= st.one_of(st.text(max_size=5), st.none()),  # TODO
                             ):
-    model = draw(KOrderDescrStrategy(pair=pair, type = type, ordertype=ordertype, order=order, price=price, price2=price2, leverage=leverage, close=close))
+    model = draw(KOrderDescrStrategy(pair=pair, abtype= abtype, ordertype=ordertype, order=order, price=price, price2=price2, leverage=leverage, close=close))
     schema = KOrderDescrSchema()
     return schema.dump(model)
 

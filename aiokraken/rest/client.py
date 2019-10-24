@@ -99,10 +99,10 @@ class RestClient:
             LOGGER.error(err)
             return {'error': err}
 
-    async def bid(self, order):
+    async def bid(self, order, leverage=0):
         """ make public requests to kraken api"""
 
-        kt = self.server.bid(order=order)
+        kt = self.server.bid(order=order, leverage=leverage)
         print(kt.urlpath)
         try:
             async with self.session.post(self.protocol + self.server.url + kt.urlpath, headers=kt.headers,
@@ -114,10 +114,10 @@ class RestClient:
             LOGGER.error(err)
             return {'error': err}
 
-    async def ask(self, order):
+    async def ask(self, order, leverage=0):
         """ make public requests to kraken api"""
 
-        kt = self.server.ask(order = order)
+        kt = self.server.ask(order = order, leverage=leverage)
         print(kt.urlpath)
         try:
             async with self.session.post(self.protocol + self.server.url + kt.urlpath, headers=kt.headers,

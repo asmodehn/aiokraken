@@ -1,6 +1,7 @@
 import marshmallow
 import typing
 from dataclasses import dataclass
+
 from marshmallow import fields, pre_load, post_load
 
 from .base import BaseSchema
@@ -13,15 +14,19 @@ from hypothesis import given, strategies as st
 @dataclass(frozen=True)
 class PairModel:
     """
-    >>> p=PairModel(base=KCurrency("EUR"), quote=KCurrency("XBT"))
+    >>> p=PairModel(base=KCurrency("XBT"), quote=KCurrency("EUR"))
     >>> p.base
-    EUR
-    >>> p.quote
     XBT
+    >>> p.quote
+    EUR
     """
 
     base: KCurrency
     quote: KCurrency
+
+    # def __post_init__(self):
+    #     if self.base == self.quote:
+    #         raise ValueError(f"Pair cannot have base {self.base} and quote {self.quote}")
 
     def __repr__(self):
         return f"{repr(self.base)}/{repr(self.quote)}"
@@ -33,6 +38,15 @@ class PairModel:
 
 def PairStrategy(base=KCurrencyStrategy(), quote=KCurrencyStrategy()):
     return st.builds(PairModel, base=base, quote=quote)
+
+# This makes hypothesis blow up because of inability to shrink...
+# @st.composite
+# def PairStrategy(draw, base=KCurrencyStrategy(), quote=KCurrencyStrategy()):
+#     b = draw(base)
+#     q = draw(quote)
+#     while q == b:
+#         q = draw(quote)
+#     return PairModel(base=b, quote=q)
 
 
 class PairField(fields.Field):
@@ -53,25 +67,32 @@ class PairField(fields.Field):
         :return: The deserialized value.
 
         """
-        # TODO : proper Pair parsing !!!
         p = {}
         i=1
+        iv = value[:]  # we need to keep value intact while parsing
         for k in ['base', 'quote']:
-            while i <= len(value):
+            while i <= len(iv):
                 # some kind of pattern matching... for python 3.7
                 # TODO : is there a better way ? Overload enum ? try/except ?
                 # Ref : https://pypi.org/project/algebraic-data-types/
                 # Ref : https://github.com/python/mypy/issues/2464
 
                 try:
-                    p.setdefault(k, KCurrency(value[:i]))
-                    value = value[i:]
+                    p.setdefault(k, KCurrency(iv[:i]))
+                    iv = iv[i:]
                     i=1
                     break
-                except Exception as e:
+                except ValueError as ve:
+                    # not a valid currency expected
                     i += 1
 
-        return PairModel(base=p['base'], quote=p['quote'])
+        try :
+            pm = PairModel(base=p['base'], quote=p['quote'])
+        except KeyError as ke:
+            # reinterpreting the exception (is there a better way ?)
+            raise ValueError(f"Cannot extract currencies from {value}")
+
+        return pm
 
     def _serialize(self, value: typing.Any, attr: str, obj: typing.Any, **kwargs):
         """Serializes ``value`` to a basic Python datatype. Noop by default.

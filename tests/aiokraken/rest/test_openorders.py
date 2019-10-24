@@ -4,7 +4,8 @@ import pytest
 
 from aiokraken.rest.api import API, Server
 from aiokraken.rest.client import RestClient
-from aiokraken.model.order import MarketOrder, LimitOrder, StopLossOrder, bid, ask
+#from aiokraken.model.order import MarketOrder, LimitOrder, StopLossOrder, bid, ask
+from aiokraken.rest.schemas.krequestorder import RequestOrderModel
 
 
 @pytest.mark.asyncio
@@ -22,7 +23,7 @@ async def test_openorders_empty(keyfile):
         await rest_kraken.close()
     print(f'response is {response}')
 
-    assert response
+    assert response == {}
 
 
 @pytest.mark.asyncio
@@ -40,13 +41,13 @@ async def test_openorders_one_high_limit_sell(keyfile):
         print(tickerresponse)
         # pass high limit sell order
         ask_high_price = tickerresponse.ask.price * Decimal(1.5)
-        askresponse = await rest_kraken.ask(order=ask(LimitOrder(
+        askresponse = await rest_kraken.ask(order=RequestOrderModel(
             pair='XBTEUR',
             volume='0.01',
-            limit_price=ask_high_price,
             relative_expiretm=15,
             execute=True
-        )))
+        ).limit(
+            limit_price=ask_high_price,))
         assert askresponse
         print(askresponse)
 
@@ -76,13 +77,13 @@ async def test_openorders_one_low_limit_buy(keyfile):
         # computing realistic price, but unlikely to be filled, even after relative_starttm delay.
         low_price = tickerresponse.bid.price * Decimal(0.5)
         # delayed market order
-        bidresponse = await rest_kraken.bid(order=bid(LimitOrder(
+        bidresponse = await rest_kraken.bid(order=RequestOrderModel(
             pair='XBTEUR',
             volume='0.01',
-            limit_price=low_price,
             relative_expiretm=15,
             execute=True
-        )))
+        ).limit(
+            limit_price=low_price,))
         assert bidresponse
         print(bidresponse)
 

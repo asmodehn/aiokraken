@@ -23,6 +23,7 @@ ipympl = "*"
 jupyterlab-git = "*"
 pandas-ta = "*"
 pyjanitor = "*"
+hypothesis = "*"
 
 [requires]
 python_version = "3.7"

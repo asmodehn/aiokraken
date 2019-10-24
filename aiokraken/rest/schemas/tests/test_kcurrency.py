@@ -29,7 +29,7 @@ class TestKCurrency(unittest.TestCase):
     def test_enum(self, model):
         assert model.value in ['EUR', 'USD', 'CAD', 'KRW', 'JPY',
                                # TODO : deal with aliases properly
-                               'XBT', 'XBT', 'ETC', 'ETC', 'XRP']
+                               'XBT', 'BTC', 'ETC', 'ETH', 'XRP', 'EOS', 'BCH', 'ADA', 'XTZ', 'BSV'], model.value
 
 
 class TestOrderTypeField(unittest.TestCase):

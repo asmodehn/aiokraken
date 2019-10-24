@@ -14,41 +14,42 @@ else:
 
 # Enums to store accepted strings.
 # Unknown strings will be ignored
-class KTypeModel(StringEnum):
+class KABTypeModel(StringEnum):
     """
     Accepts transparently strings
-    >>> KTypeModel('sell')
+    >>> KABTypeModel('sell')
     sell
-    >>> str(KTypeModel('sell'))
+    >>> str(KABTypeModel('sell'))
     'sell'
 
-    >>> KTypeModel('buy')
+    >>> KABTypeModel('buy')
     buy
-    >>> str(KTypeModel('buy'))
+    >>> str(KABTypeModel.bid)
     'buy'
 
     Does not accept anything else
-    >>> KTypeModel('something')
+    >>> KABTypeModel('something')
     Traceback (most recent call last):
         ...
     ValueError: 'something' is not a valid KTypeModel
 
     """
     buy = 'buy'
+    bid = 'buy'
     sell = 'sell'
-
+    ask = 'sell'
 
 # Using partial call here to delay evaluation (and get same semantics as potentially more complex strategies)
-KTypeStrategy = functools.partial(st.sampled_from, KTypeModel)
+KABTypeStrategy = functools.partial(st.sampled_from, KABTypeModel)
 
 
-class KTypeField(fields.Field):
+class KABTypeField(fields.Field):
     """
     A field to interface with marshmallow
 
-    >>> KTypeField().serialize('buy', obj=KTypeModel('buy'))
+    >>> KABTypeField().serialize('buy', obj=KABTypeModel('buy'))
     'buy'
-    >>> KTypeField().deserialize('buy')
+    >>> KABTypeField().deserialize('buy')
     buy
 
     """
@@ -68,7 +69,7 @@ class KTypeField(fields.Field):
         :raise ValidationError: In case of formatting or validation failure.
         :return: The deserialized value.
         """
-        return KTypeModel(value)
+        return KABTypeModel(value)
 
     def _serialize(self, value: typing.Any, attr: str, obj: typing.Any, **kwargs):
         """Serializes ``value`` to a basic Python datatype. Noop by default.
@@ -84,9 +85,9 @@ class KTypeField(fields.Field):
 
 
 @st.composite
-def KTypeStringStrategy(draw):
-    model = draw(KTypeStrategy())
-    field = KTypeField()
+def KABTypeStringStrategy(draw):
+    model = draw(KABTypeStrategy())
+    field = KABTypeField()
     return field.serialize('a', {'a': model})
 
 

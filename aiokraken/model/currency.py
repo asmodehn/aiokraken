@@ -94,6 +94,9 @@ def currency(c: str) -> typing.Optional[Currency]:
         raise CurrencyError
 
 
+# TODO : the distinction between the  different types of currency seem superflous.
+#  YAGNI. we should probably get rid of it and just have a currency model...
+
 if __name__ == "__main__":
     import pytest
     pytest.main(['-s', '--doctest-modules', '--doctest-continue-on-failure', __file__])
