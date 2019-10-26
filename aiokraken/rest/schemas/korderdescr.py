@@ -17,6 +17,9 @@ from .kordertype import KOrderTypeModel, KOrderTypeField, KOrderTypeStrategy
 from ...utils.stringenum import StringEnum
 
 
+# TODO : 3 models : one per ordertype "kind", to take in account the price / price2 structure in class structure...
+#  insted of the assert logic...
+
 @dataclass(init=False, repr=False)
 class KOrderDescrModel:
     pair: PairModel
@@ -59,15 +62,16 @@ class KOrderDescrModel:
         self.price2 = price2
 
         # enforcing consistency as early as possible
+        # Note : When price is not valid, it is set to 0 by kraken it seems, not 'none' or absent of the structure...
         if self.ordertype == KOrderTypeModel.market:
-            assert price is None, print(f"price: {price} with {self.ordertype}")
-            assert price2 is None, print(f"price2: {price2} with {self.ordertype}")
+            assert (price is None or price2 == Decimal(0)), print(f"price: {price} with {self.ordertype}")
+            assert (price2 is None or price2 == Decimal(0)), print(f"price2: {price2} with {self.ordertype}")
         elif self.ordertype in [KOrderTypeModel.limit, KOrderTypeModel.stop_loss, KOrderTypeModel.take_profit, KOrderTypeModel.trailing_stop]:
-            assert price is not None, print(f"price: {price} with {self.ordertype}")
-            assert price2 is None, print(f"price2: {price2} with {self.ordertype}")
+            assert (price is not None and price != Decimal(0)), print(f"price: {price} with {self.ordertype}")
+            assert (price2 is None or price2 == Decimal(0)), print(f"price2: {price2} with {self.ordertype}")
         elif self.ordertype in [KOrderTypeModel.stop_loss_profit, KOrderTypeModel.stop_loss_profit_limit, KOrderTypeModel.stop_loss_limit, KOrderTypeModel.take_profit_limit, KOrderTypeModel.trailing_stop_limit, KOrderTypeModel.stop_loss_and_limit]:
-            assert price is not None, print(f"price: {price} with {self.ordertype}")
-            assert price2 is not None, print(f"price2: {price2} with {self.ordertype}")
+            assert (price is not None and price != Decimal(0)), print(f"price: {price} with {self.ordertype}")
+            assert (price2 is not None and price != Decimal(0)), print(f"price2: {price2} with {self.ordertype}")
 
         self.leverage = leverage
         self.close = close
@@ -96,7 +100,7 @@ def KOrderDescrStrategy(draw,
     if ot in [KOrderTypeModel.limit, KOrderTypeModel.stop_loss, KOrderTypeModel.take_profit,
                             KOrderTypeModel.trailing_stop]:
         if price is None:
-            price =st.decimals(allow_nan=False, allow_infinity=False)
+            price = st.decimals(allow_nan=False, allow_infinity=False)
         if price2 is None:
             price2 = st.none()
     elif ot in [KOrderTypeModel.stop_loss_profit, KOrderTypeModel.stop_loss_profit_limit,
@@ -125,16 +129,19 @@ def KOrderDescrStrategy(draw,
 
 class KOrderDescrSchema(BaseSchema):
     pair = PairField()
-    abtype = KABTypeField(data_key='type')  # need rename to not confuse python on this...
+    abtype = KABTypeField()  # need rename to not confuse python on this...
     ordertype = KOrderTypeField()
     price = fields.Decimal(required=False, as_string=True)
     price2 = fields.Decimal(required=False, as_string=True)
-    leverage = fields.Decimal(required=False, as_string=True)  # Kraken returns none on this (cf cassettes)...
+    leverage = fields.Decimal(allow_none=True, required=False, as_string=True)  # Kraken returns none on this (cf cassettes)...
     order = fields.Str()
     close = fields.Str(required=False)  # ???
 
     @pre_load
-    def filter_dict(self, data, **kwargs):
+    def filter_dict_onload(self, data, **kwargs):
+        # filtering 'type' field
+        if data.get('type') is not None:
+            data['abtype'] = data.pop('type')
         # filtering None fields
         if data.get('leverage') in ['none', 'None']:
             data.pop('leverage')
@@ -145,7 +152,7 @@ class KOrderDescrSchema(BaseSchema):
         return KOrderDescrModel(**data)
 
     @post_dump
-    def filter_dict(self, data, **kwargs):
+    def filter_dict_ondump(self, data, **kwargs):
         data = {k: v for k, v in data.items() if v is not None}
         return data
 
@@ -159,8 +166,8 @@ def KOrderDescrDictStrategy(draw,
                             order= None,  # TODO :refine this...
                             price=None,
                             price2=None,
-                            leverage= st.decimals(allow_nan=False, allow_infinity=False),  # TODO
-                            close= st.one_of(st.text(max_size=5), st.none()),  # TODO
+                            leverage= st.one_of(st.decimals(allow_nan=False, allow_infinity=False), st.none()),  # yes kraken may return none...
+                            close= st.one_of(st.text(max_size=5), st.none()),  # yes kraken may return none...
                             ):
     model = draw(KOrderDescrStrategy(pair=pair, abtype= abtype, ordertype=ordertype, order=order, price=price, price2=price2, leverage=leverage, close=close))
     schema = KOrderDescrSchema()

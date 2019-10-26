@@ -24,12 +24,8 @@ class TestOrderDescrModel(unittest.TestCase):
     @settings(verbosity=Verbosity.verbose)
     @given(KOrderDescrStrategy())
     def test_repr(self, model):
-        assert repr(model) == f"{model.order}"
-
-    @settings(verbosity=Verbosity.verbose)
-    @given(KOrderDescrStrategy(order=st.text(max_size=5)))
-    def test_order(self, model):
-        assert repr(model) == f"{model.order}"
+        assert model.order == f"{model.abtype} @ {model.price} {model.ordertype}"
+        assert repr(model) == f"{model.pair}: {model.order}", print(repr(model) + '\n' + f"{model.order}")
 
 
 class TestOrderDescrSchema(unittest.TestCase):
@@ -48,7 +44,7 @@ class TestOrderDescrSchema(unittest.TestCase):
         assert isinstance(p, dict)
         expected = {k: v for k, v in asdict(orderdescrmodel).items() if v is not None}
         expected['pair'] = str(orderdescrmodel.pair)
-        expected['type'] = orderdescrmodel.type.value
+        expected['abtype'] = orderdescrmodel.abtype.value
         expected['ordertype'] = orderdescrmodel.ordertype.value
         expected['leverage'] = "{0:f}".format(orderdescrmodel.leverage)
 
