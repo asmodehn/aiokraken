@@ -100,16 +100,16 @@ def KOrderDescrStrategy(draw,
     if ot in [KOrderTypeModel.limit, KOrderTypeModel.stop_loss, KOrderTypeModel.take_profit,
                             KOrderTypeModel.trailing_stop]:
         if price is None:
-            price = st.decimals(allow_nan=False, allow_infinity=False)
+            price = st.decimals(allow_nan=False, allow_infinity=False, min_value=1)
         if price2 is None:
             price2 = st.none()
     elif ot in [KOrderTypeModel.stop_loss_profit, KOrderTypeModel.stop_loss_profit_limit,
                             KOrderTypeModel.stop_loss_limit, KOrderTypeModel.take_profit_limit,
                             KOrderTypeModel.trailing_stop_limit, KOrderTypeModel.stop_loss_and_limit]:
         if price is None:
-            price = st.decimals(allow_nan=False, allow_infinity=False)
+            price = st.decimals(allow_nan=False, allow_infinity=False, min_value=1)
         if price2 is None:
-            price2 = st.decimals(allow_nan=False, allow_infinity=False)
+            price2 = st.decimals(allow_nan=False, allow_infinity=False, min_value=1)
 
     else:  # market or forgotten enum value...
         if price is None:
