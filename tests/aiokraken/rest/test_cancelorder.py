@@ -80,13 +80,13 @@ async def test_cancel_limit_order_userref_execute(keyfile):
         # Ref : https://support.kraken.com/hc/en-us/articles/360000919926-Does-Kraken-offer-a-Test-API-or-Sandbox-Mode-
         high_price = tickerresponse.ask.price * Decimal(1.5)
         # delayed market order
-        bidresponse = await rest_kraken.ask(order=ask(LimitOrder(
+        bidresponse = await rest_kraken.ask(order=RequestOrderModel(
             pair='XBTEUR',
             volume='0.01',
-            limit_price=high_price,
             relative_expiretm=15,  # expire in 15 seconds (better than cancelling since cancelling too often can lock us out)
             execute=True,
-        )))
+        ).limit(
+            limit_price=high_price,))
         # TODO : verify balance before, this will trigger error if not enough funds.
         assert bidresponse
         print(bidresponse)
