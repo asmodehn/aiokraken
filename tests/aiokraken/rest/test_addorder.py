@@ -164,7 +164,8 @@ async def test_add_buy_stop_order(keyfile):
         rest_kraken = RestClient(server=Server())
     try:
         # CAREFUL here. Orders should be on 'validate' mode, but still it would be better to get current price asap... TODO
-        response = await rest_kraken.bid(order=RequestOrderModel(pair='XBTEUR', volume='0.01').stoploss( stop_price=1234))
+        response = await rest_kraken.bid(order=RequestOrderModel(pair='XBTEUR', volume='0.01').stop_loss(
+            stop_loss_price=1234))
     finally:
         await rest_kraken.close()
     print(f'response is {response}')
@@ -183,7 +184,8 @@ async def test_add_sell_stop_order(keyfile):
         rest_kraken = RestClient(server=Server())
     try:
         # CAREFUL here. Orders should be on 'validate' mode, but still it would be better to get current price asap... TODO
-        response = await rest_kraken.ask(order=RequestOrderModel(pair='XBTEUR', volume='0.01').stoploss(stop_price=1234))
+        response = await rest_kraken.ask(order=RequestOrderModel(pair='XBTEUR', volume='0.01').stop_loss(
+            stop_loss_price=1234))
     finally:
         await rest_kraken.close()
     print(f'response is {response}')
