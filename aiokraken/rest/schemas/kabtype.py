@@ -34,10 +34,12 @@ class KABTypeModel(StringEnum):
     ValueError: 'something' is not a valid KTypeModel
 
     """
-    buy = 'buy'
-    bid = 'buy'
-    sell = 'sell'
-    ask = 'sell'
+
+    buy = "buy"
+    bid = "buy"
+    sell = "sell"
+    ask = "sell"
+
 
 # Using partial call here to delay evaluation (and get same semantics as potentially more complex strategies)
 KABTypeStrategy = functools.partial(st.sampled_from, KABTypeModel)
@@ -53,12 +55,13 @@ class KABTypeField(fields.Field):
     buy
 
     """
+
     def _deserialize(
-            self,
-            value: typing.Any,
-            attr: typing.Optional[str],
-            data: typing.Optional[typing.Mapping[str, typing.Any]],
-            **kwargs
+        self,
+        value: typing.Any,
+        attr: typing.Optional[str],
+        data: typing.Optional[typing.Mapping[str, typing.Any]],
+        **kwargs
     ):
         """Deserialize value. Concrete :class:`Field` classes should implement this method.
 
@@ -88,9 +91,10 @@ class KABTypeField(fields.Field):
 def KABTypeStringStrategy(draw):
     model = draw(KABTypeStrategy())
     field = KABTypeField()
-    return field.serialize('a', {'a': model})
+    return field.serialize("a", {"a": model})
 
 
 if __name__ == "__main__":
     import pytest
-    pytest.main(['-s', '--doctest-modules', '--doctest-continue-on-failure', __file__])
+
+    pytest.main(["-s", "--doctest-modules", "--doctest-continue-on-failure", __file__])

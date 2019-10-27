@@ -1,7 +1,7 @@
 import functools
 import typing
 
-from enum import (IntEnum)
+from enum import IntEnum
 
 from marshmallow import fields
 from hypothesis import given, strategies as st
@@ -30,18 +30,19 @@ class KOrderTypeModel(StringEnum):
     ValueError: 'what is this' is not a valid KTypeModel
 
     """
-    market = 'market'
-    limit = 'limit'
-    stop_loss = 'stop-loss'
-    take_profit = 'take-profit'
-    stop_loss_profit = 'stop-loss-profit'
-    stop_loss_profit_limit = 'stop-loss-profit-limit'
-    stop_loss_limit = 'stop-loss-limit'
-    take_profit_limit = 'take-profit-limit'
-    trailing_stop = 'trailing-stop'
-    trailing_stop_limit = 'trailing-stop-limit'
-    stop_loss_and_limit = 'stop-loss-and-limit'
-    settle_position = 'settle-position'
+
+    market = "market"
+    limit = "limit"
+    stop_loss = "stop-loss"
+    take_profit = "take-profit"
+    stop_loss_profit = "stop-loss-profit"
+    stop_loss_profit_limit = "stop-loss-profit-limit"
+    stop_loss_limit = "stop-loss-limit"
+    take_profit_limit = "take-profit-limit"
+    trailing_stop = "trailing-stop"
+    trailing_stop_limit = "trailing-stop-limit"
+    stop_loss_and_limit = "stop-loss-and-limit"
+    settle_position = "settle-position"
 
 
 # Using partial call here to delay evaluation (and get same semantics as potentially more complex strategies)
@@ -58,12 +59,13 @@ class KOrderTypeField(fields.Field):
     take-profit
 
     """
+
     def _deserialize(
-            self,
-            value: typing.Any,
-            attr: typing.Optional[str],
-            data: typing.Optional[typing.Mapping[str, typing.Any]],
-            **kwargs
+        self,
+        value: typing.Any,
+        attr: typing.Optional[str],
+        data: typing.Optional[typing.Mapping[str, typing.Any]],
+        **kwargs
     ):
         """Deserialize value. Concrete :class:`Field` classes should implement this method.
 
@@ -93,9 +95,10 @@ class KOrderTypeField(fields.Field):
 def KOrderTypeStringStrategy(draw):
     model = draw(KOrderTypeStrategy())
     field = KOrderTypeField()
-    return field.serialize('a', {'a': model})
+    return field.serialize("a", {"a": model})
 
 
 if __name__ == "__main__":
     import pytest
-    pytest.main(['-s', '--doctest-modules', '--doctest-continue-on-failure', __file__])
+
+    pytest.main(["-s", "--doctest-modules", "--doctest-continue-on-failure", __file__])
