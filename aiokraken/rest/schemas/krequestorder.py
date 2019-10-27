@@ -22,31 +22,31 @@ from ..exceptions import AIOKrakenException
 from .kopenorder import KOpenOrderSchema
 from .korderdescr import KOrderDescrModel, KOrderDescrSchema
 
-
-class OrderSchema(BaseSchema):
-
-    """ Schema to produce dict from model"""
-
-    type = fields.Str(required=True)
-    ordertype = fields.Str(required=True)
-
-    pair = fields.Str(required=True)
-    volume = fields.Decimal(required=True, as_string=True)
-    leverage = fields.Str()
-
-    starttm = fields.Str()
-    expiretm = fields.Str()
-
-    oflags = fields.List(fields.Str())
-
-    validate = fields.Bool()
-    userref = fields.Int()  # 32 bits signed number  # Ref : https://www.kraken.com/features/api#private-user-trading
-
-    close = fields.Str()
-
-    price = fields.Decimal(places=1, as_string=True)  # TODO : number of places likely depend on currency pair ?? 1 for BTC/EUR
-    price2 = fields.Decimal(places=1, as_string=True)
-
+#
+# class OrderSchema(BaseSchema):
+#
+#     """ Schema to produce dict from model"""
+#
+#     type = fields.Str(required=True)
+#     ordertype = fields.Str(required=True)
+#
+#     pair = fields.Str(required=True)
+#     volume = fields.Decimal(required=True, as_string=True)
+#     leverage = fields.Str()
+#
+#     starttm = fields.Str()
+#     expiretm = fields.Str()
+#
+#     oflags = fields.List(fields.Str())
+#
+#     validate = fields.Bool()
+#     userref = fields.Int()  # 32 bits signed number  # Ref : https://www.kraken.com/features/api#private-user-trading
+#
+#     close = fields.Str()
+#
+#     price = fields.Decimal(places=1, as_string=True)  # TODO : number of places likely depend on currency pair ?? 1 for BTC/EUR
+#     price2 = fields.Decimal(places=1, as_string=True)
+#
 
 class OrderDescriptionSchema(BaseSchema):
     order = fields.Str(required=True)  # order description
@@ -62,16 +62,16 @@ class CancelOrderResponseSchema(BaseSchema):
     pending = fields.List(fields.Str())
     count = fields.Integer()  #array of transaction ids for order (if order was added successfully)
 
-
-class OrderInfoSchema(BaseSchema):
-    pair = fields.Str()
-    type = fields.Str()  #(buy/sell)
-    ordertype = fields.Str()  #(See Add standard order)
-    price =fields.Number()
-    price2 = fields.Number()
-    leverage = fields.Str()  # ???
-    order = fields.Str()
-    close = fields.Str()
+#
+# class OrderInfoSchema(BaseSchema):
+#     pair = fields.Str()
+#     type = fields.Str()  #(buy/sell)
+#     ordertype = fields.Str()  #(See Add standard order)
+#     price =fields.Number()
+#     price2 = fields.Number()
+#     leverage = fields.Str()  # ???
+#     order = fields.Str()
+#     close = fields.Str()
 
 
 class AlreadyCalled(Exception):
@@ -153,17 +153,20 @@ class RequestOrderModel:
         # In any case return _descr. None means order incomplete. whether this is relevant or not depends on the caller.
         return self._descr
 
-    #
-    # def _delayed_descr(self, **dict2merge):
-    #     if self._descr is None:
-    #         self._descr_data.update(dict2merge)
-    #         if 'abtype' in self._descr_data and 'ordertype' in self._descr_data:
-    #             # if we have both abtype and ordertype we want to create the descr instance
-    #             # Note we do not want to use the schema here, as we are only dealing with internal values
-    #             self._descr = KOrderDescrModel(**self._descr_data)
-    #             self._descr_data = None
-    #     else:
-    #         raise AlreadyCalled
+    # Order type
+    # Ref : From API docs :
+    # market
+    #     limit (price = limit price)
+    #     stop-loss (price = stop loss price)
+    #     take-profit (price = take profit price)
+    #     stop-loss-profit (price = stop loss price, price2 = take profit price)
+    #     stop-loss-profit-limit (price = stop loss price, price2 = take profit price)
+    #     stop-loss-limit (price = stop loss trigger price, price2 = triggered limit price)
+    #     take-profit-limit (price = take profit trigger price, price2 = triggered limit price)
+    #     trailing-stop (price = trailing stop offset)
+    #     trailing-stop-limit (price = trailing stop offset, price2 = triggered limit offset)
+    #     stop-loss-and-limit (price = stop loss price, price2 = limit price)
+    #     settle-position
 
     def market(self,):
         self._descr_data.update({'ordertype': KOrderTypeModel.market})
@@ -173,11 +176,47 @@ class RequestOrderModel:
         self._descr_data.update({'ordertype': KOrderTypeModel.limit, 'price': limit_price})
         return self
 
-    def stoploss(self, stop_price):
-        self._descr_data.update({'ordertype': KOrderTypeModel.stop_loss, 'price': stop_price})
+    def stop_loss(self, stop_loss_price):
+        self._descr_data.update({'ordertype': KOrderTypeModel.stop_loss, 'price': stop_loss_price})
         return self
 
-    # TODO : more !
+    def take_profit(self, take_profit_price):
+        self._descr_data.update({'ordertype': KOrderTypeModel.take_profit, 'price': take_profit_price})
+        return self
+
+    def stop_loss_profit(self, stop_loss_price, take_profit_price):
+        self._descr_data.update({'ordertype': KOrderTypeModel.stop_loss_profit, 'price': stop_loss_price, 'price2': take_profit_price})
+        return self
+
+    def stop_loss_profit_limit(self, stop_loss_price, take_profit_price):
+        self._descr_data.update({'ordertype': KOrderTypeModel.stop_loss_profit_limit, 'price': stop_loss_price, 'price2': take_profit_price})
+        return self
+
+    def stop_loss_limit(self, stop_loss_trigger_price, triggered_limit_price):
+        self._descr_data.update({'ordertype': KOrderTypeModel.stop_loss_limit, 'price': stop_loss_trigger_price, 'price2': triggered_limit_price})
+        return self
+
+    def take_profit_limit(self, take_profit_trigger_price, triggered_limit_price):
+        self._descr_data.update({'ordertype': KOrderTypeModel.take_profit_limit,  'price': take_profit_trigger_price, 'price2': triggered_limit_price})
+        return self
+
+    def trailing_stop(self, trailing_stop_offset):
+        self._descr_data.update({'ordertype': KOrderTypeModel.trailing_stop, 'price': trailing_stop_offset})
+        return self
+
+    def trailing_stop_limit(self, trailing_stop_offset, triggered_limit_offset):
+        self._descr_data.update({'ordertype': KOrderTypeModel.trailing_stop_limit, 'price': trailing_stop_offset, 'price2': triggered_limit_offset})
+        return self
+
+    def stop_loss_and_limit(self, stop_loss_price, limit_price):
+        self._descr_data.update({'ordertype': KOrderTypeModel.stop_loss_and_limit, 'price': stop_loss_price, 'price2': limit_price})
+        return self
+
+    def settle_position(self):
+        self._descr_data.update({'ordertype': KOrderTypeModel.settle_position})
+        return self
+
+    # Ask/Bid type
 
     def buy(self, leverage=0):
         self._descr_data.update({'abtype': KABTypeModel.buy, 'leverage': leverage})
@@ -225,11 +264,45 @@ def RequestOrderStrategy(draw,
     if ot == KOrderTypeModel.market:
         rom.market()
     elif ot == KOrderTypeModel.limit:
-        rom.limit(limit_price=draw(st.decimals(allow_nan=False, allow_infinity=False)))
+        rom.limit(limit_price=draw(st.decimals(allow_nan=False, allow_infinity=False, min_value= 1)))
     elif ot == KOrderTypeModel.stop_loss:
-        rom.stoploss(stop_price=draw(st.decimals(allow_nan=False, allow_infinity=False)))
+        rom.stop_loss(stop_loss_price=draw(st.decimals(allow_nan=False, allow_infinity=False, min_value= 1)))
+    elif ot == KOrderTypeModel.take_profit:
+        rom.take_profit(take_profit_price=draw(st.decimals(allow_nan=False, allow_infinity=False, min_value= 1)))
+    elif ot == KOrderTypeModel.stop_loss_profit:
+        rom.stop_loss_profit(stop_loss_price=draw(st.decimals(allow_nan=False, allow_infinity=False, min_value= 1)), take_profit_price=draw(st.decimals(allow_nan=False, allow_infinity=False, min_value= 1)))
+    elif ot == KOrderTypeModel.stop_loss_profit_limit:
+        rom.stop_loss_profit_limit(stop_loss_price=draw(st.decimals(allow_nan=False, allow_infinity=False, min_value= 1)),
+                             take_profit_price=draw(st.decimals(allow_nan=False, allow_infinity=False, min_value= 1)))
+    elif ot == KOrderTypeModel.stop_loss_limit:
+        rom.stop_loss_limit(stop_loss_trigger_price=draw(st.decimals(allow_nan=False, allow_infinity=False, min_value= 1)), triggered_limit_price=draw(st.decimals(allow_nan=False, allow_infinity=False, min_value= 1)))
+    elif ot == KOrderTypeModel.take_profit_limit:
+        rom.take_profit_limit(take_profit_trigger_price=draw(st.decimals(allow_nan=False, allow_infinity=False, min_value= 1)), triggered_limit_price=draw(st.decimals(allow_nan=False, allow_infinity=False, min_value= 1)))
+    elif ot == KOrderTypeModel.trailing_stop:
+        rom.trailing_stop(trailing_stop_offset=draw(st.decimals(allow_nan=False, allow_infinity=False, min_value= 1)))
+    elif ot == KOrderTypeModel.trailing_stop_limit:
+        rom.trailing_stop_limit(trailing_stop_offset=draw(st.decimals(allow_nan=False, allow_infinity=False, min_value= 1)), triggered_limit_offset=draw(st.decimals(allow_nan=False, allow_infinity=False, min_value= 1)))
+    elif ot == KOrderTypeModel.stop_loss_and_limit:
+        rom.stop_loss_and_limit(stop_loss_price=draw(st.decimals(allow_nan=False, allow_infinity=False, min_value= 1)), limit_price=draw(st.decimals(allow_nan=False, allow_infinity=False, min_value= 1)))
+    elif ot == KOrderTypeModel.settle_position:
+        rom.settle_position()
     else:
-        rom.limit(limit_price=draw(st.decimals(allow_nan=False, allow_infinity=False)))  #TODO : handle more cases
+        raise NotImplementedError
+
+    # Order type
+    # Ref : From API docs :
+    # market
+    #     limit (price = limit price)
+    #     stop-loss (price = stop loss price)
+    #     take-profit (price = take profit price)
+    #     stop-loss-profit (price = stop loss price, price2 = take profit price)
+    #     stop-loss-profit-limit (price = stop loss price, price2 = take profit price)
+    #     stop-loss-limit (price = stop loss trigger price, price2 = triggered limit price)
+    #     take-profit-limit (price = take profit trigger price, price2 = triggered limit price)
+    #     trailing-stop (price = trailing stop offset)
+    #     trailing-stop-limit (price = trailing stop offset, price2 = triggered limit offset)
+    #     stop-loss-and-limit (price = stop loss price, price2 = limit price)
+    #     settle-position
 
     if t == KABTypeModel.buy:
         rom.buy()
@@ -243,7 +316,7 @@ def RequestOrderStrategy(draw,
 
 class RequestOrderSchema(BaseSchema):
     descr= fields.Nested(KOrderDescrSchema())
-    pair= PairField(dump_only=True)  # to dump internals of descr
+    pair= PairField(required=False)  # to load/dump to/from internals of descr
 
     volume= fields.Decimal()
     leverage= fields.Decimal()
@@ -254,25 +327,63 @@ class RequestOrderSchema(BaseSchema):
     # market_price_protection
 
     userref= fields.Integer()  # TODO
-    validate= fields.Bool(default=True)
+    execute= fields.Bool(default=False)
     close= fields.Str()  # TODO
+
+    @pre_load
+    def translate_fields(self, data, **kwargs):
+        data.setdefault('execute', not data.get('validate'))
+        data.pop('validate')
+        return data
 
     @post_load
     def build_model(self, data, **kwargs):
         descr = data.pop('descr')
-        raise NotImplementedError  # TODO : is this a real usecase ??
+
+        # grab the pair from descr
+        data['pair'] = descr.pair
+        # build order model
         rom= RequestOrderModel(**data)
+
+        # and finalize step by step...
+        if descr.ordertype == KOrderTypeModel.market:
+            rom.market()
+        elif descr.ordertype == KOrderTypeModel.limit:
+            rom.limit(limit_price=descr.price)
+        elif descr.ordertype == KOrderTypeModel.stop_loss:
+            rom.stop_loss(stop_loss_price=descr.price)
+        elif descr.ordertype == KOrderTypeModel.take_profit:
+            rom.take_profit(take_profit_price=descr.price)
+        elif descr.ordertype == KOrderTypeModel.stop_loss_profit:
+            rom.stop_loss_profit(stop_loss_price=descr.price, take_profit_price=descr.price2)
+        elif descr.ordertype == KOrderTypeModel.stop_loss_profit_limit:
+            rom.stop_loss_profit_limit(stop_loss_price=descr.price, take_profit_price=descr.price2)
+        elif descr.ordertype == KOrderTypeModel.stop_loss_limit:
+            rom.stop_loss_limit(stop_loss_trigger_price=descr.price, triggered_limit_price=descr.price2)
+        elif descr.ordertype == KOrderTypeModel.take_profit_limit:
+            rom .take_profit_limit(take_profit_trigger_price=descr.price, triggered_limit_price=descr.price2)
+        elif descr.ordertype == KOrderTypeModel.trailing_stop:
+            rom.trailing_stop(trailing_stop_offset=descr.price)
+        elif descr.ordertype == KOrderTypeModel.trailing_stop_limit:
+            rom.trailing_stop_limit(trailing_stop_offset=descr.price, triggered_limit_offset=descr.price2)
+        elif descr.ordertype == KOrderTypeModel.stop_loss_and_limit:
+            rom.stop_loss_and_limit(stop_loss_price=descr.price, limit_price=descr.price2)
+        elif descr.ordertype == KOrderTypeModel.settle_position:
+            rom.settle_position()
+        else:
+            raise NotImplementedError
+
+        if descr.abtype == KABTypeModel.sell:
+            rom.buy(leverage=descr.leverage)
+        elif descr.abtype == KABTypeModel.sell:
+            rom.sell(leverage=descr.leverage)
         return rom
 
     @pre_dump
     def make_dict(self, data, **kwargs):
 
-        if hasattr(data, 'descr_data'):
-            try:
-                #TMP : forcing descr() as validation...
-                data._delayed_descr()
-            except OrderNotFinalized:  # __init__ missing positional arguments
-                raise OrderNotFinalized(f"{data} is not ready just yet. You might want to call .sell() or .limit() on it.")
+        # accessing descr property to build it if needed
+        descr = data.descr
 
         def filter_none(item_list):
             return {k: v for k, v in item_list if v is not None if not k.startswith('_')}
@@ -281,11 +392,16 @@ class RequestOrderSchema(BaseSchema):
 
         # Adding redundant fields
         d.setdefault('pair', data.descr.pair)
+        d.setdefault('descr', descr)
 
         return d
 
     @post_dump
     def cleanup_dict(self, data, **kwargs):
+
+        # translating
+        data.setdefault('validate', not data.get('execute'))
+        data.pop('execute')
 
         # Removing fields with default semantic to use server defaults, and minimize serialization errors
         if data.get('relative_starttm') == '+0':
@@ -314,7 +430,7 @@ def RequestOrderDictStrategy(draw,
                       execute=execute,
                       close=close,
     ))
-    schema = KOpenOrderSchema()
+    schema = RequestOrderSchema()
     return schema.dump(model)
 
 

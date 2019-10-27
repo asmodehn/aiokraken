@@ -9,6 +9,7 @@ import decimal
 from hypothesis import given, strategies as st
 
 from aiokraken.rest.schemas.kcurrency import KCurrency
+from aiokraken.rest.schemas.korderdescr import KOrderDescrSchema
 from aiokraken.rest.schemas.kpair import PairModel, PairField
 from aiokraken.rest.schemas.ktm import TimerField
 from ..krequestorder import (
@@ -72,19 +73,19 @@ class TestRequestOrderModel(unittest.TestCase):
         assert m.descr.leverage == 2
 
     def test_stop_loss_partial(self):
-        m = self.model.stoploss(stop_price=51)
+        m = self.model.stop_loss(stop_loss_price=51)
         assert m._descr_data.get('ordertype') == KOrderTypeModel.stop_loss
         assert m._descr_data.get('price') == 51
 
     def test_stop_loss_sell(self):
-        m = self.model.stoploss(stop_price=51).sell(leverage=3)
+        m = self.model.stop_loss(stop_loss_price=51).sell(leverage=3)
         assert m.descr.ordertype == KOrderTypeModel.stop_loss
         assert m.descr.abtype == KABTypeModel.sell
         assert m.descr.leverage == 3
         assert m.descr.price == 51
 
     def test_stop_loss_buy(self):
-        m = self.model.stoploss(stop_price=51).buy(leverage=2)
+        m = self.model.stop_loss(stop_loss_price=51).buy(leverage=2)
         assert m.descr.ordertype == KOrderTypeModel.stop_loss
         assert m.descr.abtype == KABTypeModel.buy
         assert m.descr.leverage == 2
@@ -101,8 +102,9 @@ class TestRequestOrderModel(unittest.TestCase):
         assert m._descr_data.get('leverage') == 2
 
     def test_cancel(self):
+        raise NotImplementedError
         m = self.model.cancel()
-        assert FAlse  # TODO : smthg...
+        assert False  # TODO : smthg...
 
 
 class TestRequestOrderSchema(unittest.TestCase):
@@ -118,6 +120,7 @@ class TestRequestOrderSchema(unittest.TestCase):
         expected = {
             "volume": model.volume,
             "pair": PairField().serialize('v', {'v': model.pair}),
+            "descr": KOrderDescrSchema().dump(model.descr),
             "validate": True,
             "userref": model.userref
         }
