@@ -8,7 +8,7 @@ import marshmallow
 import decimal
 
 from ..ktm import TMModel, TimerField
-from ..ktype import KABTypeModel
+from ..kabtype import KABTypeModel
 from ..kordertype import KOrderTypeModel
 from ..kopenorder import KOpenOrderSchema, KOpenOrderModel, OpenOrderStrategy, OpenOrderDictStrategy
 from ..korderdescr import KOrderDescrModel, KOrderDescrSchema

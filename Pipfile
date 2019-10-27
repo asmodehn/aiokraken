@@ -4,25 +4,26 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
+pytest = "*"
 pytest-recording = "==0.3.3"  # 0.3.4 is breaking on --block-network it seems
 pytest-asyncio = "*"
 pytest-dependency = "*"
+black = "*"
+jupyterlab = "*"
+jupyterlab-git = "*"
 
 [packages]
 aiohttp = "*"
 aiodns = "*"
 cchardet = "*"
-pytest = "*"
 aiokraken = {path = ".",editable = true}
 marshmallow = "*"
-pandas = "*"
-parameterized = "*"
 marshmallow-dataframe = "*"
-jupyterlab = "*"
-ipympl = "*"
-jupyterlab-git = "*"
+pandas = "*"
 pandas-ta = "*"
 pyjanitor = "*"
+ipympl = "*"
+parameterized = "*"
 hypothesis = "*"
 
 [requires]

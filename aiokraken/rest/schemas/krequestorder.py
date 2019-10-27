@@ -13,7 +13,7 @@ if not __package__:
     __package__ = 'aiokraken.rest.schemas'
 from .base import BaseSchema
 from .kpair import PairModel, PairStrategy, PairField
-from .ktype import KABTypeModel
+from .kabtype import KABTypeModel
 from .kordertype import KOrderTypeModel
 
 from ..exceptions import AIOKrakenException
@@ -87,7 +87,7 @@ class RequestOrderModel:
     >>> RequestOrderModel(pair='EURBTC', volume=0.01)  # # doctest:+ELLIPSIS
     RequestOrderModel(descr=functools.partial(<function BaseSchema.load at ...>, pair='EURBTC'), volume=0.01, relative_starttm=0, relative_expiretm=0, userref=None, close=None, execute=False)
     """
-    # TODO : Some how merge part of this with openorder ??? if we can ignore differences...
+    # TODO : Somehow merge part of this with openorder ??? if we can ignore differences...
 
     _descr_data: typing.Dict = field(repr=False)
     _descr: typing.Union[None, KOrderDescrModel]

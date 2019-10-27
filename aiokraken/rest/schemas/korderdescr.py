@@ -12,7 +12,7 @@ if not __package__:
 
 from .base import BaseSchema
 from .kpair import PairModel, PairField, PairStrategy
-from .ktype import KABTypeModel, KABTypeField, KABTypeStrategy
+from .kabtype import KABTypeModel, KABTypeField, KABTypeStrategy
 from .kordertype import KOrderTypeModel, KOrderTypeField, KOrderTypeStrategy
 from ...utils.stringenum import StringEnum
 

@@ -39,6 +39,7 @@ class PairModel:
 def PairStrategy(base=KCurrencyStrategy(), quote=KCurrencyStrategy()):
     return st.builds(PairModel, base=base, quote=quote)
 
+
 # This makes hypothesis blow up because of inability to shrink...
 # @st.composite
 # def PairStrategy(draw, base=KCurrencyStrategy(), quote=KCurrencyStrategy()):
@@ -51,11 +52,11 @@ def PairStrategy(base=KCurrencyStrategy(), quote=KCurrencyStrategy()):
 
 class PairField(fields.Field):
     def _deserialize(
-            self,
-            value: typing.Any,
-            attr: typing.Optional[str],
-            data: typing.Optional[typing.Mapping[str, typing.Any]],
-            **kwargs
+        self,
+        value: typing.Any,
+        attr: typing.Optional[str],
+        data: typing.Optional[typing.Mapping[str, typing.Any]],
+        **kwargs,
     ):
         """Deserialize value. Concrete :class:`Field` classes should implement this method.
 
@@ -68,9 +69,9 @@ class PairField(fields.Field):
 
         """
         p = {}
-        i=1
+        i = 1
         iv = value[:]  # we need to keep value intact while parsing
-        for k in ['base', 'quote']:
+        for k in ["base", "quote"]:
             while i <= len(iv):
                 # some kind of pattern matching... for python 3.7
                 # TODO : is there a better way ? Overload enum ? try/except ?
@@ -80,14 +81,14 @@ class PairField(fields.Field):
                 try:
                     p.setdefault(k, KCurrency(iv[:i]))
                     iv = iv[i:]
-                    i=1
+                    i = 1
                     break
                 except ValueError as ve:
                     # not a valid currency expected
                     i += 1
 
-        try :
-            pm = PairModel(base=p['base'], quote=p['quote'])
+        try:
+            pm = PairModel(base=p["base"], quote=p["quote"])
         except KeyError as ke:
             # reinterpreting the exception (is there a better way ?)
             raise ValueError(f"Cannot extract currencies from {value}")
@@ -108,7 +109,7 @@ class PairField(fields.Field):
 
 
 @st.composite
-def PairStringStrategy(draw,base=KCurrencyStrategy(), quote=KCurrencyStrategy()):
+def PairStringStrategy(draw, base=KCurrencyStrategy(), quote=KCurrencyStrategy()):
     model = draw(PairStrategy(base=base, quote=quote))
     field = PairField()
-    return field.serialize('a', {'a': model})
+    return field.serialize("a", {"a": model})

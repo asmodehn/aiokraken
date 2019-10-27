@@ -12,8 +12,6 @@ if not __package__:
     __package__ = 'aiokraken.rest.schemas'
 
 from .base import BaseSchema
-from .kpair import PairModel, PairField
-from .ktype import KABTypeModel, KABTypeField
 from .kordertype import KOrderTypeModel, KOrderTypeField
 from .ktm import TMModel, TMStrategy, TimerField
 from .korderdescr import KOrderDescrModel, KOrderDescrSchema, KOrderDescrStrategy

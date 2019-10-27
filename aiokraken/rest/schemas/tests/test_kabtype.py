@@ -7,7 +7,7 @@ import json
 import marshmallow
 import decimal
 
-from ..ktype import KABTypeModel, KABTypeField, KABTypeStrategy, KABTypeStringStrategy
+from ..kabtype import KABTypeModel, KABTypeField, KABTypeStrategy, KABTypeStringStrategy
 from ...exceptions import AIOKrakenException
 from hypothesis import given
 

@@ -128,9 +128,6 @@ class TestRequestOrderSchema(unittest.TestCase):
         # check equality on dicts with usual python types, but display strings.
         assert serialized == expected, print(str(serialized) + '\n' + str(expected))
 
-    def test_load_ok(self, model):
-        raise NotImplementedError
-
     @given(RequestOrderDictStrategy())
     def test_load_ok(self, model):
         ro = self.schema.load(model)
