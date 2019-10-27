@@ -8,9 +8,9 @@ uses integrated python tools only.
 
 # import your test modules
 if __package__ is not None:
-    from . import test_time, test_ticker, test_payload, test_ohlc, test_ktype, test_ktm, test_krequestorder, test_kpair, test_kordertype, test_korderdescr, test_kopenorder, test_kcurrency
+    from . import test_time, test_ticker, test_payload, test_ohlc, test_kabtype, test_ktm, test_krequestorder, test_kpair, test_kordertype, test_korderdescr, test_kopenorder, test_kcurrency
 else:
-    import test_time, test_ticker, test_payload, test_ohlc, test_ktype, test_ktm, test_krequestorder, test_kpair, test_kordertype, test_korderdescr, test_kopenorder, test_kcurrency
+    import test_time, test_ticker, test_payload, test_ohlc, test_kabtype, test_ktm, test_krequestorder, test_kpair, test_kordertype, test_korderdescr, test_kopenorder, test_kcurrency
 
 # initialize the test suite
 loader = unittest.TestLoader()
@@ -21,7 +21,7 @@ suite.addTests(loader.loadTestsFromModule(test_time))
 suite.addTests(loader.loadTestsFromModule(test_ticker))
 suite.addTests(loader.loadTestsFromModule(test_payload))
 suite.addTests(loader.loadTestsFromModule(test_ohlc))
-suite.addTests(loader.loadTestsFromModule(test_ktype))
+suite.addTests(loader.loadTestsFromModule(test_kabtype))
 suite.addTests(loader.loadTestsFromModule(test_ktm))
 suite.addTests(loader.loadTestsFromModule(test_krequestorder))
 suite.addTests(loader.loadTestsFromModule(test_kpair))
