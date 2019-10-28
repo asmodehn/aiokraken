@@ -9,7 +9,27 @@ import marshmallow
 import decimal
 from hypothesis import given, settings, Verbosity, strategies as st
 
-from ..korderdescr import KOrderDescrModel, KOrderDescrSchema, KOrderDescrStrategy, KOrderDescrDictStrategy
+from aiokraken.rest.schemas.kabtype import KABTypeModel
+from aiokraken.rest.schemas.kordertype import KOrderTypeModel
+from aiokraken.rest.schemas.kpair import PairModel
+from ..korderdescr import (
+    KOrderDescr,
+    KOrderDescrNoPrice,
+    KOrderDescrNoPriceFinalized,
+    KOrderDescrNoPriceFinalizedClosed,
+    KOrderDescrNoPriceStrategy,
+    KOrderDescrOnePrice,
+    KOrderDescrOnePriceFinalized,
+    KOrderDescrOnePriceFinalizedClosed,
+    KOrderDescrOnePriceStrategy,
+    KOrderDescrTwoPrice,
+    KOrderDescrTwoPriceFinalized,
+    KOrderDescrTwoPriceFinalizedClosed,
+    KOrderDescrTwoPriceStrategy,
+    KOrderDescrFinalizeStrategy,
+    KDictStrategy,
+    KOrderDescrSchema,
+)
 from ...exceptions import AIOKrakenException
 
 """
@@ -19,39 +39,186 @@ For simple usecase examples, we should rely on doctests.
 """
 
 
-class TestOrderDescrModel(unittest.TestCase):
+class TestOrderDescr(unittest.TestCase):
+    @given(st.builds(KOrderDescr))
+    def test_model(self, model):
+        assert isinstance(model, KOrderDescr)
+        assert hasattr(model, "pair") and isinstance(model.pair, PairModel)
+
+        assert hasattr(model, "market") and callable(model.market)
+        assert hasattr(model, "limit") and callable(model.limit)
+        assert hasattr(model, "stop_loss") and callable(model.stop_loss)
+        assert hasattr(model, "take_profit") and callable(model.take_profit)
+        assert hasattr(model, "stop_loss_profit") and callable(model.stop_loss_profit)
+        assert hasattr(model, "stop_loss_profit_limit") and callable(
+            model.stop_loss_profit_limit
+        )
+        assert hasattr(model, "stop_loss_limit") and callable(model.stop_loss_limit)
+        assert hasattr(model, "take_profit_limit") and callable(model.take_profit_limit)
+        assert hasattr(model, "trailing_stop") and callable(model.trailing_stop)
+        assert hasattr(model, "trailing_stop_limit") and callable(
+            model.trailing_stop_limit
+        )
+        assert hasattr(model, "stop_loss_and_limit") and callable(
+            model.stop_loss_and_limit
+        )
+        assert hasattr(model, "settle_position") and callable(model.settle_position)
+
+
+class TestOrderDescr_NoPrice(unittest.TestCase):
+    @settings(verbosity=Verbosity.verbose)
+    @given(KOrderDescrNoPriceStrategy())
+    def test_model(self, model):
+        assert isinstance(model, KOrderDescrNoPrice)
+        assert hasattr(model, "pair") and isinstance(model.pair, PairModel)
+        assert hasattr(model, "ordertype") and isinstance(
+            model.ordertype, KOrderTypeModel
+        )
+
+        assert hasattr(model, "buy") and callable(model.buy)
+        assert hasattr(model, "sell") and callable(model.sell)
 
     @settings(verbosity=Verbosity.verbose)
-    @given(KOrderDescrStrategy())
-    def test_repr(self, model):
-        assert model.order == f"{model.abtype} @ {model.price} {model.ordertype}"
-        assert repr(model) == f"{model.pair}: {model.order}", print(repr(model) + '\n' + f"{model.order}")
+    @given(KOrderDescrFinalizeStrategy(strategy=KOrderDescrNoPriceStrategy()))
+    def test_finalize(self, model):
+        assert isinstance(
+            model, (KOrderDescrNoPriceFinalized, KOrderDescrNoPriceFinalizedClosed)
+        )
+        assert hasattr(model, "pair") and isinstance(model.pair, PairModel)
+        assert hasattr(model, "ordertype") and isinstance(
+            model.ordertype, KOrderTypeModel
+        )
+        assert hasattr(model, "abtype") and isinstance(model.abtype, KABTypeModel)
+        assert hasattr(model, "close")  # callable or not
+
+
+class TestOrderDescr_OnePrice(unittest.TestCase):
+    @settings(verbosity=Verbosity.verbose)
+    @given(KOrderDescrOnePriceStrategy())
+    def test_model(self, model):
+        assert isinstance(model, KOrderDescrOnePrice)
+        assert hasattr(model, "pair") and isinstance(model.pair, PairModel)
+        assert hasattr(model, "ordertype") and isinstance(
+            model.ordertype, KOrderTypeModel
+        )
+        assert hasattr(model, "price") and isinstance(model.price, Decimal)
+        assert hasattr(model, "buy") and callable(model.buy)
+        assert hasattr(model, "sell") and callable(model.sell)
+
+    @settings(verbosity=Verbosity.verbose)
+    @given(KOrderDescrFinalizeStrategy(strategy=KOrderDescrOnePriceStrategy()))
+    def test_finalize(self, model):
+        assert isinstance(
+            model, (KOrderDescrOnePriceFinalized, KOrderDescrOnePriceFinalizedClosed)
+        )
+        assert hasattr(model, "pair") and isinstance(model.pair, PairModel)
+        assert hasattr(model, "ordertype") and isinstance(
+            model.ordertype, KOrderTypeModel
+        )
+        assert hasattr(model, "price") and isinstance(model.price, Decimal)
+        assert hasattr(model, "abtype") and isinstance(model.abtype, KABTypeModel)
+        assert hasattr(model, "close")  # callable or not
+
+
+class TestOrderDescr_TwoPrice(unittest.TestCase):
+    @given(KOrderDescrTwoPriceStrategy())
+    def test_model(self, model):
+        assert isinstance(model, KOrderDescrTwoPrice)
+        assert hasattr(model, "pair") and isinstance(model.pair, PairModel)
+        assert hasattr(model, "ordertype") and isinstance(
+            model.ordertype, KOrderTypeModel
+        )
+        assert hasattr(model, "price") and isinstance(model.price, Decimal)
+        assert hasattr(model, "price2") and isinstance(model.price, Decimal)
+        assert hasattr(model, "buy") and callable(model.buy)
+        assert hasattr(model, "sell") and callable(model.sell)
+
+    @given(KOrderDescrFinalizeStrategy(strategy=KOrderDescrTwoPriceStrategy()))
+    def test_finalize(self, model):
+        assert isinstance(
+            model, (KOrderDescrTwoPriceFinalized, KOrderDescrTwoPriceFinalizedClosed)
+        )
+        assert hasattr(model, "pair") and isinstance(model.pair, PairModel)
+        assert hasattr(model, "ordertype") and isinstance(
+            model.ordertype, KOrderTypeModel
+        )
+        assert hasattr(model, "price") and isinstance(model.price, Decimal)
+        assert hasattr(model, "price2") and isinstance(model.price, Decimal)
+        assert hasattr(model, "abtype") and isinstance(model.abtype, KABTypeModel)
+
+        assert hasattr(model, "close")  # callable or not
 
 
 class TestOrderDescrSchema(unittest.TestCase):
-
     def setUp(self) -> None:
         self.schema = KOrderDescrSchema()
 
-    @given(KOrderDescrDictStrategy())
+    @settings(verbosity=Verbosity.verbose)
+    @given(
+        KDictStrategy(
+            st.one_of(
+                KOrderDescrFinalizeStrategy(strategy=KOrderDescrNoPriceStrategy()),
+                KOrderDescrFinalizeStrategy(strategy=KOrderDescrOnePriceStrategy()),
+                KOrderDescrFinalizeStrategy(strategy=KOrderDescrTwoPriceStrategy()),
+            )
+        )
+    )
     def test_deserialize(self, orderdescrdct):
         p = self.schema.load(orderdescrdct)
-        assert isinstance(p, KOrderDescrModel)
+        assert isinstance(
+            p,
+            (
+                KOrderDescrNoPriceFinalized,
+                KOrderDescrOnePriceFinalized,
+                KOrderDescrTwoPriceFinalized,
+                KOrderDescrNoPriceFinalizedClosed,
+                KOrderDescrOnePriceFinalizedClosed,
+                KOrderDescrTwoPriceFinalizedClosed,
+            ),
+        )
 
-    @given(KOrderDescrStrategy())
+    # TODO :validate deserialize fail on unexpected / incomplete data...
+
+    @settings(verbosity=Verbosity.verbose)
+    @given(
+        st.one_of(
+            [
+                KOrderDescrFinalizeStrategy(strategy=KOrderDescrNoPriceStrategy()),
+                KOrderDescrFinalizeStrategy(strategy=KOrderDescrOnePriceStrategy()),
+                KOrderDescrFinalizeStrategy(strategy=KOrderDescrTwoPriceStrategy()),
+            ]
+        )
+    )
     def test_serialize(self, orderdescrmodel):
         p = self.schema.dump(orderdescrmodel)
         assert isinstance(p, dict)
         expected = {k: v for k, v in asdict(orderdescrmodel).items() if v is not None}
-        expected['pair'] = str(orderdescrmodel.pair)
-        expected['abtype'] = orderdescrmodel.abtype.value
-        expected['ordertype'] = orderdescrmodel.ordertype.value
-        expected['leverage'] = "{0:f}".format(orderdescrmodel.leverage)
+        expected["pair"] = str(orderdescrmodel.pair)
+        expected["abtype"] = orderdescrmodel.abtype.value
+        expected["ordertype"] = orderdescrmodel.ordertype.value
+        expected["leverage"] = "{0:f}".format(orderdescrmodel.leverage)
 
-        if orderdescrmodel.price is not None:
-            expected['price'] = "{0:f}".format(orderdescrmodel.price)
-        if orderdescrmodel.price2 is not None:
-            expected['price2'] = "{0:f}".format(orderdescrmodel.price2)  # careful with exponents on decimal https://stackoverflow.com/a/27053722
-        assert p == expected, print(str(p) + '\n' + str(expected))
+        if hasattr(orderdescrmodel, "price"):
+            expected["price"] = "{0:f}".format(orderdescrmodel.price)
+        if hasattr(orderdescrmodel, "price2"):
+            expected["price2"] = "{0:f}".format(
+                orderdescrmodel.price2
+            )  # careful with exponents on decimal https://stackoverflow.com/a/27053722
+        assert p == expected, print(str(p) + "\n" + str(expected))
 
-    # TODO : test invariant with serialize / deserialize and vice versa
+    @settings(verbosity=Verbosity.verbose)
+    @given(
+        st.one_of(
+            [
+                KOrderDescrNoPriceStrategy(),
+                KOrderDescrOnePriceStrategy(),
+                KOrderDescrTwoPriceStrategy(),
+            ]
+        )
+    )
+    def test_serialize_fail(self, orderdescrmodel):
+        """ must fail on non finalized descr """
+
+        with self.assertRaises(Exception) as e:
+            p = self.schema.dump(orderdescrmodel)
+            # TODO: refine
