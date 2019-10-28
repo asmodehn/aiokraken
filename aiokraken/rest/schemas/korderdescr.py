@@ -1,3 +1,4 @@
+from __future__ import annotations
 import functools
 import typing
 from decimal import Decimal
@@ -31,24 +32,6 @@ class KOrderDescrMixin:
 
 # TODO : we need to overload init there to allow multiple inheritance and work with constructors...
 #  => better way ? enhancement in python dataclasses ??
-@dataclass(frozen=True, init=False)
-class KOrderDescrFinalizedMixin:
-    abtype: KABTypeModel
-    leverage: Decimal = field(default=Decimal(0))
-
-    def __init__(self, abtype: KABTypeModel, leverage: Decimal, **kwargs):
-        object.__setattr__(self, "abtype", abtype)
-        object.__setattr__(self, "leverage", leverage)
-        super(KOrderDescrFinalizedMixin, self).__init__(**kwargs)
-
-
-@dataclass(frozen=True, init=False)
-class KOrderDescrFinalizedClosedMixin(KOrderDescrFinalizedMixin):
-    close: str = field(default=str())  # TODO
-
-    def __init__(self, close: str = "", **kwargs):
-        object.__setattr__(self, "close", close)
-        super(KOrderDescrFinalizedClosedMixin, self).__init__(**kwargs)
 
 
 @dataclass(frozen=True, init=False)
@@ -86,103 +69,144 @@ class KOrderDescrTwoPriceMixin(KOrderDescrMixin):
         super(KOrderDescrTwoPriceMixin, self).__init__(**kwargs)
 
 
+@dataclass(frozen=True, init=False)
+class KOrderDescrFinalizedMixin:
+    abtype: KABTypeModel
+    leverage: Decimal
+    close: typing.Optional[
+        typing.Union[
+            KOrderDescrNoPriceMixin, KOrderDescrOnePriceMixin, KOrderDescrTwoPriceMixin
+        ]
+    ]
+
+    def __init__(
+        self,
+        abtype: KABTypeModel,
+        leverage: Decimal = Decimal(0),
+        close: typing.Optional[
+            typing.Union[
+                KOrderDescrNoPriceMixin,
+                KOrderDescrOnePriceMixin,
+                KOrderDescrTwoPriceMixin,
+            ]
+        ] = None,
+        **kwargs
+    ):
+        object.__setattr__(self, "abtype", abtype)
+        object.__setattr__(self, "leverage", leverage)
+        object.__setattr__(self, "close", close)
+        super(KOrderDescrFinalizedMixin, self).__init__(**kwargs)
+
+
 # categorical product via multi inheritance (careful with MRO)...
 
 # Terminal
-class KOrderDescrNoPriceFinalizedClosed(
-    KOrderDescrNoPriceMixin, KOrderDescrFinalizedClosedMixin
-):
-    pass
-
-
-class KOrderDescrOnePriceFinalizedClosed(
-    KOrderDescrOnePriceMixin, KOrderDescrFinalizedClosedMixin
-):
-    pass
-
-
-class KOrderDescrTwoPriceFinalizedClosed(
-    KOrderDescrTwoPriceMixin, KOrderDescrFinalizedClosedMixin
-):
-    pass
-
-
 class KOrderDescrNoPriceFinalized(KOrderDescrNoPriceMixin, KOrderDescrFinalizedMixin):
-    def close(self, close_order) -> KOrderDescrNoPriceFinalizedClosed:
-        return KOrderDescrNoPriceFinalizedClosed(
-            pair=self.pair,
-            ordertype=self.ordertype,
-            abtype=self.abtype,
-            leverage=self.leverage,
-            close=close_order,
-        )
+    pass
 
 
 class KOrderDescrOnePriceFinalized(KOrderDescrOnePriceMixin, KOrderDescrFinalizedMixin):
-    def close(self, close_order) -> KOrderDescrOnePriceFinalizedClosed:
-        return KOrderDescrOnePriceFinalizedClosed(
-            pair=self.pair,
-            ordertype=self.ordertype,
-            price=self.price,
-            abtype=self.abtype,
-            leverage=self.leverage,
-            close=close_order,
-        )
+    pass
 
 
 class KOrderDescrTwoPriceFinalized(KOrderDescrTwoPriceMixin, KOrderDescrFinalizedMixin):
-    def close(self, close_order) -> KOrderDescrTwoPriceFinalizedClosed:
-        return KOrderDescrTwoPriceFinalizedClosed(
-            pair=self.pair,
-            ordertype=self.ordertype,
-            price=self.price,
-            price2=self.price2,
-            abtype=self.abtype,
-            leverage=self.leverage,
-            close=close_order,
-        )
+    pass
 
 
 class KOrderDescrNoPrice(KOrderDescrNoPriceMixin, KOrderDescrMixin):
-    def buy(self, leverage) -> KOrderDescrNoPriceFinalized:
+    def buy(
+        self,
+        leverage,
+        close: typing.Optional[
+            typing.Union[
+                KOrderDescrNoPriceMixin,
+                KOrderDescrOnePriceMixin,
+                KOrderDescrTwoPriceMixin,
+            ]
+        ] = None,
+    ) -> KOrderDescrNoPriceFinalized:
         return KOrderDescrNoPriceFinalized(
             pair=self.pair,
             ordertype=self.ordertype,
             abtype=KABTypeModel.buy,
             leverage=leverage,
+            close=close,
         )
 
-    def sell(self, leverage) -> KOrderDescrNoPriceFinalized:
+    def sell(
+        self,
+        leverage,
+        close: typing.Optional[
+            typing.Union[
+                KOrderDescrNoPriceMixin,
+                KOrderDescrOnePriceMixin,
+                KOrderDescrTwoPriceMixin,
+            ]
+        ] = None,
+    ) -> KOrderDescrNoPriceFinalized:
         return KOrderDescrNoPriceFinalized(
             pair=self.pair,
             ordertype=self.ordertype,
             abtype=KABTypeModel.sell,
             leverage=leverage,
+            close=close,
         )
 
 
 class KOrderDescrOnePrice(KOrderDescrOnePriceMixin, KOrderDescrMixin):
-    def buy(self, leverage) -> KOrderDescrOnePriceFinalized:
+    def buy(
+        self,
+        leverage,
+        close: typing.Optional[
+            typing.Union[
+                KOrderDescrNoPriceMixin,
+                KOrderDescrOnePriceMixin,
+                KOrderDescrTwoPriceMixin,
+            ]
+        ] = None,
+    ) -> KOrderDescrOnePriceFinalized:
         return KOrderDescrOnePriceFinalized(
             pair=self.pair,
             ordertype=self.ordertype,
             price=self.price,
             abtype=KABTypeModel.buy,
             leverage=leverage,
+            close=close,
         )
 
-    def sell(self, leverage) -> KOrderDescrOnePriceFinalized:
+    def sell(
+        self,
+        leverage,
+        close: typing.Optional[
+            typing.Union[
+                KOrderDescrNoPriceMixin,
+                KOrderDescrOnePriceMixin,
+                KOrderDescrTwoPriceMixin,
+            ]
+        ] = None,
+    ) -> KOrderDescrOnePriceFinalized:
         return KOrderDescrOnePriceFinalized(
             pair=self.pair,
             ordertype=self.ordertype,
             price=self.price,
             abtype=KABTypeModel.sell,
             leverage=leverage,
+            close=close,
         )
 
 
 class KOrderDescrTwoPrice(KOrderDescrTwoPriceMixin, KOrderDescrMixin):
-    def buy(self, leverage) -> KOrderDescrTwoPriceFinalized:
+    def buy(
+        self,
+        leverage,
+        close: typing.Optional[
+            typing.Union[
+                KOrderDescrNoPriceMixin,
+                KOrderDescrOnePriceMixin,
+                KOrderDescrTwoPriceMixin,
+            ]
+        ] = None,
+    ) -> KOrderDescrTwoPriceFinalized:
         return KOrderDescrTwoPriceFinalized(
             pair=self.pair,
             ordertype=self.ordertype,
@@ -190,9 +214,20 @@ class KOrderDescrTwoPrice(KOrderDescrTwoPriceMixin, KOrderDescrMixin):
             price2=self.price2,
             abtype=KABTypeModel.buy,
             leverage=leverage,
+            close=close,
         )
 
-    def sell(self, leverage) -> KOrderDescrTwoPriceFinalized:
+    def sell(
+        self,
+        leverage,
+        close: typing.Optional[
+            typing.Union[
+                KOrderDescrNoPriceMixin,
+                KOrderDescrOnePriceMixin,
+                KOrderDescrTwoPriceMixin,
+            ]
+        ] = None,
+    ) -> KOrderDescrTwoPriceFinalized:
         return KOrderDescrTwoPriceFinalized(
             pair=self.pair,
             ordertype=self.ordertype,
@@ -200,6 +235,7 @@ class KOrderDescrTwoPrice(KOrderDescrTwoPriceMixin, KOrderDescrMixin):
             price2=self.price2,
             abtype=KABTypeModel.sell,
             leverage=leverage,
+            close=close,
         )
 
 
@@ -412,27 +448,38 @@ def KOrderDescrFinalizeStrategy(
     draw,
     strategy,  # CAREFUL here ... how about typing strategies ???
     leverage=st.decimals(allow_nan=False, allow_infinity=False, min_value=0),
-    close=st.one_of(st.text(max_size=5), st.none()),
+    close=st.one_of(
+        KOrderDescrNoPriceStrategy(),
+        KOrderDescrOnePriceStrategy(),
+        KOrderDescrTwoPriceStrategy(),
+        st.none(),
+    ),
 ):
     op = draw(strategy)
     oab = draw(st.sampled_from([KABTypeModel.buy, KABTypeModel.sell]))
-    if oab == KABTypeModel.buy:
-        of = op.buy(leverage=draw(leverage))
-    elif oab == KABTypeModel.sell:
-        of = op.sell(leverage=draw(leverage))
-    else:
-        raise NotImplementedError
 
     # optional close order
     c = draw(close)
-    if c is not None:
-        of.close(close)
+
+    if oab == KABTypeModel.buy:
+        of = op.buy(leverage=draw(leverage), close=c)
+    elif oab == KABTypeModel.sell:
+        of = op.sell(leverage=draw(leverage), close=c)
+    else:
+        raise NotImplementedError
 
     return of
 
 
 # IMPORTANT : Only ONE schema for multiple internal classes, because we deal only with one external structure,
 # even if we want to be more strict with types internally...
+
+
+class KOrderDescrCloseSchema(BaseSchema):
+    # TODO : extra fields ? redundant or implicit ??
+    ordertype = KOrderTypeField()
+    price = fields.Decimal(required=False, as_string=True)
+    price2 = fields.Decimal(required=False, as_string=True)
 
 
 class KOrderDescrSchema(BaseSchema):
@@ -443,9 +490,9 @@ class KOrderDescrSchema(BaseSchema):
     price2 = fields.Decimal(required=False, as_string=True)
     leverage = fields.Decimal(
         required=False, as_string=True
-    )  # Kraken returns none on this (cf cassettes)...
+    )  # Kraken returns 'none' on this (cf cassettes)...
     order = fields.Str()  # TODO ??? idea : should be isomorphic to repr()
-    close = fields.Str(required=False)  # TODO ???
+    close = fields.Nested(nested=KOrderDescrCloseSchema(), required=False)
 
     @pre_load
     def filter_dict_onload(self, data, **kwargs):
@@ -492,17 +539,16 @@ class KOrderDescrSchema(BaseSchema):
             raise NotImplementedError
 
         # Finalize the order
-        if data.get("abtype") == KABTypeModel.buy:
-            finmodel = model.buy(leverage=data.get("leverage"))
-        elif data.get("abtype") == KABTypeModel.sell:
-            finmodel = model.sell(leverage=data.get("leverage"))
-        else:
-            raise NotImplementedError
 
         # optionally has a close order
         c = data.get("close")
-        if c:
-            finmodel = finmodel.close(close_order=c)
+
+        if data.get("abtype") == KABTypeModel.buy:
+            finmodel = model.buy(leverage=data.get("leverage"), close=c)
+        elif data.get("abtype") == KABTypeModel.sell:
+            finmodel = model.sell(leverage=data.get("leverage"), close=c)
+        else:
+            raise NotImplementedError
 
         return finmodel
 

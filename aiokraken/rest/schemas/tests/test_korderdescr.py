@@ -16,19 +16,17 @@ from ..korderdescr import (
     KOrderDescr,
     KOrderDescrNoPrice,
     KOrderDescrNoPriceFinalized,
-    KOrderDescrNoPriceFinalizedClosed,
     KOrderDescrNoPriceStrategy,
     KOrderDescrOnePrice,
     KOrderDescrOnePriceFinalized,
-    KOrderDescrOnePriceFinalizedClosed,
     KOrderDescrOnePriceStrategy,
     KOrderDescrTwoPrice,
     KOrderDescrTwoPriceFinalized,
-    KOrderDescrTwoPriceFinalizedClosed,
     KOrderDescrTwoPriceStrategy,
     KOrderDescrFinalizeStrategy,
     KDictStrategy,
     KOrderDescrSchema,
+    KOrderDescrCloseSchema,
 )
 from ...exceptions import AIOKrakenException
 
@@ -81,15 +79,16 @@ class TestOrderDescr_NoPrice(unittest.TestCase):
     @settings(verbosity=Verbosity.verbose)
     @given(KOrderDescrFinalizeStrategy(strategy=KOrderDescrNoPriceStrategy()))
     def test_finalize(self, model):
-        assert isinstance(
-            model, (KOrderDescrNoPriceFinalized, KOrderDescrNoPriceFinalizedClosed)
-        )
+        assert isinstance(model, KOrderDescrNoPriceFinalized)
         assert hasattr(model, "pair") and isinstance(model.pair, PairModel)
         assert hasattr(model, "ordertype") and isinstance(
             model.ordertype, KOrderTypeModel
         )
         assert hasattr(model, "abtype") and isinstance(model.abtype, KABTypeModel)
-        assert hasattr(model, "close")  # callable or not
+        assert hasattr(model, "close") and isinstance(
+            model.close,
+            (type(None), KOrderDescrNoPrice, KOrderDescrOnePrice, KOrderDescrTwoPrice),
+        )
 
 
 class TestOrderDescr_OnePrice(unittest.TestCase):
@@ -108,16 +107,17 @@ class TestOrderDescr_OnePrice(unittest.TestCase):
     @settings(verbosity=Verbosity.verbose)
     @given(KOrderDescrFinalizeStrategy(strategy=KOrderDescrOnePriceStrategy()))
     def test_finalize(self, model):
-        assert isinstance(
-            model, (KOrderDescrOnePriceFinalized, KOrderDescrOnePriceFinalizedClosed)
-        )
+        assert isinstance(model, KOrderDescrOnePriceFinalized)
         assert hasattr(model, "pair") and isinstance(model.pair, PairModel)
         assert hasattr(model, "ordertype") and isinstance(
             model.ordertype, KOrderTypeModel
         )
         assert hasattr(model, "price") and isinstance(model.price, Decimal)
         assert hasattr(model, "abtype") and isinstance(model.abtype, KABTypeModel)
-        assert hasattr(model, "close")  # callable or not
+        assert hasattr(model, "close") and isinstance(
+            model.close,
+            (type(None), KOrderDescrNoPrice, KOrderDescrOnePrice, KOrderDescrTwoPrice),
+        )
 
 
 class TestOrderDescr_TwoPrice(unittest.TestCase):
@@ -135,9 +135,7 @@ class TestOrderDescr_TwoPrice(unittest.TestCase):
 
     @given(KOrderDescrFinalizeStrategy(strategy=KOrderDescrTwoPriceStrategy()))
     def test_finalize(self, model):
-        assert isinstance(
-            model, (KOrderDescrTwoPriceFinalized, KOrderDescrTwoPriceFinalizedClosed)
-        )
+        assert isinstance(model, KOrderDescrTwoPriceFinalized)
         assert hasattr(model, "pair") and isinstance(model.pair, PairModel)
         assert hasattr(model, "ordertype") and isinstance(
             model.ordertype, KOrderTypeModel
@@ -146,7 +144,10 @@ class TestOrderDescr_TwoPrice(unittest.TestCase):
         assert hasattr(model, "price2") and isinstance(model.price, Decimal)
         assert hasattr(model, "abtype") and isinstance(model.abtype, KABTypeModel)
 
-        assert hasattr(model, "close")  # callable or not
+        assert hasattr(model, "close") and isinstance(
+            model.close,
+            (type(None), KOrderDescrNoPrice, KOrderDescrOnePrice, KOrderDescrTwoPrice),
+        )
 
 
 class TestOrderDescrSchema(unittest.TestCase):
@@ -171,9 +172,6 @@ class TestOrderDescrSchema(unittest.TestCase):
                 KOrderDescrNoPriceFinalized,
                 KOrderDescrOnePriceFinalized,
                 KOrderDescrTwoPriceFinalized,
-                KOrderDescrNoPriceFinalizedClosed,
-                KOrderDescrOnePriceFinalizedClosed,
-                KOrderDescrTwoPriceFinalizedClosed,
             ),
         )
 
@@ -197,6 +195,9 @@ class TestOrderDescrSchema(unittest.TestCase):
         expected["abtype"] = orderdescrmodel.abtype.value
         expected["ordertype"] = orderdescrmodel.ordertype.value
         expected["leverage"] = "{0:f}".format(orderdescrmodel.leverage)
+
+        if orderdescrmodel.close:
+            expected["close"] = KOrderDescrCloseSchema().dump(orderdescrmodel.close)
 
         if hasattr(orderdescrmodel, "price"):
             expected["price"] = "{0:f}".format(orderdescrmodel.price)
