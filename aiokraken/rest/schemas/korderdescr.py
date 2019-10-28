@@ -483,9 +483,9 @@ class KOrderDescrCloseSchema(BaseSchema):
 
 
 class KOrderDescrSchema(BaseSchema):
-    pair = PairField()
-    abtype = KABTypeField()  # need rename to not confuse python on this...
-    ordertype = KOrderTypeField()
+    pair = PairField(required=True)
+    abtype = KABTypeField(required=True)  # need rename to not confuse python on this...
+    ordertype = KOrderTypeField(required=True)
     price = fields.Decimal(required=False, as_string=True)
     price2 = fields.Decimal(required=False, as_string=True)
     leverage = fields.Decimal(
@@ -553,9 +553,11 @@ class KOrderDescrSchema(BaseSchema):
         return finmodel
 
     @pre_dump
-    def deconstruct_model(self, data, **kwargs):
-        if callable(data.close):
-            data.close = None  # dropping method before attempting dump
+    def validate_model(self, data, **kwargs):
+        # pre dump validation (addon for marshmallow, not designed for this)
+        assert data.pair is not None
+        assert data.abtype is not None
+        assert data.ordertype is not None
         return data
 
     @post_dump

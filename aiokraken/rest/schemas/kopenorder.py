@@ -14,13 +14,22 @@ if not __package__:
 from .base import BaseSchema
 from .kordertype import KOrderTypeModel, KOrderTypeField
 from .ktm import TMModel, TMStrategy, TimerField
-from .korderdescr import KOrderDescrModel, KOrderDescrSchema, KOrderDescrStrategy
-from ...utils.stringenum import StringEnum
+from .korderdescr import (KOrderDescrNoPriceFinalized,
+           KOrderDescrOnePriceFinalized,
+           KOrderDescrTwoPriceFinalized,
+                          KOrderDescrNoPriceStrategy,
+                          KOrderDescrOnePriceStrategy,
+                          KOrderDescrTwoPriceStrategy,
+                    KOrderDescrFinalizeStrategy,
 
+KOrderDescrSchema,
+)
 
 @dataclass(frozen=True)
 class KOpenOrderModel:
-    descr: KOrderDescrModel
+    descr: typing.Union[KOrderDescrNoPriceFinalized,
+           KOrderDescrOnePriceFinalized,
+           KOrderDescrTwoPriceFinalized, ]
 
     status: str  # TODO
     starttm: TMModel
@@ -44,18 +53,18 @@ class KOpenOrderModel:
     userref: int  # TODO
 
 
-    # def filled(self):
-    #
-    #     return Trade
-
 @composite
 def OpenOrderStrategy(draw,
-                      descr= KOrderDescrStrategy(),
+                      descr= st.one_of([
+                          KOrderDescrFinalizeStrategy(strategy=KOrderDescrNoPriceStrategy()),
+                          KOrderDescrFinalizeStrategy(strategy=KOrderDescrOnePriceStrategy()),
+                          KOrderDescrFinalizeStrategy(strategy=KOrderDescrTwoPriceStrategy())
+                      ]),
                       status= st.text(max_size=5),  # TODO
                       starttm= TMStrategy(),
                       opentm= TMStrategy(),
                       expiretm= TMStrategy(),
-
+                      # CAreful here : consistency with descr content ???
                       price= st.decimals(allow_nan=False, allow_infinity=False),
                       limitprice= st.decimals(allow_nan=False, allow_infinity=False),
                       stopprice= st.decimals(allow_nan=False, allow_infinity=False),
@@ -67,10 +76,10 @@ def OpenOrderStrategy(draw,
                       cost= st.decimals(allow_nan=False, allow_infinity=False),
 
                       misc= st.text(max_size=5),  # TODO
-                      oflags= st.text(max_size=5), # TODO
+                      oflags= st.text(max_size=5),  # TODO
 
                       refid=st.integers(),  # TODO
-                      userref= st.integers() # TODO
+                      userref= st.integers()  # TODO
 ):
 
     return KOpenOrderModel(
@@ -139,7 +148,11 @@ class KOpenOrderSchema(BaseSchema):
 @st.composite
 def OpenOrderDictStrategy(draw,
                           # Here we mirror arguments for the model strategy
-                          descr= KOrderDescrStrategy(),
+                          descr= st.one_of([
+                              KOrderDescrFinalizeStrategy(strategy=KOrderDescrNoPriceStrategy()),
+                              KOrderDescrFinalizeStrategy(strategy=KOrderDescrOnePriceStrategy()),
+                              KOrderDescrFinalizeStrategy(strategy=KOrderDescrTwoPriceStrategy())
+                          ]),
                           status= st.text(max_size=5),  # TODO
                           starttm= TMStrategy(),
                           opentm= TMStrategy(),

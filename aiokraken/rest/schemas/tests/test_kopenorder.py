@@ -1,6 +1,7 @@
 import time
 import unittest
 
+import typing
 from hypothesis import given
 from parameterized import parameterized
 import json
@@ -10,8 +11,12 @@ import decimal
 from ..ktm import TMModel, TimerField
 from ..kabtype import KABTypeModel
 from ..kordertype import KOrderTypeModel
-from ..kopenorder import KOpenOrderSchema, KOpenOrderModel, OpenOrderStrategy, OpenOrderDictStrategy
-from ..korderdescr import KOrderDescrModel, KOrderDescrSchema
+from ..kopenorder import (KOpenOrderSchema, KOpenOrderModel,
+KOrderDescrNoPriceFinalized,
+KOrderDescrOnePriceFinalized,
+KOrderDescrTwoPriceFinalized,
+    OpenOrderStrategy, OpenOrderDictStrategy)
+from ..korderdescr import KOrderDescrSchema
 from ...exceptions import AIOKrakenException
 
 """
@@ -26,7 +31,9 @@ class TestOpenOrderModel(unittest.TestCase):
     @given(OpenOrderStrategy())
     def test_init(self, openorder):
         assert isinstance(openorder.cost, decimal.Decimal)
-        assert isinstance(openorder.descr, KOrderDescrModel)
+        assert isinstance(openorder.descr, (KOrderDescrNoPriceFinalized,
+           KOrderDescrOnePriceFinalized,
+           KOrderDescrTwoPriceFinalized))
         assert isinstance(openorder.expiretm, TMModel)
         assert isinstance(openorder.fee, decimal.Decimal)
         assert isinstance(openorder.limitprice, decimal.Decimal)
