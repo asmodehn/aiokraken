@@ -21,7 +21,7 @@ from .schemas.ohlc import PairOHLCSchema
 from .schemas.balance import BalanceSchema
 from .schemas.kopenorder import KOpenOrderSchema, OpenOrdersResponseSchema
 from .schemas.krequestorder import (
-    RequestOrderModel, AddOrderResponseSchema, CancelOrderResponseSchema,
+    RequestOrderFinalized, AddOrderResponseSchema, CancelOrderResponseSchema,
     RequestOrderSchema,
 )
 from .schemas.ticker import TickerSchema, PairTickerSchema
@@ -191,9 +191,9 @@ class Server:
                                                      )
                                    )
 
-    def bid(self, order: RequestOrderModel, leverage=0):
+    def bid(self, order: RequestOrderFinalized, leverage=0):
         order.bid(leverage=leverage)
-        data = RequestOrderSchema().dump(order)
+       # data = RequestOrderSchema().dump(order)
         print(f"Serialized Order: {data}")
         return self.private.request('AddOrder',
                                     data=data,
@@ -203,9 +203,9 @@ class Server:
                                                       ))
                                     )
 
-    def ask(self, order: RequestOrderModel, leverage=0):
+    def ask(self, order: RequestOrderFinalized, leverage=0):
         order.ask(leverage=leverage)
-        data = RequestOrderSchema().dump(order)
+       # data = RequestOrderSchema().dump(order)
         print(f"Serialized Order: {data}")
         return self.private.request('AddOrder',
                                     data=data,

@@ -25,6 +25,7 @@ pyjanitor = "*"
 ipympl = "*"
 parameterized = "*"
 hypothesis = "*"
+mypy = "*"
 
 [requires]
 python_version = "3.7"
