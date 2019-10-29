@@ -8,9 +8,9 @@ uses integrated python tools only.
 
 # import your test modules
 if __package__ is not None:
-    from . import test_ohlc, test_pair, test_ticker
+    from . import test_ohlc, test_ticker
 else:
-    import test_ohlc, test_pair, test_ticker
+    import test_ohlc, test_ticker
 
 # initialize the test suite
 loader = unittest.TestLoader()
@@ -18,7 +18,6 @@ suite = unittest.TestSuite()
 
 # add tests to the test suite
 suite.addTests(loader.loadTestsFromModule(test_ohlc))
-suite.addTests(loader.loadTestsFromModule(test_pair))
 suite.addTests(loader.loadTestsFromModule(test_ticker))
 
 # initialize a runner, pass it your suite and run it

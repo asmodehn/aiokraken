@@ -1,7 +1,6 @@
 import unittest
 from hypothesis import given, settings, Verbosity, HealthCheck
 from hypothesis.strategies import sampled_from
-from .. import pair
 
 
 class TestTicker(unittest.TestCase):
