@@ -4,8 +4,10 @@ from dataclasses import dataclass
 
 from marshmallow import fields, pre_load, post_load
 
-from .base import BaseSchema
+if not __package__:
+    __package__ = 'aiokraken.rest.schemas'
 
+from .base import BaseSchema
 from ..exceptions import AIOKrakenException
 from .kcurrency import KCurrency, KCurrencyStrategy
 from hypothesis import given, strategies as st
@@ -35,9 +37,17 @@ class PairModel:
         # or using .value ?? see other stringenums like ordertype...
         return f"{self.base}{self.quote}"
 
+@st.composite
+def PairStrategy(draw):
+    """
 
-def PairStrategy(base=KCurrencyStrategy(), quote=KCurrencyStrategy()):
-    return st.builds(PairModel, base=base, quote=quote)
+    :param draw:
+    :return:
+
+    """
+    base = draw(KCurrencyStrategy())
+    quote= draw(KCurrencyStrategy().filter(lambda c: c != base))
+    return PairModel(base=base, quote=quote)
 
 
 # This makes hypothesis blow up because of inability to shrink...
@@ -109,7 +119,19 @@ class PairField(fields.Field):
 
 
 @st.composite
-def PairStringStrategy(draw, base=KCurrencyStrategy(), quote=KCurrencyStrategy()):
-    model = draw(PairStrategy(base=base, quote=quote))
+def PairStringStrategy(draw):
+    """
+    :param draw:
+    :return:
+
+
+    """
+    model = draw(PairStrategy())
     field = PairField()
     return field.serialize("a", {"a": model})
+
+
+if __name__ == "__main__":
+    import pytest
+
+    pytest.main(["-s", "--doctest-modules", "--doctest-continue-on-failure", __file__])

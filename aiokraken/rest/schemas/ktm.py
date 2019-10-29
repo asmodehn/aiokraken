@@ -68,7 +68,10 @@ class TimerField(fields.Field):
         :param dict kwargs: Field-specific keyword arguments.
         :return: The serialized value
         """
-        return str(value)
+        if value is not None:
+            return str(value)
+        else:
+            return ''  # meaningless string value
 
 
 @st.composite

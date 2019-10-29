@@ -2,6 +2,8 @@ import functools
 import typing
 from decimal import Decimal
 from enum import Enum
+
+import hypothesis
 import marshmallow
 from dataclasses import dataclass, field, asdict
 from marshmallow import fields, pre_load, post_load, post_dump, pre_dump
@@ -22,15 +24,16 @@ from ..exceptions import AIOKrakenException
 from .kopenorder import KOpenOrderSchema
 from .korderdescr import (
     KOrderDescr, KOrderDescrNoPrice, KOrderDescrOnePrice, KOrderDescrTwoPrice,
-    KOrderDescrTwoPriceMixin,
-    KOrderDescrNoPriceMixin,
-    KOrderDescrOnePriceMixin,
+    KOrderDescrTwoPriceData,
+    KOrderDescrNoPriceData,
+    KOrderDescrOnePriceData,
     KOrderDescrNoPriceFinalized,
     KOrderDescrOnePriceFinalized,
     KOrderDescrTwoPriceFinalized,
     KOrderDescrNoPriceStrategy,
     KOrderDescrOnePriceStrategy,
     KOrderDescrTwoPriceStrategy,
+    KOrderDescrSchema,
 )
 
 
@@ -109,12 +112,13 @@ class RequestOrderMixin:
 
     userref: typing.Optional[int]  # TODO
 
+    # Explicit init to manage defaults without impacting inheritance...
     def __init__(self, pair: PairModel, userref: typing.Optional[int] = None, fee_currency_base:bool = True, market_price_protection: bool = True, **kwargs):
         object.__setattr__(self, "pair", pair)
         object.__setattr__(self, "userref", userref)
         object.__setattr__(self, "fee_currency_base", fee_currency_base)
         object.__setattr__(self, "market_price_protection", market_price_protection)
-        super(RequestOrderMixin, self).__init__(**kwargs)
+        assert not kwargs, kwargs  # making sure we dont have any arguments left unprocessed
 
 
 @dataclass(frozen=True, init=False)
@@ -122,24 +126,29 @@ class RequestOrderFinalizedMixin(RequestOrderMixin):
 
     volume: Decimal
 
-    relative_starttm: TMModel
-    relative_expiretm: TMModel
+    relative_starttm: typing.Optional[TMModel]
+    relative_expiretm: typing.Optional[TMModel]
 
     # False by default to prevent accidental orders...
     validate: bool
 
+    #
     def __init__(self, volume: Decimal, **kwargs):
         # default value to prevent any server order execution by default...
         object.__setattr__(self, "volume", volume)
         object.__setattr__(self, "validate", True)
+        object.__setattr__(self, "relative_starttm", None)
+        object.__setattr__(self, "relative_expiretm", None)
         super(RequestOrderFinalizedMixin, self).__init__(**kwargs)
 
-    def delay(self, relative_starttm: TMModel, relative_expiretm: TMModel):
+    def delay(self, relative_starttm: TMModel = TMModel(0), relative_expiretm: TMModel = TMModel(0)):
         object.__setattr__(self, "relative_starttm", relative_starttm)
         object.__setattr__(self, "relative_expiretm", relative_expiretm)
+        return self
 
-    def execute(self, validate=False):
-        object.__setattr__(self, "validate", validate)
+    def execute(self, execute=False):
+        object.__setattr__(self, "validate", not execute)
+        return self
 
 
     # def cancel(self):
@@ -175,42 +184,47 @@ class RequestOrderTwoPriceMixin(RequestOrderMixin):
         super(RequestOrderTwoPriceMixin, self).__init__(**kwargs)
 
 
-class RequestOrderNoPriceFinalized(RequestOrderNoPriceMixin, RequestOrderFinalizedMixin):
+# Finalized classes bypass the incomplete class desc behavior, as desc is now of a different type...
+@dataclass(frozen=True, init=False)
+class RequestOrderNoPriceFinalized(RequestOrderFinalizedMixin):
     descr: KOrderDescrNoPriceFinalized
 
-    # overloading only to get proper type specification
     def __init__(self, descr: KOrderDescrNoPriceFinalized, **kwargs):
-        super(RequestOrderNoPriceFinalized, self).__init__(descr=descr, **kwargs)
+        object.__setattr__(self, "descr", descr)
+        super(RequestOrderNoPriceFinalized, self).__init__(**kwargs)
 
 
-class RequestOrderOnePriceFinalized(RequestOrderOnePriceMixin, RequestOrderFinalizedMixin):
+@dataclass(frozen=True, init=False)
+class RequestOrderOnePriceFinalized(RequestOrderFinalizedMixin):
     descr: KOrderDescrOnePriceFinalized
 
-    # overloading only to get proper type specification
-    def __init__(self, descr: KOrderDescrNoPriceFinalized, **kwargs):
-        super(RequestOrderOnePriceFinalized, self).__init__(descr=descr, **kwargs)
+    def __init__(self, descr: KOrderDescrOnePriceFinalized, **kwargs):
+        object.__setattr__(self, "descr", descr)
+        super(RequestOrderOnePriceFinalized, self).__init__(**kwargs)
 
 
-class RequestOrderTwoPriceFinalized(RequestOrderTwoPriceMixin, RequestOrderFinalizedMixin):
+@dataclass(frozen=True, init=False)
+class RequestOrderTwoPriceFinalized(RequestOrderFinalizedMixin):
     descr: KOrderDescrTwoPriceFinalized
 
-    # overloading only to get proper type specification
-    def __init__(self, descr:KOrderDescrNoPriceFinalized, **kwargs):
-        super(RequestOrderTwoPriceFinalized, self).__init__(descr=descr, **kwargs)
+    def __init__(self, descr:KOrderDescrTwoPriceFinalized, **kwargs):
+        object.__setattr__(self, "descr", descr)
+        super(RequestOrderTwoPriceFinalized, self).__init__(**kwargs)
+
 
 # Common "union" type for the finalized types
 RequestOrderFinalized = RequestOrderFinalizedMixin
 
 
-class RequestOrderNoPrice(RequestOrderNoPriceMixin, RequestOrderMixin):
+class RequestOrderNoPrice(RequestOrderNoPriceMixin):
     """
     """
 
     def buy(self, volume: Decimal,leverage: Decimal =Decimal(0), close: typing.Optional[
             typing.Union[
-                KOrderDescrNoPriceMixin,
-                KOrderDescrOnePriceMixin,
-                KOrderDescrTwoPriceMixin,
+                KOrderDescrNoPriceData,
+                KOrderDescrOnePriceData,
+                KOrderDescrTwoPriceData,
             ]
         ] = None) -> RequestOrderNoPriceFinalized:
         return RequestOrderNoPriceFinalized(
@@ -223,9 +237,9 @@ class RequestOrderNoPrice(RequestOrderNoPriceMixin, RequestOrderMixin):
 
     def sell(self, volume: Decimal,leverage: Decimal=Decimal(0), close: typing.Optional[
             typing.Union[
-                KOrderDescrNoPriceMixin,
-                KOrderDescrOnePriceMixin,
-                KOrderDescrTwoPriceMixin,
+                KOrderDescrNoPriceData,
+                KOrderDescrOnePriceData,
+                KOrderDescrTwoPriceData,
             ]
         ] = None,)-> RequestOrderNoPriceFinalized:
         return RequestOrderNoPriceFinalized(
@@ -237,15 +251,15 @@ class RequestOrderNoPrice(RequestOrderNoPriceMixin, RequestOrderMixin):
     ask = sell
 
 
-class RequestOrderOnePrice(RequestOrderOnePriceMixin, RequestOrderMixin):
+class RequestOrderOnePrice(RequestOrderOnePriceMixin):
     """
     """
 
     def buy(self, volume: Decimal, leverage: Decimal = Decimal(0), close: typing.Optional[
         typing.Union[
-            KOrderDescrNoPriceMixin,
-            KOrderDescrOnePriceMixin,
-            KOrderDescrTwoPriceMixin,
+            KOrderDescrNoPriceData,
+            KOrderDescrOnePriceData,
+            KOrderDescrTwoPriceData,
         ]
     ] = None) -> RequestOrderOnePriceFinalized:
         return RequestOrderOnePriceFinalized(
@@ -258,9 +272,9 @@ class RequestOrderOnePrice(RequestOrderOnePriceMixin, RequestOrderMixin):
 
     def sell(self, volume: Decimal, leverage: Decimal = Decimal(0), close: typing.Optional[
         typing.Union[
-            KOrderDescrNoPriceMixin,
-            KOrderDescrOnePriceMixin,
-            KOrderDescrTwoPriceMixin,
+            KOrderDescrNoPriceData,
+            KOrderDescrOnePriceData,
+            KOrderDescrTwoPriceData,
         ]
     ] = None, ) -> RequestOrderOnePriceFinalized:
         return RequestOrderOnePriceFinalized(
@@ -272,13 +286,13 @@ class RequestOrderOnePrice(RequestOrderOnePriceMixin, RequestOrderMixin):
     ask = sell
 
 
-class RequestOrderTwoPrice(RequestOrderTwoPriceMixin, RequestOrderMixin):
+class RequestOrderTwoPrice(RequestOrderTwoPriceMixin):
 
     def buy(self, volume: Decimal,leverage: Decimal = Decimal(0), close: typing.Optional[
         typing.Union[
-            KOrderDescrNoPriceMixin,
-            KOrderDescrOnePriceMixin,
-            KOrderDescrTwoPriceMixin,
+            KOrderDescrNoPriceData,
+            KOrderDescrOnePriceData,
+            KOrderDescrTwoPriceData,
         ]
     ] = None) -> RequestOrderTwoPriceFinalized:
         return RequestOrderTwoPriceFinalized(
@@ -291,9 +305,9 @@ class RequestOrderTwoPrice(RequestOrderTwoPriceMixin, RequestOrderMixin):
 
     def sell(self, volume: Decimal ,leverage: Decimal = Decimal(0), close: typing.Optional[
         typing.Union[
-            KOrderDescrNoPriceMixin,
-            KOrderDescrOnePriceMixin,
-            KOrderDescrTwoPriceMixin,
+            KOrderDescrNoPriceData,
+            KOrderDescrOnePriceData,
+            KOrderDescrTwoPriceData,
         ]
     ] = None, ) -> RequestOrderTwoPriceFinalized:
         return RequestOrderTwoPriceFinalized(
@@ -391,9 +405,14 @@ class RequestOrder(RequestOrderMixin):
 
 
 @st.composite
+def RequestOrderStrategy(draw,):
+    return RequestOrder(pair=draw(PairStrategy()), userref=draw(st.integers(min_value=0)), ) # TODO : add more arg for strategy, after implementation complete...
+
+
+@st.composite
 def RequestOrderNoPriceStrategy(draw,):
 
-    rom = draw(st.builds(RequestOrder))
+    rom = draw(RequestOrderStrategy())
     ot = draw(st.sampled_from([KOrderTypeModel.market, KOrderTypeModel.settle_position]))
 
     if ot == KOrderTypeModel.market:
@@ -409,7 +428,7 @@ def RequestOrderNoPriceStrategy(draw,):
 def RequestOrderOnePriceStrategy(draw,
     price=st.decimals(allow_nan=False, allow_infinity=False, min_value=1), ):
 
-    rom = draw(st.builds(RequestOrder))
+    rom = draw(RequestOrderStrategy())
     ot = draw(st.sampled_from([
                 KOrderTypeModel.limit,
                 KOrderTypeModel.take_profit,
@@ -435,7 +454,7 @@ def RequestOrderTwoPriceStrategy(draw,
     price=st.decimals(allow_nan=False, allow_infinity=False, min_value=1),
     price2=st.decimals(allow_nan=False, allow_infinity=False, min_value=1),):
 
-    rom = draw(st.builds(RequestOrder))
+    rom = draw(RequestOrderStrategy())
     ot = draw(st.sampled_from([
                 KOrderTypeModel.stop_loss_profit,
                 KOrderTypeModel.stop_loss_profit_limit,
@@ -497,103 +516,109 @@ def RequestOrderFinalizeStrategy(
     return of
 
 
-# class RequestOrderSchema(BaseSchema):
-# # TMP TODO FIX    descr= fields.Nested(KOrderDescrSchema())
-#     pair= PairField(required=False)  # to load/dump to/from internals of descr
-#
-#     volume= fields.Decimal()
-#     leverage= fields.Decimal()
-#     relative_starttm= TimerField()
-#     relative_expiretm= TimerField()
-#
-#     # fee_currency_base
-#     # market_price_protection
-#
-#     userref= fields.Integer()  # TODO
-#     execute= fields.Bool(default=False)
-#     close= fields.Str()  # TODO
-#
-#     @pre_load
-#     def translate_fields(self, data, **kwargs):
-#         data.setdefault('execute', not data.get('validate'))
-#         data.pop('validate')
-#         return data
-#
-#     @post_load
-#     def build_model(self, data, **kwargs):
-#         descr = data.pop('descr')
-#
-#         # grab the pair from descr
-#         data['pair'] = descr.pair
-#         # build order model
-#         rom= RequestOrderModel(**data)
-#
-#         # and finalize step by step...
-#         if descr.ordertype == KOrderTypeModel.market:
-#             rom.market()
-#         elif descr.ordertype == KOrderTypeModel.limit:
-#             rom.limit(limit_price=descr.price)
-#         elif descr.ordertype == KOrderTypeModel.stop_loss:
-#             rom.stop_loss(stop_loss_price=descr.price)
-#         elif descr.ordertype == KOrderTypeModel.take_profit:
-#             rom.take_profit(take_profit_price=descr.price)
-#         elif descr.ordertype == KOrderTypeModel.stop_loss_profit:
-#             rom.stop_loss_profit(stop_loss_price=descr.price, take_profit_price=descr.price2)
-#         elif descr.ordertype == KOrderTypeModel.stop_loss_profit_limit:
-#             rom.stop_loss_profit_limit(stop_loss_price=descr.price, take_profit_price=descr.price2)
-#         elif descr.ordertype == KOrderTypeModel.stop_loss_limit:
-#             rom.stop_loss_limit(stop_loss_trigger_price=descr.price, triggered_limit_price=descr.price2)
-#         elif descr.ordertype == KOrderTypeModel.take_profit_limit:
-#             rom .take_profit_limit(take_profit_trigger_price=descr.price, triggered_limit_price=descr.price2)
-#         elif descr.ordertype == KOrderTypeModel.trailing_stop:
-#             rom.trailing_stop(trailing_stop_offset=descr.price)
-#         elif descr.ordertype == KOrderTypeModel.trailing_stop_limit:
-#             rom.trailing_stop_limit(trailing_stop_offset=descr.price, triggered_limit_offset=descr.price2)
-#         elif descr.ordertype == KOrderTypeModel.stop_loss_and_limit:
-#             rom.stop_loss_and_limit(stop_loss_price=descr.price, limit_price=descr.price2)
-#         elif descr.ordertype == KOrderTypeModel.settle_position:
-#             rom.settle_position()
-#         else:
-#             raise NotImplementedError
-#
-#         if descr.abtype == KABTypeModel.sell:
-#             rom.buy(leverage=descr.leverage)
-#         elif descr.abtype == KABTypeModel.sell:
-#             rom.sell(leverage=descr.leverage)
-#         return rom
-#
-#     @pre_dump
-#     def make_dict(self, data, **kwargs):
-#
-#         # accessing descr property to build it if needed
-#         descr = data.descr
-#
-#         def filter_none(item_list):
-#             return {k: v for k, v in item_list if v is not None if not k.startswith('_')}
-#
-#         d = asdict(data, dict_factory=filter_none)
-#
-#         # Adding redundant fields
-#         d.setdefault('pair', data.descr.pair)
-#         d.setdefault('descr', descr)
-#
-#         return d
-#
-#     @post_dump
-#     def cleanup_dict(self, data, **kwargs):
-#
-#         # translating
-#         data.setdefault('validate', not data.get('execute'))
-#         data.pop('execute')
-#
-#         # Removing fields with default semantic to use server defaults, and minimize serialization errors
-#         if data.get('relative_starttm') == '+0':
-#             data.pop('relative_starttm')
-#         if data.get('relative_expiretm') == '+0':
-#             data.pop('relative_expiretm')
-#
-#         return data
-#
+class RequestOrderSchema(BaseSchema):
+    descr= fields.Nested(KOrderDescrSchema())
+    pair= PairField(required=False)  # to load/dump to/from internals of descr
+
+    volume= fields.Decimal(allow_nan=False, allow_infinity=False, as_string=True)
+    leverage= fields.Decimal(allow_nan=False, allow_infinity=False, as_string=True)
+    relative_starttm= TimerField(required=False)
+    relative_expiretm= TimerField(required=False)
+
+    # TODO
+    # fee_currency_base
+    # market_price_protection
+
+    userref= fields.Integer(required=False)  # TODO
+    validate= fields.Bool(default=True)
+    close= fields.Str()  # TODO
+
+    @pre_load
+    def translate_fields(self, data, **kwargs):
+        return data
+
+    @post_load
+    def build_model(self, data, **kwargs):
+        descr = data.pop('descr')
+
+        # grab the pair from descr
+        data['pair'] = descr.pair
+
+        # grab volume :
+        volume = data.pop("volume")
+
+        # grab validate :
+        validate = data.pop("validate")
+
+        # build order model
+        rom= RequestOrder(**{
+            'pair': data.get('pair'),
+            'userref': data.get('userref'),
+            # TODO fee_currency_base = True, market_price_protection = True
+            }
+        )
+
+        # and finalize step by step...
+        if descr.ordertype == KOrderTypeModel.market:
+            pro = rom.market()
+        elif descr.ordertype == KOrderTypeModel.limit:
+            pro = rom.limit(limit_price=descr.price)
+        elif descr.ordertype == KOrderTypeModel.stop_loss:
+            pro = rom.stop_loss(stop_loss_price=descr.price)
+        elif descr.ordertype == KOrderTypeModel.take_profit:
+            pro = rom.take_profit(take_profit_price=descr.price)
+        elif descr.ordertype == KOrderTypeModel.stop_loss_profit:
+            pro = rom.stop_loss_profit(stop_loss_price=descr.price, take_profit_price=descr.price2)
+        elif descr.ordertype == KOrderTypeModel.stop_loss_profit_limit:
+            pro = rom.stop_loss_profit_limit(stop_loss_price=descr.price, take_profit_price=descr.price2)
+        elif descr.ordertype == KOrderTypeModel.stop_loss_limit:
+            pro = rom.stop_loss_limit(stop_loss_trigger_price=descr.price, triggered_limit_price=descr.price2)
+        elif descr.ordertype == KOrderTypeModel.take_profit_limit:
+            pro = rom .take_profit_limit(take_profit_trigger_price=descr.price, triggered_limit_price=descr.price2)
+        elif descr.ordertype == KOrderTypeModel.trailing_stop:
+            pro = rom.trailing_stop(trailing_stop_offset=descr.price)
+        elif descr.ordertype == KOrderTypeModel.trailing_stop_limit:
+            pro = rom.trailing_stop_limit(trailing_stop_offset=descr.price, triggered_limit_offset=descr.price2)
+        elif descr.ordertype == KOrderTypeModel.stop_loss_and_limit:
+            pro = rom.stop_loss_and_limit(stop_loss_price=descr.price, limit_price=descr.price2)
+        elif descr.ordertype == KOrderTypeModel.settle_position:
+            pro = rom.settle_position()
+        else:
+            raise NotImplementedError
+
+        if descr.abtype == KABTypeModel.buy:
+            ro = pro.buy(leverage=descr.leverage, volume=volume).execute(not validate)
+        elif descr.abtype == KABTypeModel.sell:
+            ro = pro.sell(leverage=descr.leverage, volume=volume).execute(not validate)
+        else:
+            raise NotImplementedError
+
+        return ro
+
+    @pre_dump
+    def make_dict(self, data, **kwargs):
+        # in and out as model type. let marshmallow unpack the data from the dataclass
+        return data
+
+    @post_dump
+    def cleanup_dict(self, data, **kwargs):
+
+        # Removing fields with default semantic to use server defaults, and minimize serialization errors
+        if data.get('relative_starttm') in ['', '+0']:
+            data.pop('relative_starttm')
+        if data.get('relative_expiretm') in ['', '+0']:
+            data.pop('relative_expiretm')
+
+        data = {k: v for k, v in data.items() if v is not None}
+
+        return data
+
+
+@st.composite
+def KDictStrategy(draw, model_strategy):
+    model = draw(model_strategy)
+    schema = RequestOrderSchema()
+    return schema.dump(model)
 #
 # @st.composite
 # def RequestOrderDictStrategy(draw,

@@ -9,11 +9,12 @@ import marshmallow
 import decimal
 from hypothesis import given, settings, Verbosity, strategies as st
 
-from aiokraken.rest.schemas.kabtype import KABTypeModel
-from aiokraken.rest.schemas.kordertype import KOrderTypeModel
-from aiokraken.rest.schemas.kpair import PairModel
+from ..kabtype import KABTypeModel
+from ..kordertype import KOrderTypeModel
+from ..kpair import PairModel
 from ..korderdescr import (
     KOrderDescr,
+    KOrderDescrStrategy,
     KOrderDescrNoPrice,
     KOrderDescrNoPriceFinalized,
     KOrderDescrNoPriceStrategy,
@@ -38,7 +39,9 @@ For simple usecase examples, we should rely on doctests.
 
 
 class TestOrderDescr(unittest.TestCase):
-    @given(st.builds(KOrderDescr))
+
+    @settings(verbosity=Verbosity.verbose)
+    @given(KOrderDescrStrategy())
     def test_model(self, model):
         assert isinstance(model, KOrderDescr)
         assert hasattr(model, "pair") and isinstance(model.pair, PairModel)
@@ -164,7 +167,7 @@ class TestOrderDescrSchema(unittest.TestCase):
             )
         )
     )
-    def test_deserialize(self, orderdescrdct):
+    def test_load_ok(self, orderdescrdct):
         p = self.schema.load(orderdescrdct)
         assert isinstance(
             p,
@@ -187,7 +190,7 @@ class TestOrderDescrSchema(unittest.TestCase):
             ]
         )
     )
-    def test_serialize(self, orderdescrmodel):
+    def test_dump_ok(self, orderdescrmodel):
         p = self.schema.dump(orderdescrmodel)
         assert isinstance(p, dict)
         expected = {k: v for k, v in asdict(orderdescrmodel).items() if v is not None}
@@ -217,9 +220,11 @@ class TestOrderDescrSchema(unittest.TestCase):
             ]
         )
     )
-    def test_serialize_fail(self, orderdescrmodel):
+    def test_dump_fail(self, non_finalized_model):
         """ must fail on non finalized descr """
 
         with self.assertRaises(Exception) as e:
-            p = self.schema.dump(orderdescrmodel)
+            p = self.schema.dump(non_finalized_model)
             # TODO: refine
+
+    # TODO : more corrupted data

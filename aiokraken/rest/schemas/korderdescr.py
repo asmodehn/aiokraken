@@ -4,7 +4,7 @@ import typing
 from decimal import Decimal
 
 from enum import IntEnum
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass, field, asdict, make_dataclass
 
 from marshmallow import fields, post_load, pre_dump, post_dump, pre_load
 from hypothesis import strategies as st
@@ -13,6 +13,7 @@ if not __package__:
     __package__ = "aiokraken.rest.schemas"
 
 from .base import BaseSchema
+from .kcurrency import KCurrency
 from .kpair import PairModel, PairField, PairStrategy
 from .kabtype import KABTypeModel, KABTypeField, KABTypeStrategy
 from .kordertype import KOrderTypeModel, KOrderTypeField, KOrderTypeStrategy
@@ -20,108 +21,73 @@ from .kordertype import KOrderTypeModel, KOrderTypeField, KOrderTypeStrategy
 # TODO : repr for dataclasses ! (should be isomorphic to order string representation frmo kraken)
 
 # This multilevel inheritance is for enforcing sequential call, building data bit by bit, and verifiable via types...
-# Difficulty : we need 2 orthogonal dimensions... attempting with python's multiple inheritance...
-@dataclass(frozen=True, init=False)
-class KOrderDescrMixin:
+# Data is repeated because we would need 2 dimensions of combination.
+# Multiple inheritance is probably worse than a small copy/paste... so we didn't go that route.
+
+
+@dataclass(frozen=True, init=True)
+class KOrderDescrData:
     pair: PairModel  # always needed, usually from context
 
-    def __init__(self, pair: PairModel, **kwargs):
-        object.__setattr__(self, "pair", pair)
-        super(KOrderDescrMixin, self).__init__(**kwargs)
 
-
-# TODO : we need to overload init there to allow multiple inheritance and work with constructors...
-#  => better way ? enhancement in python dataclasses ??
-
-
-@dataclass(frozen=True, init=False)
-class KOrderDescrNoPriceMixin(KOrderDescrMixin):
+@dataclass(frozen=True, init=True)
+class KOrderDescrNoPriceData(KOrderDescrData):
     ordertype: KOrderTypeModel
 
-    def __init__(self, ordertype: KOrderTypeModel, **kwargs):
-        object.__setattr__(self, "ordertype", ordertype)
-        super(KOrderDescrNoPriceMixin, self).__init__(**kwargs)
 
-
-@dataclass(frozen=True, init=False)
-class KOrderDescrOnePriceMixin(KOrderDescrMixin):
+@dataclass(frozen=True, init=True)
+class KOrderDescrOnePriceData(KOrderDescrData):
     ordertype: KOrderTypeModel
     price: Decimal
 
-    def __init__(self, ordertype: KOrderTypeModel, price: Decimal, **kwargs):
-        object.__setattr__(self, "ordertype", ordertype)
-        object.__setattr__(self, "price", price)
-        super(KOrderDescrOnePriceMixin, self).__init__(**kwargs)
 
-
-@dataclass(frozen=True, init=False)
-class KOrderDescrTwoPriceMixin(KOrderDescrMixin):
+@dataclass(frozen=True, init=True)
+class KOrderDescrTwoPriceData(KOrderDescrData):
     ordertype: KOrderTypeModel
     price: Decimal
     price2: Decimal
 
-    def __init__(
-        self, ordertype: KOrderTypeModel, price: Decimal, price2: Decimal, **kwargs
-    ):
-        object.__setattr__(self, "ordertype", ordertype)
-        object.__setattr__(self, "price", price)
-        object.__setattr__(self, "price2", price2)
-        super(KOrderDescrTwoPriceMixin, self).__init__(**kwargs)
 
-
-@dataclass(frozen=True, init=False)
-class KOrderDescrFinalizedMixin:
+@dataclass(frozen=True, init=True)
+class KOrderDescrNoPriceFinalized(KOrderDescrNoPriceData):
     abtype: KABTypeModel
-    leverage: Decimal
     close: typing.Optional[
         typing.Union[
-            KOrderDescrNoPriceMixin, KOrderDescrOnePriceMixin, KOrderDescrTwoPriceMixin
+            KOrderDescrNoPriceData, KOrderDescrOnePriceData, KOrderDescrTwoPriceData
         ]
     ]
-
-    def __init__(
-        self,
-        abtype: KABTypeModel,
-        leverage: Decimal = Decimal(0),
-        close: typing.Optional[
-            typing.Union[
-                KOrderDescrNoPriceMixin,
-                KOrderDescrOnePriceMixin,
-                KOrderDescrTwoPriceMixin,
-            ]
-        ] = None,
-        **kwargs
-    ):
-        object.__setattr__(self, "abtype", abtype)
-        object.__setattr__(self, "leverage", leverage)
-        object.__setattr__(self, "close", close)
-        super(KOrderDescrFinalizedMixin, self).__init__(**kwargs)
+    leverage: Decimal = field(default=Decimal(0))
 
 
-# categorical product via multi inheritance (careful with MRO)...
-
-# Terminal
-class KOrderDescrNoPriceFinalized(KOrderDescrNoPriceMixin, KOrderDescrFinalizedMixin):
-    pass
-
-
-class KOrderDescrOnePriceFinalized(KOrderDescrOnePriceMixin, KOrderDescrFinalizedMixin):
-    pass
-
-
-class KOrderDescrTwoPriceFinalized(KOrderDescrTwoPriceMixin, KOrderDescrFinalizedMixin):
-    pass
+@dataclass(frozen=True, init=True)
+class KOrderDescrOnePriceFinalized(KOrderDescrOnePriceData):
+    abtype: KABTypeModel
+    close: typing.Optional[
+        typing.Union[
+            KOrderDescrNoPriceData, KOrderDescrOnePriceData, KOrderDescrTwoPriceData
+        ]
+    ]
+    leverage: Decimal = field(default=Decimal(0))
 
 
-class KOrderDescrNoPrice(KOrderDescrNoPriceMixin, KOrderDescrMixin):
+@dataclass(frozen=True, init=True)
+class KOrderDescrTwoPriceFinalized(KOrderDescrTwoPriceData):
+    abtype: KABTypeModel
+    close: typing.Optional[
+        typing.Union[
+            KOrderDescrNoPriceData, KOrderDescrOnePriceData, KOrderDescrTwoPriceData
+        ]
+    ]
+    leverage: Decimal = field(default=Decimal(0))
+
+
+class KOrderDescrNoPrice(KOrderDescrNoPriceData):
     def buy(
         self,
         leverage,
         close: typing.Optional[
             typing.Union[
-                KOrderDescrNoPriceMixin,
-                KOrderDescrOnePriceMixin,
-                KOrderDescrTwoPriceMixin,
+                KOrderDescrNoPriceData, KOrderDescrOnePriceData, KOrderDescrTwoPriceData
             ]
         ] = None,
     ) -> KOrderDescrNoPriceFinalized:
@@ -138,9 +104,7 @@ class KOrderDescrNoPrice(KOrderDescrNoPriceMixin, KOrderDescrMixin):
         leverage,
         close: typing.Optional[
             typing.Union[
-                KOrderDescrNoPriceMixin,
-                KOrderDescrOnePriceMixin,
-                KOrderDescrTwoPriceMixin,
+                KOrderDescrNoPriceData, KOrderDescrOnePriceData, KOrderDescrTwoPriceData
             ]
         ] = None,
     ) -> KOrderDescrNoPriceFinalized:
@@ -153,15 +117,13 @@ class KOrderDescrNoPrice(KOrderDescrNoPriceMixin, KOrderDescrMixin):
         )
 
 
-class KOrderDescrOnePrice(KOrderDescrOnePriceMixin, KOrderDescrMixin):
+class KOrderDescrOnePrice(KOrderDescrOnePriceData):
     def buy(
         self,
         leverage,
         close: typing.Optional[
             typing.Union[
-                KOrderDescrNoPriceMixin,
-                KOrderDescrOnePriceMixin,
-                KOrderDescrTwoPriceMixin,
+                KOrderDescrNoPriceData, KOrderDescrOnePriceData, KOrderDescrTwoPriceData
             ]
         ] = None,
     ) -> KOrderDescrOnePriceFinalized:
@@ -179,9 +141,7 @@ class KOrderDescrOnePrice(KOrderDescrOnePriceMixin, KOrderDescrMixin):
         leverage,
         close: typing.Optional[
             typing.Union[
-                KOrderDescrNoPriceMixin,
-                KOrderDescrOnePriceMixin,
-                KOrderDescrTwoPriceMixin,
+                KOrderDescrNoPriceData, KOrderDescrOnePriceData, KOrderDescrTwoPriceData
             ]
         ] = None,
     ) -> KOrderDescrOnePriceFinalized:
@@ -195,15 +155,13 @@ class KOrderDescrOnePrice(KOrderDescrOnePriceMixin, KOrderDescrMixin):
         )
 
 
-class KOrderDescrTwoPrice(KOrderDescrTwoPriceMixin, KOrderDescrMixin):
+class KOrderDescrTwoPrice(KOrderDescrTwoPriceData):
     def buy(
         self,
         leverage,
         close: typing.Optional[
             typing.Union[
-                KOrderDescrNoPriceMixin,
-                KOrderDescrOnePriceMixin,
-                KOrderDescrTwoPriceMixin,
+                KOrderDescrNoPriceData, KOrderDescrOnePriceData, KOrderDescrTwoPriceData
             ]
         ] = None,
     ) -> KOrderDescrTwoPriceFinalized:
@@ -222,9 +180,7 @@ class KOrderDescrTwoPrice(KOrderDescrTwoPriceMixin, KOrderDescrMixin):
         leverage,
         close: typing.Optional[
             typing.Union[
-                KOrderDescrNoPriceMixin,
-                KOrderDescrOnePriceMixin,
-                KOrderDescrTwoPriceMixin,
+                KOrderDescrNoPriceData, KOrderDescrOnePriceData, KOrderDescrTwoPriceData
             ]
         ] = None,
     ) -> KOrderDescrTwoPriceFinalized:
@@ -240,7 +196,20 @@ class KOrderDescrTwoPrice(KOrderDescrTwoPriceMixin, KOrderDescrMixin):
 
 
 # Initial
-class KOrderDescr(KOrderDescrMixin):
+class KOrderDescr(KOrderDescrData):
+    """
+    >>> KOrderDescr(pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR))
+    KOrderDescr(pair=XBT/EUR)
+    >>> o = KOrderDescr(pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR))
+    >>> o.market()
+    KOrderDescrNoPrice(pair=XBT/EUR, ordertype=market)
+    >>> o.limit(limit_price=Decimal(1234))
+    KOrderDescrOnePrice(pair=XBT/EUR, ordertype=limit, price=Decimal('1234'))
+    >>> o.stop_loss(stop_loss_price=Decimal(1234))
+    KOrderDescrOnePrice(pair=XBT/EUR, ordertype=stop_loss, price=Decimal('1234'))
+    >>> o.take_profit_limit(take_profit_trigger_price=Decimal(1234), triggered_limit_price=Decimal(321))
+    KOrderDescrTwoPrice(pair=XBT/EUR, ordertype=take_profit_limit, price=Decimal('1234'), price2=Decimal('321'))
+    """
 
     # market
     #     limit (price = limit price)
@@ -351,10 +320,14 @@ class KOrderDescr(KOrderDescrMixin):
 # These are meant to be internal classes for safety and prevent mistakes via types.
 # But not user interface with meaningful names (methods on RequestOrder have that design)
 
+@st.composite
+def KOrderDescrStrategy(draw,):
+    return KOrderDescr(pair=draw(PairStrategy()))
+
 
 @st.composite
 def KOrderDescrNoPriceStrategy(draw,):
-    o = draw(st.builds(KOrderDescr))
+    o = draw(KOrderDescrStrategy())
     ot = draw(
         st.sampled_from([KOrderTypeModel.market, KOrderTypeModel.settle_position])
     )
@@ -371,7 +344,7 @@ def KOrderDescrNoPriceStrategy(draw,):
 def KOrderDescrOnePriceStrategy(
     draw, price=st.decimals(allow_nan=False, allow_infinity=False, min_value=1)
 ):
-    o = draw(st.builds(KOrderDescr))
+    o = draw(KOrderDescrStrategy())
     ot = draw(
         st.sampled_from(
             [
@@ -401,7 +374,7 @@ def KOrderDescrTwoPriceStrategy(
     price=st.decimals(allow_nan=False, allow_infinity=False, min_value=1),
     price2=st.decimals(allow_nan=False, allow_infinity=False, min_value=1),
 ):
-    o = draw(st.builds(KOrderDescr))
+    o = draw(KOrderDescrStrategy())
     ot = draw(
         st.sampled_from(
             [
@@ -555,9 +528,9 @@ class KOrderDescrSchema(BaseSchema):
     @pre_dump
     def validate_model(self, data, **kwargs):
         # pre dump validation (addon for marshmallow, not designed for this)
-        assert data.pair is not None
-        assert data.abtype is not None
-        assert data.ordertype is not None
+        assert hasattr(data, "pair") and data.pair is not None, data
+        assert hasattr(data, "abtype") and data.abtype is not None, data
+        assert hasattr(data, "ordertype") and data.ordertype is not None, data
         return data
 
     @post_dump

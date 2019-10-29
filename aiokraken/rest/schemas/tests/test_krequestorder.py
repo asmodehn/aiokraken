@@ -6,14 +6,14 @@ from parameterized import parameterized
 import json
 import marshmallow
 import decimal
-from hypothesis import given, strategies as st
+from hypothesis import given, strategies as st, settings, Verbosity
 
-from aiokraken.rest.schemas.kcurrency import KCurrency
-from aiokraken.rest.schemas.kabtype import KABTypeModel
-from aiokraken.rest.schemas.kordertype import KOrderTypeModel
-from aiokraken.rest.schemas.korderdescr import KOrderDescrSchema
-from aiokraken.rest.schemas.kpair import PairModel, PairField
-from aiokraken.rest.schemas.ktm import TimerField
+from ..kcurrency import KCurrency
+from ..kabtype import KABTypeModel
+from ..kordertype import KOrderTypeModel
+from ..korderdescr import KOrderDescrSchema
+from ..kpair import PairModel, PairField
+from ..ktm import TimerField
 from ..krequestorder import (
     RequestOrder,
     RequestOrderNoPriceStrategy,
@@ -27,6 +27,8 @@ from ..krequestorder import (
     RequestOrderTwoPriceFinalized,
     RequestOrderOnePriceFinalized,
     RequestOrderOnePrice,
+    RequestOrderSchema,
+    KDictStrategy,
 )
 from ...exceptions import AIOKrakenException
 
@@ -121,39 +123,65 @@ class TestRequestOrderTwoPrice(unittest.TestCase):
         assert isinstance(model, RequestOrderTwoPriceFinalized)
 
 
-# class TestRequestOrderSchema(unittest.TestCase):
-#
-#     def setUp(self) -> None:
-#         self.schema = RequestOrderSchema()
-#         self.descr_schema = self.schema.fields.get('descr').nested
-#
-#     @given(RequestOrderStrategy())
-#     def test_dump_ok(self, model):
-#         """ Verifying that expected data parses properly """
-#         serialized = self.schema.dump(model)
-#         expected = {
-#             "volume": model.volume,
-#             "pair": PairField().serialize('v', {'v': model.pair}),
-#             "descr": KOrderDescrSchema().dump(model.descr),
-#             "validate": True,
-#             "userref": model.userref
-#         }
-#         if model.relative_starttm:  #if not expired
-#             expected.update({"relative_starttm": TimerField().serialize('v', {'v': model.relative_starttm})})
-#         if model.relative_expiretm:  #if not expired
-#             expected.update({"relative_expiretm": TimerField().serialize('v', {'v': model.relative_expiretm})})
-#         # check equality on dicts with usual python types, but display strings.
-#         assert serialized == expected, print(str(serialized) + '\n' + str(expected))
-#
-#     @given(RequestOrderDictStrategy())
-#     def test_load_ok(self, model):
-#         ro = self.schema.load(model)
-#         assert isinstance(ro, RequestOrderModel)
-#
-#     def test_load_fail(self):
-#         # corrupted data:
-#         wrg_orderstr = '{}'
-#         # checking it actually fails
-#         with self.assertRaises(Exception) as e:
-#             self.schema.load(wrg_orderstr)
+class TestRequestOrderSchema(unittest.TestCase):
 
+    def setUp(self) -> None:
+        self.schema = RequestOrderSchema()
+
+    @settings(verbosity=Verbosity.verbose)
+    @given(
+            st.one_of(
+                RequestOrderFinalizeStrategy(strategy=RequestOrderNoPriceStrategy()),
+                RequestOrderFinalizeStrategy(strategy=RequestOrderOnePriceStrategy()),
+                RequestOrderFinalizeStrategy(strategy=RequestOrderTwoPriceStrategy()),
+            )
+    )
+    def test_dump_ok(self, model):
+        """ Verifying that expected data parses properly """
+        serialized = self.schema.dump(model)
+        expected = {
+            "volume": "{0:f}".format(model.volume),
+            "pair": PairField().serialize('v', {'v': model.pair}),
+            "descr": KOrderDescrSchema().dump(model.descr),
+            "validate": True,
+        }
+        if hasattr(model, 'userref') and model.userref:
+            expected.update({
+            "userref": model.userref})
+        if hasattr(model, "relative_starttm") and model.relative_starttm:  #if not expired
+            expected.update({"relative_starttm": TimerField().serialize('v', {'v': model.relative_starttm})})
+        if hasattr(model, "relative_starttm") and model.relative_expiretm:  #if not expired
+            expected.update({"relative_expiretm": TimerField().serialize('v', {'v': model.relative_expiretm})})
+        # check equality on dicts with usual python types, but display strings.
+        assert serialized == expected, print(str(serialized) + '\n' + str(expected))
+
+    @settings(verbosity=Verbosity.verbose)
+    @given(
+        KDictStrategy(
+        st.one_of(
+            RequestOrderFinalizeStrategy(strategy=RequestOrderNoPriceStrategy()),
+            RequestOrderFinalizeStrategy(strategy=RequestOrderOnePriceStrategy()),
+            RequestOrderFinalizeStrategy(strategy=RequestOrderTwoPriceStrategy()),
+        )
+        )
+    )
+    def test_load_ok(self, model):
+        ro = self.schema.load(model)
+        assert isinstance(ro, (RequestOrderNoPriceFinalized, RequestOrderOnePriceFinalized, RequestOrderTwoPriceFinalized))
+
+    @settings(verbosity=Verbosity.verbose)
+    @given(
+        st.one_of(
+            [
+                RequestOrderNoPriceStrategy(),
+                RequestOrderOnePriceStrategy(),
+                RequestOrderTwoPriceStrategy(),
+            ]
+        )
+    )
+    def test_load_fail(self, non_finalized_model):
+        # checking it actually fails
+        with self.assertRaises(Exception) as e:
+            self.schema.load(non_finalized_model)
+
+    # TODO : add more corrupted data occurences to ensure we keep handling it properly.
