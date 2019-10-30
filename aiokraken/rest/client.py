@@ -99,25 +99,10 @@ class RestClient:
             LOGGER.error(err)
             return {'error': err}
 
-    async def bid(self, order, leverage=0):
+    async def addorder(self, order):
         """ make public requests to kraken api"""
 
-        kt = self.server.bid(order=order, leverage=leverage)
-        print(kt.urlpath)
-        try:
-            async with self.session.post(self.protocol + self.server.url + kt.urlpath, headers=kt.headers,
-                                         data=kt.data) as response:
-                # todo : Return instance of order model (with orderid), validated from hte return of the response
-                return await kt(response)
-
-        except aiohttp.ClientResponseError as err:
-            LOGGER.error(err)
-            return {'error': err}
-
-    async def ask(self, order, leverage=0):
-        """ make public requests to kraken api"""
-
-        kt = self.server.ask(order = order, leverage=leverage)
+        kt = self.server.addorder(order=order)
         print(kt.urlpath)
         try:
             async with self.session.post(self.protocol + self.server.url + kt.urlpath, headers=kt.headers,

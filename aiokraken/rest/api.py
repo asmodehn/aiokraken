@@ -191,21 +191,8 @@ class Server:
                                                      )
                                    )
 
-    def bid(self, order: RequestOrderFinalized, leverage=0):
-        order.bid(leverage=leverage)
-       # data = RequestOrderSchema().dump(order)
-        print(f"Serialized Order: {data}")
-        return self.private.request('AddOrder',
-                                    data=data,
-                                    expected=Response(status=200,
-                                                      schema=PayloadSchema(
-                                                          result_schema=AddOrderResponseSchema
-                                                      ))
-                                    )
-
-    def ask(self, order: RequestOrderFinalized, leverage=0):
-        order.ask(leverage=leverage)
-       # data = RequestOrderSchema().dump(order)
+    def addorder(self, order: RequestOrderFinalized):
+        data = RequestOrderSchema().dump(order)
         print(f"Serialized Order: {data}")
         return self.private.request('AddOrder',
                                     data=data,

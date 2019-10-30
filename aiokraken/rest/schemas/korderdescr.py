@@ -454,6 +454,16 @@ class KOrderDescrCloseSchema(BaseSchema):
     price = fields.Decimal(required=False, as_string=True)
     price2 = fields.Decimal(required=False, as_string=True)
 
+    # @pre_load
+    # def load(self, data, **kwargs):
+    #     return data
+    #
+    #
+    # @post_dump
+    # def dump(self, data, **kwargs):
+    #     return data
+
+
 
 class KOrderDescrSchema(BaseSchema):
     pair = PairField(required=True)
@@ -475,6 +485,9 @@ class KOrderDescrSchema(BaseSchema):
         # filtering None fields
         if data.get("leverage") in ["none", "None"]:
             data.pop("leverage")
+        # filtering meaningless fields
+        if data.get('close') in [None, '']:
+            data.pop('close')
         return data
 
     @post_load
