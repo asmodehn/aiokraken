@@ -5,7 +5,9 @@ import pytest
 from aiokraken.rest.api import API, Server
 from aiokraken.rest.client import RestClient
 #from aiokraken.model.order import MarketOrder, LimitOrder, StopLossOrder, bid, ask
-from aiokraken.rest.schemas.krequestorder import RequestOrderModel
+from aiokraken.rest.schemas.kcurrency import KCurrency
+from aiokraken.rest.schemas.kpair import PairModel
+from aiokraken.rest.schemas.krequestorder import RequestOrder
 
 
 @pytest.mark.asyncio
@@ -41,13 +43,15 @@ async def test_openorders_one_high_limit_sell(keyfile):
         print(tickerresponse)
         # pass high limit sell order
         ask_high_price = tickerresponse.ask.price * Decimal(1.5)
-        askresponse = await rest_kraken.ask(order=RequestOrderModel(
-            pair='XBTEUR',
-            volume='0.01',
-            relative_expiretm=15,
-            execute=True
+        askresponse = await rest_kraken.addorder(order=RequestOrder(
+            pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR)
         ).limit(
-            limit_price=ask_high_price,))
+            limit_price=ask_high_price,)
+        .ask(
+            volume='0.01',)
+        .delay(
+            relative_expiretm=15,)
+        .execute(True))
         assert askresponse
         print(askresponse)
 
@@ -77,13 +81,15 @@ async def test_openorders_one_low_limit_buy(keyfile):
         # computing realistic price, but unlikely to be filled, even after relative_starttm delay.
         low_price = tickerresponse.bid.price * Decimal(0.5)
         # delayed market order
-        bidresponse = await rest_kraken.bid(order=RequestOrderModel(
-            pair='XBTEUR',
-            volume='0.01',
-            relative_expiretm=15,
-            execute=True
+        bidresponse = await rest_kraken.addorder(order=RequestOrder(
+            pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR)
         ).limit(
-            limit_price=low_price,))
+            limit_price=low_price,)
+        .bid(
+            volume='0.01',)
+        .delay(
+            relative_expiretm=15,)
+        .execute(True))
         assert bidresponse
         print(bidresponse)
 
