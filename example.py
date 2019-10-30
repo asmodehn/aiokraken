@@ -64,7 +64,7 @@ class Proxy:
             await asyncio.sleep(self.public_period_limit - now + self._last_public_call)
         if self._last_ticker is None or now - self._last_public_call > self.public_period_limit:
             self._last_public_call = now
-            self._last_ticker = await self.rest_client.ticker(pair=pairs)
+            self._last_ticker = await self.rest_client.ticker() #pair=pairs)  # TODO :FIXIT to pass the pair...
             LOGGER.info(f"Ticker for {pairs}: {self._last_ticker}")
 
         res = self._last_ticker
@@ -132,6 +132,8 @@ class Proxy:
 class OrderEnterBullishStrategy:
     """
     Elementary strategy
+    # TODO : start with very broadly accepting trigger (ex: RSI 40) from indicators (it helps testing actions triggered)
+    #  and then tune them, step by step...
     """
 
     def __init__(self, rest_client_proxy, pair):
@@ -148,16 +150,16 @@ class OrderEnterBullishStrategy:
         # making sure the time of the measure
         assert int(time.time()) - rsi.iloc[-1]['time'] < 100  # expected timeframe of 1 minutes by default  # TODO : manage TIME !!!
 
-        if rsi.iloc[-1]['RSI_14'] > 60:
+        if rsi.iloc[-1]['RSI_14'] > 40:  # TMP DEBUG 60:
             LOGGER.info(f"RSI: \n{rsi}. Commencing Bullish strategy...")
-            ticker = self.rest_client_proxy.ticker(pair=self.pair)
+            ticker = await self.rest_client_proxy.ticker(pairs=self.pair)
             # extract current price as midpoint of bid and ask from ticker
-            price = ticker.ask.price - ticker.bid.price / 2
+            price = (ticker.ask.price + ticker.bid.price) / 2
             LOGGER.info(f"Price for {self.pair}: {price}. Passing Enter Order ...")
             # bull trend
             # TODO : how to pass 2 orders quicker (more " together") ??
             await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).market().bid(volume=volume))
-            await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).stop_loss(stop_loss_price=price * 0.95))
+            await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).stop_loss(stop_loss_price=price * Decimal(0.95)))
 
             # trigger exit strat
             LOGGER.info(f"Triggering Exit watch...")
@@ -193,17 +195,17 @@ class OrderExitBullishStrategy:
         # making sure the time of the measure
         assert int(time.time()) - rsi.iloc[-1]['time'] < 100  # expected timeframe of 1 minutes by default  # TODO : manage TIME !!!
 
-        if rsi.iloc[-1]['RSI_14'] < 60:
+        if rsi.iloc[-1]['RSI_14'] < 40:  # 60 TMP DEBUG
             LOGGER.info(f"RSI: \n{rsi}. Terminating Bullish strategy...")
-            ticker = self.rest_client_proxy.ticker(pair=self.pair)
+            ticker = await self.rest_client_proxy.ticker(pairs=self.pair)
             # extract current price as midpoint of bid and ask from ticker
-            price = ticker.ask.price - ticker.bid.price / 2
+            price = (ticker.ask.price + ticker.bid.price) / 2
 
             LOGGER.info(f"Price for {self.pair}: {price}. Passing Exit Order ...")
             # Not bull any longer : pass the inverse/complementary order...
             # TODO : how to pass 2 orders quicker (more " together") ??
-            self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).market().sell(volume=volume))
-            self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).stop_loss(stop_loss_price=price * 1.05))
+            await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).market().sell(volume=volume))
+            await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).stop_loss(stop_loss_price=price * Decimal(1.05)))
 
             LOGGER.info(f"Bullish Strategy Terminated.")
         else:
@@ -255,7 +257,8 @@ async def basicbot(loop, pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR)
                               proxy=proxy,
                               pair=pair)
             await asyncio.wait([bullbot_run], loop=loop, return_when=asyncio.ALL_COMPLETED)
-
+    except Exception as e:
+        LOGGER.info(f"Exception caught : {e}. Terminating...")
     finally:
         await rest_kraken.close()
 
