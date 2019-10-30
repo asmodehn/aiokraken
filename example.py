@@ -1,18 +1,23 @@
+import time
+from decimal import Decimal
+
 import aiohttp
 import asyncio
 import signal
 
+from aiokraken.rest.schemas.kcurrency import KCurrency
+from aiokraken.rest.schemas.kpair import PairModel
 from aiokraken.utils import get_kraken_logger, get_nonce
 from aiokraken.rest.api import Server, API
 from aiokraken.rest.client import RestClient
 
-from aiokraken.model.order import MarketOrder, StopLossOrder, TrailingStopOrder, ask, bid
+from aiokraken.rest.schemas.krequestorder import RequestOrder
+from aiokraken.rest.schemas.kopenorder import KOpenOrderModel
 
 LOGGER = get_kraken_logger(__name__)
 
 
-# Dummy client
-# TODO : command line basic client.
+# Stupid bot
 
 async def get_time():
     """ get kraken time"""
@@ -24,18 +29,6 @@ async def get_time():
         await rest_kraken.close()
 
 
-async def get_balance():
-    """Start kraken websockets api
-    """
-    from aiokraken.config import load_api_keyfile
-    keystruct = load_api_keyfile()
-    rest_kraken = RestClient(server=Server(key=keystruct.get('key'),
-                                           secret=keystruct.get('secret')))
-    response = await rest_kraken.balance()
-    await rest_kraken.close()
-    print(f'response is {response}')
-
-
 @asyncio.coroutine
 def ask_exit(sig_name):
     print("got signal %s: exit" % sig_name)
@@ -43,66 +36,211 @@ def ask_exit(sig_name):
     asyncio.get_event_loop().stop()
 
 
-def check_rsi(rest_client, pair):
-    response = await rest_client.ohlc(pair=pair)
-    print(f'response is \n{response.head()}')
-
-    indicators = response.rsi()
-
-    print(f'with RSI indicator \n{indicators.head()}')
-    return indicators
-
-
-class Position:
-    """ Note this is the abstract concept of position (aggregation of trades).
-        It is related, but not exactly the same as the exchange's position.
-        More specifically : it conceptually exists, even if leverage is 0.
+class Proxy:
+    """
+    Proxy class to only do request when needed... careful with calling rates.
+    # TODO : integrate this in library API...
     """
 
-    def __init__(self, rest_client, enter_order, stoploss):
+    def __init__(self,rest_client,):
         self.rest_client = rest_client
-        self.entering_order = enter_order
-        self.stoploss = stoploss
-        self.pair = self.entering_order.pair
+        # TODO : integrate with API and  maybe have some basic control algo ?
+        self.public_period_limit = 1  # secs
+        self.private_period_limit = 10 # secs
 
-        # TODO : add entering logic
-        response = await self.rest_client.ask(order=self.entering_order)
+        self._last_public_call = time.time()
+        self._last_ticker = None
+        self._last_ohlcv = None
 
-        # trailing stop
-        stop_response = await self.rest_client.ask(order=self.stoploss)
+        self._last_private_call = time.time()
+        self._last_balance = None
+        LOGGER.info(f"Proxy created. time: {int(time.time())}")
 
-        if self.entering_order.type == 'buy':
-            self.long = True
-            self.short = False
-        elif self.entering_order.type == 'sell':
-            self.short = True
-            self.long = False
+    async def ticker(self, pairs, wait_for_it = False):
+        now = time.time()
+        # CAREFUL with timer, we cannot limit restart of software !
+        # Better to start slowly, just in case...
+        if self._last_ticker is None or (wait_for_it and now - self._last_public_call < self.public_period_limit):
+            await asyncio.sleep(self.public_period_limit - now + self._last_public_call)
+        if self._last_ticker is None or now - self._last_public_call > self.public_period_limit:
+            self._last_public_call = now
+            self._last_ticker = await self.rest_client.ticker(pair=pairs)
+            LOGGER.info(f"Ticker for {pairs}: {self._last_ticker}")
 
-    async def __call__(self, *args, **kwargs):
+        res = self._last_ticker
+        return res
+
+    async def ohlcv(self, pair, wait_for_it = False):
+        now = time.time()
+        # CAREFUL with timer, we cannot limit restart of software !
+        # Better to start slowly, just in case...
+        if self._last_ohlcv is None or (wait_for_it and now - self._last_public_call < self.public_period_limit):
+            await asyncio.sleep(self.public_period_limit - now + self._last_public_call)
+        if self._last_ohlcv is None or now - self._last_public_call > self.public_period_limit:
+            self._last_public_call = now
+            self._last_ohlcv = await self.rest_client.ohlc(pair=pair)
+            LOGGER.info(f"OHLCV for {pair} : {self._last_ohlcv}")
+
+        res = self._last_ohlcv
+        return res
+
+    async def balance(self, wait_for_it = False):  # Note : the wait_for_it is not about public/private, but about GET/POST behavior...
+        now = time.time()
+        if self._last_balance is None or (wait_for_it and now - self._last_private_call < self.private_period_limit):
+            await asyncio.sleep(self.private_period_limit - now + self._last_private_call)
+        if self._last_balance is None or now - self._last_private_call > self.private_period_limit:
+            self._last_private_call = now
+            self._last_balance = await self.rest_client.balance()
+            LOGGER.info(f"Balance API called : {self._last_balance}")
+
+        res = self._last_balance
+        return res
+
+    async def addorder(self, order):
         """
-        Looping coro managing the position
-        :param args:
-        :param kwargs:
-        :return:
+
+        :param order:
+        :return: txid
         """
-        # TODO : replace this by Websockets callback...
+        now = time.time()
+        if now - self._last_private_call < self.private_period_limit:
+            await asyncio.sleep(self.private_period_limit - now + self._last_private_call)
+        if now - self._last_private_call > self.private_period_limit:
+            self._last_private_call = now
+            response = await self.rest_client.addorder(order=order)
+            LOGGER.info(f"AddOrder API called with {order}")
+            LOGGER.info(f"-> {response}")
+            # self_orders.append = res  # TODO : order manager
+            return response
+        return None  # Note: proxying response here does not make any sense
 
-        indicators = check_rsi(rest_client=self.rest_client, pair=self.pair)
+    async def cancel(self, txid):
+        res = None
+        now = time.time()
+        if now - self._last_private_call < self.private_period_limit:
+            await asyncio.sleep(self.private_period_limit - now + self._last_private_call)
+        if now - self._last_private_call > self.private_period_limit:
+            self._last_private_call = now
+            response = await self.rest_client.cancel(txid=txid)
+            LOGGER.info(f"Cancel API called with {txid}")
+            LOGGER.info(f"-> {response}")
+            return response
+        return None  # Note: proxying response here does not make any sense
 
-        if indicators < 60 and self.long:
-            self.settle(ask(MarketOrder(pair=self.pair, volume=self.entering_order.volume)))
 
-        elif indicators > 30 and self.short:
-            self.settle(bid(MarketOrder(pair=self.pair, volume=self.entering_order.volume)))
+# TODO : related to the command design pattern?
+class OrderEnterBullishStrategy:
+    """
+    Elementary strategy
+    """
 
-    def settle(self, leave_order):
-        response = await self.rest_client.ask(order=leave_order)
+    def __init__(self, rest_client_proxy, pair):
+        self.rest_client_proxy = rest_client_proxy
+        self.pair = pair
 
-    def cancel(self, cancel_order):
-        response = await self.rest_client.ask(order=cancel_order)
+    async def __call__(self, volume, exit_coro):
+        # wait for the right moment
+
+        ohlc = await self.rest_client_proxy.ohlcv(pair=self.pair)
+        ohlc.rsi()
+        rsi = ohlc.dataframe[['time', 'RSI_14']]  # getting last RSI value
+
+        # making sure the time of the measure
+        assert int(time.time()) - rsi.iloc[-1]['time'] < 100  # expected timeframe of 1 minutes by default  # TODO : manage TIME !!!
+
+        if rsi.iloc[-1]['RSI_14'] > 60:
+            LOGGER.info(f"RSI: \n{rsi}. Commencing Bullish strategy...")
+            ticker = self.rest_client_proxy.ticker(pair=self.pair)
+            # extract current price as midpoint of bid and ask from ticker
+            price = ticker.ask.price - ticker.bid.price / 2
+            LOGGER.info(f"Price for {self.pair}: {price}. Passing Enter Order ...")
+            # bull trend
+            # TODO : how to pass 2 orders quicker (more " together") ??
+            await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).market().bid(volume=volume))
+            await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).stop_loss(stop_loss_price=price * 0.95))
+
+            # trigger exit strat
+            LOGGER.info(f"Triggering Exit watch...")
+            return asyncio.create_task(exit_coro)
+
+            # exit and die.
+
+        else:
+            LOGGER.info(f"RSI: \n{rsi}. sleeping for a bit...")
+            await asyncio.sleep(10)
+            # looping...
+            return asyncio.create_task(self(volume=volume, exit_coro=exit_coro))
 
 
-async def basicbot(loop, pair= 'XBTEUR'):
+class OrderExitBullishStrategy:
+    """
+    Elementary strategy
+    """
+
+    def __init__(self, rest_client_proxy, pair):
+        self.rest_client_proxy = rest_client_proxy
+        self.pair = pair
+
+    # TODO : design review : same volume, 'exit' behavior could retrigger 'enter' behavior...
+    #  and we wouldnt need a supervisor...
+    async def __call__(self, volume):
+        # wait for the right moment
+
+        ohlc = await self.rest_client_proxy.ohlcv(pair=self.pair)
+        ohlc.rsi()
+        rsi = ohlc.dataframe[['time', 'RSI_14']][-1]  # getting last RSI value
+
+        # making sure the time of the measure
+        assert int(time.time()) - rsi.iloc[-1]['time'] < 100  # expected timeframe of 1 minutes by default  # TODO : manage TIME !!!
+
+        if rsi.iloc[-1]['RSI_14'] < 60:
+            LOGGER.info(f"RSI: \n{rsi}. Terminating Bullish strategy...")
+            ticker = self.rest_client_proxy.ticker(pair=self.pair)
+            # extract current price as midpoint of bid and ask from ticker
+            price = ticker.ask.price - ticker.bid.price / 2
+
+            LOGGER.info(f"Price for {self.pair}: {price}. Passing Exit Order ...")
+            # Not bull any longer : pass the inverse/complementary order...
+            # TODO : how to pass 2 orders quicker (more " together") ??
+            self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).market().sell(volume=volume))
+            self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).stop_loss(stop_loss_price=price * 1.05))
+
+            LOGGER.info(f"Bullish Strategy Terminated.")
+        else:
+            LOGGER.info(f"RSI: \n{rsi}. sleeping for a bit...")
+            await asyncio.sleep(10)
+            # looping...
+            asyncio.create_task(self(volume=volume))
+        # exit and die.
+
+
+async def bullbot(loop, proxy, pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR)):
+    try:
+
+        bull_enter = OrderEnterBullishStrategy(rest_client_proxy=proxy, pair=pair)
+
+        task_gen = await bull_enter(volume=Decimal(0.01),
+                                 # obvious CPS... TODO : better design ?
+                   exit_coro= OrderExitBullishStrategy(rest_client_proxy=proxy, pair=pair)(
+                       volume=Decimal(0.01))
+                   )
+
+        while task_gen:
+            LOGGER.info(f"Waiting for sequence of tasks...")
+            # waiting for sequence of tasks monoid style...
+            if not task_gen.done():
+                await asyncio.sleep(5.0)
+            else:  # expectation : the task return another task, or None...
+                task_gen = task_gen.result()
+
+        # no tasks left -> exiting # TODO : tracking profit ??
+
+    finally:
+        # TODO : cleaning up bot data
+        pass
+
+
+async def basicbot(loop, pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR)):
 
     from aiokraken.config import load_api_keyfile
     keystruct = load_api_keyfile()
@@ -110,49 +248,14 @@ async def basicbot(loop, pair= 'XBTEUR'):
                                            secret=keystruct.get('secret')))
     try:
 
-        pm = None
+        proxy = Proxy(rest_client=rest_kraken)
+        # seems we can reuse the proxy here... (still same account on same exchange)
+        while True:
+            bullbot_run = await bullbot(loop=asyncio.get_event_loop(),
+                              proxy=proxy,
+                              pair=pair)
+            await asyncio.wait([bullbot_run], loop=loop, return_when=asyncio.ALL_COMPLETED)
 
-        # self test to make sure everything is working, as early as possible, as much as possible.
-        indicators = check_rsi(rest_client=rest_kraken, pair=pair)
-
-        # SelfTest buy case quickly
-        pm = Position(rest_client=rest_kraken,
-                      enter_order=bid(MarketOrder(pair=pair, volume='0.01')),
-                      stoploss=StopLossOrder(pair=pair, stop_loss_price="-5"))
-        # force settling without waiting
-        pm.settle(leave_order=ask(MarketOrder(pair=pair, volume='0.01')))
-        pm = None
-
-        # SelfTest sell case quickly
-        pm=Position(
-        )
-        # force settling without waiting
-        pm.settle()
-        pm = None
-
-        # while True:
-        #     indicators = check_rsi(rest_client=rest_kraken, pair=pair)
-        #
-        #     if indicators > 60 and pm is None:
-        #         # bull trend
-        #         pm = Position()  # todo : some kind of basic risk management ?
-        #
-        #
-        #     elif indicators < 30 and pm is None:
-        #         # bear trend
-        #         pm = Position()  # todo : some kind of basic risk management ?
-        #
-        #
-        #     bull_detector = loop.create_task(
-        #         bull(pair='XBTEUR',
-        #              enter=bid(),
-        #              leave=ask()))
-        #     bear_detector = loop.create_task(
-        #         bear(pair='XBTEUR',
-        #              enter=ask(),
-        #              leave=bid()))
-        #     await asyncio.wait([bull_detector, bear_detector], loop=loop, return_when=asyncio.ALL_COMPLETED)
-        #     await asyncio.sleep(10)
     finally:
         await rest_kraken.close()
 
@@ -165,4 +268,4 @@ for signame in ('SIGINT', 'SIGTERM'):
         lambda: asyncio.ensure_future(ask_exit(signame))
     )
 
-loop.run_until_complete(basicbot(loop))
+loop.run_until_complete(basicbot(loop, pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR)))
