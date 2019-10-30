@@ -11,7 +11,7 @@ async def test_ticker():
     """ get kraken ohlc"""
     rest_kraken = RestClient(server=Server())
     try:
-        response = await rest_kraken.ticker(pair='XBTEUR')
+        response = await rest_kraken.ticker(pairs=['XBTEUR'])
         print(f'response is \n{response}')
 
         assert isinstance(response, Ticker)

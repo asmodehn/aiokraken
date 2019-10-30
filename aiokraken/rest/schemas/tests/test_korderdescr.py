@@ -194,8 +194,9 @@ class TestOrderDescrSchema(unittest.TestCase):
         p = self.schema.dump(orderdescrmodel)
         assert isinstance(p, dict)
         expected = {k: v for k, v in asdict(orderdescrmodel).items() if v is not None}
+        expected.pop("abtype")  # no abtype !
         expected["pair"] = str(orderdescrmodel.pair)
-        expected["abtype"] = orderdescrmodel.abtype.value
+        expected["type"] = orderdescrmodel.abtype.value
         expected["ordertype"] = orderdescrmodel.ordertype.value
         expected["leverage"] = "{0:f}".format(orderdescrmodel.leverage)
 

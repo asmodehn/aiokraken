@@ -9,9 +9,9 @@ import decimal
 from hypothesis import given, strategies as st, settings, Verbosity
 
 from ..kcurrency import KCurrency
-from ..kabtype import KABTypeModel
-from ..kordertype import KOrderTypeModel
-from ..korderdescr import KOrderDescrSchema
+from ..kabtype import KABTypeModel, KABTypeField
+from ..kordertype import KOrderTypeModel, KOrderTypeField
+from ..korderdescr import KOrderDescrSchema, KOrderDescrCloseSchema
 from ..kpair import PairModel, PairField
 from ..ktm import TimerField
 from ..krequestorder import (
@@ -142,12 +142,18 @@ class TestRequestOrderSchema(unittest.TestCase):
         expected = {
             "volume": "{0:f}".format(model.volume),
             "pair": PairField().serialize('v', {'v': model.pair}),
-            "descr": KOrderDescrSchema().dump(model.descr),
+            "leverage": "{0:f}".format(model.descr.leverage),
+            "ordertype": KOrderTypeField().serialize('v', {'v': model.descr.ordertype}),
+            "type": KABTypeField().serialize('v', {'v': model.descr.abtype}),
             "validate": True,
         }
         if hasattr(model, 'userref') and model.userref:
             expected.update({
             "userref": model.userref})
+
+        if hasattr(model.descr, 'close') and model.descr.close:
+            expected.update({
+            "close": KOrderDescrCloseSchema().dump(model.descr.close)})
         if hasattr(model, "relative_starttm") and model.relative_starttm:  #if not expired
             expected.update({"relative_starttm": TimerField().serialize('v', {'v': model.relative_starttm})})
         if hasattr(model, "relative_starttm") and model.relative_expiretm:  #if not expired

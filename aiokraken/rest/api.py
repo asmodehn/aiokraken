@@ -168,13 +168,14 @@ class Server:
                                                       ))
                                     )
 
-    def ticker(self, pair='XBTEUR'):  # TODO : use a model to typecheck pair symbols
+    def ticker(self, pairs=['XBTEUR']):  # TODO : use a model to typecheck pair symbols
+        pair_alias = 'XXBTZEUR'  # TODO : fix this hardcoded stuff !!!!
         return self.public.request('Ticker',
-                                   data={'pair': pair},
+                                   data={'pair': ",".join(pairs)},
                                    expected=Response(status=200,
                                                      schema=PayloadSchema(
                                                         result_schema=PairTickerSchema(
-                                                            pair=pairs_id.get(pair, pair))
+                                                            pair=pair_alias)
                                                         )
                                                      )
                                    )

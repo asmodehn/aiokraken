@@ -71,10 +71,10 @@ class RestClient:
             LOGGER.error(err)
             return {'error': err}
 
-    async def ticker(self, pair='XBTEUR'):  # TODO : model currency pair/'market' in ccxt (see crypy)
+    async def ticker(self, pairs=['XBTEUR']):  # TODO : model currency pair/'market' in ccxt (see crypy)
         """ make public requests to kraken api"""
 
-        kt = self.server.ticker(pair=pair)   # returns the request to be made for this API.)
+        kt = self.server.ticker(pairs=pairs)   # returns the request to be made for this API.)
         try:  # TODO : pass protocol & host into the request url in order to have it displayed when erroring !
             async with self.session.post(self.protocol + self.server.url + kt.urlpath, headers=kt.headers, data=kt.data) as response:
 

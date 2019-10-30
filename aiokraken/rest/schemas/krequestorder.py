@@ -15,8 +15,8 @@ if not __package__:
 from .base import BaseSchema
 from .ktm import TMModel, TimerField
 from .kpair import PairModel, PairStrategy, PairField
-from .kabtype import KABTypeModel
-from .kordertype import KOrderTypeModel
+from .kabtype import KABTypeModel, KABTypeField
+from .kordertype import KOrderTypeModel, KOrderTypeField
 
 from ..exceptions import AIOKrakenException
 #from ...model.order import Order, OpenOrder, RequestOrder
@@ -34,6 +34,7 @@ from .korderdescr import (
     KOrderDescrOnePriceStrategy,
     KOrderDescrTwoPriceStrategy,
     KOrderDescrSchema,
+    KOrderDescrCloseSchema,
 )
 
 
@@ -517,8 +518,13 @@ def RequestOrderFinalizeStrategy(
 
 
 class RequestOrderSchema(BaseSchema):
-    descr= fields.Nested(KOrderDescrSchema())
+
+    abtype = KABTypeField(required=True, data_key='type')  # need rename to not confuse python on this...
+    ordertype = KOrderTypeField(required=True)
+
     pair= PairField(required=False)  # to load/dump to/from internals of descr
+    price = fields.Decimal(allow_nan=False, allow_infinity=False, as_string=True)
+    price2 = fields.Decimal(allow_nan=False, allow_infinity=False, as_string=True)
 
     volume= fields.Decimal(allow_nan=False, allow_infinity=False, as_string=True)
     leverage= fields.Decimal(allow_nan=False, allow_infinity=False, as_string=True)
@@ -531,7 +537,7 @@ class RequestOrderSchema(BaseSchema):
 
     userref= fields.Integer(required=False)  # TODO
     validate= fields.Bool(default=True)
-    close= fields.Str()  # TODO
+    close= fields.Nested(KOrderDescrCloseSchema())  # TODO
 
     @pre_load
     def translate_fields(self, data, **kwargs):
@@ -539,10 +545,6 @@ class RequestOrderSchema(BaseSchema):
 
     @post_load
     def build_model(self, data, **kwargs):
-        descr = data.pop('descr')
-
-        # grab the pair from descr
-        data['pair'] = descr.pair
 
         # grab volume :
         volume = data.pop("volume")
@@ -558,38 +560,44 @@ class RequestOrderSchema(BaseSchema):
             }
         )
 
+        ordertype = data.get('ordertype')
+        price = data.get('price')
+        price2 = data.get('price2')
+
         # and finalize step by step...
-        if descr.ordertype == KOrderTypeModel.market:
+        if ordertype == KOrderTypeModel.market:
             pro = rom.market()
-        elif descr.ordertype == KOrderTypeModel.limit:
-            pro = rom.limit(limit_price=descr.price)
-        elif descr.ordertype == KOrderTypeModel.stop_loss:
-            pro = rom.stop_loss(stop_loss_price=descr.price)
-        elif descr.ordertype == KOrderTypeModel.take_profit:
-            pro = rom.take_profit(take_profit_price=descr.price)
-        elif descr.ordertype == KOrderTypeModel.stop_loss_profit:
-            pro = rom.stop_loss_profit(stop_loss_price=descr.price, take_profit_price=descr.price2)
-        elif descr.ordertype == KOrderTypeModel.stop_loss_profit_limit:
-            pro = rom.stop_loss_profit_limit(stop_loss_price=descr.price, take_profit_price=descr.price2)
-        elif descr.ordertype == KOrderTypeModel.stop_loss_limit:
-            pro = rom.stop_loss_limit(stop_loss_trigger_price=descr.price, triggered_limit_price=descr.price2)
-        elif descr.ordertype == KOrderTypeModel.take_profit_limit:
-            pro = rom .take_profit_limit(take_profit_trigger_price=descr.price, triggered_limit_price=descr.price2)
-        elif descr.ordertype == KOrderTypeModel.trailing_stop:
-            pro = rom.trailing_stop(trailing_stop_offset=descr.price)
-        elif descr.ordertype == KOrderTypeModel.trailing_stop_limit:
-            pro = rom.trailing_stop_limit(trailing_stop_offset=descr.price, triggered_limit_offset=descr.price2)
-        elif descr.ordertype == KOrderTypeModel.stop_loss_and_limit:
-            pro = rom.stop_loss_and_limit(stop_loss_price=descr.price, limit_price=descr.price2)
-        elif descr.ordertype == KOrderTypeModel.settle_position:
+        elif ordertype == KOrderTypeModel.limit:
+            pro = rom.limit(limit_price=price)
+        elif ordertype == KOrderTypeModel.stop_loss:
+            pro = rom.stop_loss(stop_loss_price=price)
+        elif ordertype == KOrderTypeModel.take_profit:
+            pro = rom.take_profit(take_profit_price=price)
+        elif ordertype == KOrderTypeModel.stop_loss_profit:
+            pro = rom.stop_loss_profit(stop_loss_price=price, take_profit_price=price2)
+        elif ordertype == KOrderTypeModel.stop_loss_profit_limit:
+            pro = rom.stop_loss_profit_limit(stop_loss_price=price, take_profit_price=price2)
+        elif ordertype == KOrderTypeModel.stop_loss_limit:
+            pro = rom.stop_loss_limit(stop_loss_trigger_price=price, triggered_limit_price=price2)
+        elif ordertype == KOrderTypeModel.take_profit_limit:
+            pro = rom .take_profit_limit(take_profit_trigger_price=price, triggered_limit_price=price2)
+        elif ordertype == KOrderTypeModel.trailing_stop:
+            pro = rom.trailing_stop(trailing_stop_offset=price)
+        elif ordertype == KOrderTypeModel.trailing_stop_limit:
+            pro = rom.trailing_stop_limit(trailing_stop_offset=price, triggered_limit_offset=price2)
+        elif ordertype == KOrderTypeModel.stop_loss_and_limit:
+            pro = rom.stop_loss_and_limit(stop_loss_price=price, limit_price=price2)
+        elif ordertype == KOrderTypeModel.settle_position:
             pro = rom.settle_position()
         else:
             raise NotImplementedError
 
-        if descr.abtype == KABTypeModel.buy:
-            ro = pro.buy(leverage=descr.leverage, volume=volume).execute(not validate)
-        elif descr.abtype == KABTypeModel.sell:
-            ro = pro.sell(leverage=descr.leverage, volume=volume).execute(not validate)
+        abtype = data.get('abtype')
+
+        if abtype == KABTypeModel.buy:
+            ro = pro.buy(leverage=data.get('leverage'), volume=volume).execute(not validate)
+        elif abtype == KABTypeModel.sell:
+            ro = pro.sell(leverage=data.get('leverage'), volume=volume).execute(not validate)
         else:
             raise NotImplementedError
 
@@ -600,8 +608,16 @@ class RequestOrderSchema(BaseSchema):
         # in and out as model type. let marshmallow unpack the data from the dataclass
         return data
 
-    @post_dump
-    def cleanup_dict(self, data, **kwargs):
+    @post_dump(pass_original=True)
+    def cleanup_dict(self, data, original, **kwargs):
+        # unpack descr content ## TODO : proper place ??
+        #  Probably descr should not be in schema at all... only in model ?
+
+        # TODO : better way to get marshmallow to call these by himself ??
+        data.setdefault('ordertype', self.fields.get('ordertype').serialize('v', {'v': original.descr.ordertype}))
+        data.setdefault('type', self.fields.get('abtype').serialize('v', {'v': original.descr.abtype}))
+        data.setdefault('leverage', self.fields.get('leverage').serialize('v', {'v': original.descr.leverage}))
+        data.setdefault('close', self.fields.get('close').serialize('v', {'v': original.descr.close}))
 
         # Removing fields with default semantic to use server defaults, and minimize serialization errors
         if data.get('relative_starttm') in ['', '+0']:

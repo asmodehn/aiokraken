@@ -486,7 +486,7 @@ class KOrderDescrSchema(BaseSchema):
         if data.get("leverage") in ["none", "None"]:
             data.pop("leverage")
         # filtering meaningless fields
-        if data.get('close') in [None, '']:
+        if 'close' in data.keys() and data.get('close') in [None, '']:  # None can be a value or just returned by get -> we need to check for the key.
             data.pop('close')
         return data
 
@@ -549,6 +549,7 @@ class KOrderDescrSchema(BaseSchema):
     @post_dump
     def filter_dict_ondump(self, data, **kwargs):
         data = {k: v for k, v in data.items() if v is not None}
+        data['type'] = data.pop('abtype')  # conversion on serialization (somehow symmetric to load)
         return data
 
 
