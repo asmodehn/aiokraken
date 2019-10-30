@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import functools
+import random
 import typing
 from enum import Enum
 
@@ -118,11 +119,19 @@ class KCurrencyField(fields.Field):
         'EUR': ['EUR', 'ZEUR'],
         'GBP': ['GBP', 'ZGBP'],
         'USD': ['USD', 'ZUSD'],
+        'CAD': ['CAD', 'ZCAD'],
+        'JPY': ['JPY', 'ZJPY'],
+        'KRW': ['KRW', 'ZKRW'],
         # Crypto
         'XBT': ['XBT', 'BTC', 'XXBT'],
+        'BSV': ['BSV', 'XBSV'],
+        'BCH': ['BCH', 'XBCH'],
         'ETH': ['ETH', 'XETH'],
         'ETC': ['ETC', 'XETC'],
+        'EOS': ['EOS', 'XEOS'],
         'XRP': ['XRP', 'XXRP'],
+        'XTZ': ['XTZ', 'XXTZ'],
+        'ADA': ['ADA', 'XADA'],
 
     }
 
@@ -176,6 +185,16 @@ def KCurrencyStringStrategy(draw):
     model = draw(KCurrencyStrategy())
     field = KCurrencyField()
     return field.serialize('a', {'a': model})
+
+
+@st.composite
+def KCurrencyStringAliasStrategy(draw):
+    model = draw(KCurrencyStrategy())
+    field = KCurrencyField()
+    # returns a random alias...
+    assert model.value in field._alias_map, f"{model.value} not in {field._alias_map} !"
+    aliases = field._alias_map.get(model.value)
+    return aliases[random.randint(0, len(aliases)-1)]
 
 
 if __name__ == "__main__":

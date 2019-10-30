@@ -7,7 +7,10 @@ import json
 import marshmallow
 import decimal
 
-from ..kcurrency import KCurrency, KCurrencyStrategy, KCurrencyField, KCurrencyStringStrategy
+from ..kcurrency import (
+    KCurrency, KCurrencyStrategy, KCurrencyField, KCurrencyStringStrategy,
+    KCurrencyStringAliasStrategy,
+)
 from ...exceptions import AIOKrakenException
 from hypothesis import given
 
@@ -39,6 +42,11 @@ class TestOrderTypeField(unittest.TestCase):
 
     @given(KCurrencyStringStrategy())
     def test_deserialize(self, typestr):
+        c = self.field.deserialize(typestr)
+        assert isinstance(c, KCurrency)
+
+    @given(KCurrencyStringAliasStrategy())
+    def test_deserialize_alias(self, typestr):
         c = self.field.deserialize(typestr)
         assert isinstance(c, KCurrency)
 

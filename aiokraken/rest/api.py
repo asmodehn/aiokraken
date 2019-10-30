@@ -148,12 +148,13 @@ class Server:
         return self.public.request('Time', data=None, expected=Response(status=200, schema=PayloadSchema(TimeSchema)))
 
     def ohlc(self, pair='XBTEUR'):  # TODO : use a model to typecheck pair symbols
+        pair_alias ='XXBTZEUR' # TODO : fix this hardcoded stuff !!!!
         return self.public.request('OHLC',
                                    data={'pair': pair},
                                    expected=Response(status=200,
                                                      schema=PayloadSchema(
                                                         result_schema=PairOHLCSchema(
-                                                            pair=pairs_id.get(pair, pair))
+                                                            pair=pair_alias)
                                                         )
                                                      )
                                    )

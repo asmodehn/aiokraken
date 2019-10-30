@@ -1,3 +1,5 @@
+import random
+
 import marshmallow
 import typing
 from dataclasses import dataclass
@@ -9,7 +11,7 @@ if not __package__:
 
 from .base import BaseSchema
 from ..exceptions import AIOKrakenException
-from .kcurrency import KCurrency, KCurrencyStrategy
+from .kcurrency import KCurrency, KCurrencyStrategy, KCurrencyField
 from hypothesis import given, strategies as st
 
 
@@ -36,6 +38,7 @@ class PairModel:
     def __str__(self):
         # or using .value ?? see other stringenums like ordertype...
         return f"{self.base}{self.quote}"
+
 
 @st.composite
 def PairStrategy(draw):
@@ -89,7 +92,7 @@ class PairField(fields.Field):
                 # Ref : https://github.com/python/mypy/issues/2464
 
                 try:
-                    p.setdefault(k, KCurrency(iv[:i]))
+                    p.setdefault(k, KCurrencyField().deserialize(iv[:i]))
                     iv = iv[i:]
                     i = 1
                     break
@@ -129,6 +132,26 @@ def PairStringStrategy(draw):
     model = draw(PairStrategy())
     field = PairField()
     return field.serialize("a", {"a": model})
+
+
+@st.composite
+def PairStringAliasStrategy(draw):
+    """
+    :param draw:
+    :return:
+
+
+    """
+    model = draw(PairStrategy())
+
+    field = KCurrencyField()
+    # returns random currency aliases...
+    base_aliases = field._alias_map.get(model.base.value)
+    base_str = base_aliases[random.randint(0, len(base_aliases)-1)]
+
+    quote_aliases = field._alias_map.get(model.quote.value)
+    quote_str = quote_aliases[random.randint(0, len(quote_aliases)-1)]
+    return base_str + quote_str
 
 
 if __name__ == "__main__":
