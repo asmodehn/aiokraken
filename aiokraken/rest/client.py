@@ -44,6 +44,19 @@ class RestClient:
             LOGGER.error(err)
             return {'error': err}
 
+    async def assets(self, assets=['XBTEUR']):
+        """ make public requests to kraken api"""
+
+        kt = self.server.assets(assets=assets)   # returns the request to be made for this API.)
+        try:  # TODO : pass protocol & host into the request url in order to have it displayed when erroring !
+            async with self.session.post(self.protocol + self.server.url + kt.urlpath, headers=kt.headers, data=kt.data) as response:
+
+                return await kt(response)
+
+        except aiohttp.ClientResponseError as err:
+            LOGGER.error(err)
+            return {'error': err}
+
     async def ohlc(self, pair='XBTEUR'):
         """ make public requests to kraken api"""
 

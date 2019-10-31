@@ -11,6 +11,7 @@ from dataclasses import dataclass, asdict, field
 import typing
 from marshmallow import fields
 
+from aiokraken.rest.payloads import TickerPayloadSchema, OHLCPayloadSchema, AssetPayloadSchema
 from aiokraken.rest.schemas.kasset import AssetSchema
 from aiokraken.rest.schemas.kpair import PairField
 
@@ -151,6 +152,20 @@ class Server:
     def time(self):
         return self.public.request('Time', data=None, expected=Response(status=200, schema=PayloadSchema(TimeSchema)))
 
+    def assets(self, assets=['XBTEUR']): # TODO : use a model to typecheck pair symbols
+        return self.public.request('Assets',
+                                   data={
+                                       # info = info to retrieve (optional):
+                                       #     info = all info (default)
+                                       # aclass = asset class (optional):
+                                       #     currency (default)
+                                       'asset': ",".join([str(a) for a in assets])
+                                   },
+                                   expected=Response(status=200,
+                                                     schema=AssetPayloadSchema())
+        )
+
+
     def ohlc(self, pair='XBTEUR'):  # TODO : use a model to typecheck pair symbols
         pair_alias ='XXBTZEUR' # TODO : fix this hardcoded stuff !!!!
         return self.public.request('OHLC',
@@ -177,11 +192,7 @@ class Server:
         return self.public.request('Ticker',
                                    data={'pair': ",".join(pairs)},
                                    expected=Response(status=200,
-                                                     schema=PayloadSchemaWithField(
-                                                        result_field=fields.Dict(
-                                                            keys = PairField(),
-                                                            values = fields.Nested(TickerSchema),)
-                                                        )
+                                                     schema=TickerPayloadSchema()
                                                      )
                                    )
 

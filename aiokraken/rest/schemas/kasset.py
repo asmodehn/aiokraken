@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
-from marshmallow import fields, post_load, post_dump
+import typing
+from marshmallow import fields, post_load, post_dump, pre_load
 
 from aiokraken.rest.schemas.base import BaseSchema
 
@@ -9,7 +10,7 @@ from hypothesis import strategies as st
 
 @dataclass
 class KAsset:
-
+    #name: str  # name
     altname: str  # alternate name
     aclass: str  # asset class
     decimals: int  # scaling decimal places for record keeping
@@ -28,7 +29,17 @@ def KAssetStrategy(draw):
 
 
 class AssetSchema(BaseSchema):
-
+    """
+    >>> s= AssetSchema()
+    >>> s.load({
+    ...    'altname': 'ALTNAME',
+    ...    'aclass':  'ACLASS',
+    ...    'decimals':  42,
+    ...    'display_decimals': 7
+    ... })
+    KAsset(altname='ALTNAME', aclass='ACLASS', decimals=42, display_decimals=7)
+    """
+    # name = fields.String()
     altname = fields.String()
     aclass = fields.String()
     decimals = fields.Integer()
@@ -58,3 +69,10 @@ def KDictStrategy(draw, strategy= KAssetStrategy()):
     model = draw(strategy)
     schema = AssetSchema()
     return schema.dump(model)
+
+
+
+if __name__ == "__main__":
+    import pytest
+
+    pytest.main(["-s", "--doctest-modules", "--doctest-continue-on-failure", __file__])
