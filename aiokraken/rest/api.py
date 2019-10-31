@@ -9,13 +9,17 @@ import asyncio
 from dataclasses import dataclass, asdict, field
 
 import typing
+from marshmallow import fields
+
+from aiokraken.rest.schemas.kasset import AssetSchema
+from aiokraken.rest.schemas.kpair import PairField
 
 if not __package__:
     __package__ = 'aiokraken.rest'
 
 from .request import Request
 from ..utils import get_nonce, get_kraken_logger
-from .schemas.payload import PayloadSchema
+from .schemas.payload import PayloadSchema, PayloadSchemaWithField
 from .schemas.time import TimeSchema
 from .schemas.ohlc import PairOHLCSchema
 from .schemas.balance import BalanceSchema
@@ -24,7 +28,7 @@ from .schemas.krequestorder import (
     RequestOrderFinalized, AddOrderResponseSchema, CancelOrderResponseSchema,
     RequestOrderSchema,
 )
-from .schemas.ticker import TickerSchema, PairTickerSchema
+from .schemas.ticker import TickerSchema
 from .response import Response
 from ..model.ohlc import OHLC
 
@@ -173,9 +177,10 @@ class Server:
         return self.public.request('Ticker',
                                    data={'pair': ",".join(pairs)},
                                    expected=Response(status=200,
-                                                     schema=PayloadSchema(
-                                                        result_schema=PairTickerSchema(
-                                                            pair=pair_alias)
+                                                     schema=PayloadSchemaWithField(
+                                                        result_field=fields.Dict(
+                                                            keys = PairField(),
+                                                            values = fields.Nested(TickerSchema),)
                                                         )
                                                      )
                                    )
