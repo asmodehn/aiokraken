@@ -4,7 +4,8 @@ import pytest
 
 from aiokraken.rest.api import API, Server
 from aiokraken.rest.client import RestClient
-from aiokraken.rest.schemas.krequestorder import RequestOrderModel
+from aiokraken.rest.schemas import KCurrency, PairModel
+from aiokraken.rest.schemas.krequestorder import RequestOrder
 
 # vcr configuration ? : https://github.com/kiwicom/pytest-recording#configuration
 # AddOrder (validate false)
@@ -25,7 +26,7 @@ async def test_cancel_limit_order_id_execute(keyfile):
         rest_kraken = RestClient(server=Server())
     try:
 
-        tickerresponse = await rest_kraken.ticker(pair='XBTEUR')
+        tickerresponse = await rest_kraken.ticker(pairs=['XBTEUR'])
         assert tickerresponse
         print(tickerresponse)
         # computing realistic price, but unlikely to be filled, even after relative_starttm delay.
@@ -33,12 +34,12 @@ async def test_cancel_limit_order_id_execute(keyfile):
         # Ref : https://support.kraken.com/hc/en-us/articles/360000919926-Does-Kraken-offer-a-Test-API-or-Sandbox-Mode-
         high_price = tickerresponse.ask.price * Decimal(1.5)
         # delayed market order
-        bidresponse = await rest_kraken.ask(order=RequestOrderModel(
-            pair='XBTEUR',
-            volume='0.01',
+        bidresponse = await rest_kraken.addorder(order=RequestOrder(
+            pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR),
+        ).limit(limit_price=high_price).ask(
+            volume='0.01',).delay(
             relative_expiretm=15,  # expire in 15 seconds (better than cancelling since cancelling too often can lock us out)
-            execute=True,
-        ).limit(limit_price=high_price))
+        ).execute(True))
         # TODO : verify balance before, this will trigger error if not enough funds.
         assert bidresponse
         print(bidresponse)
@@ -72,7 +73,7 @@ async def test_cancel_limit_order_userref_execute(keyfile):
         rest_kraken = RestClient(server=Server())
     try:
 
-        tickerresponse = await rest_kraken.ticker(pair='XBTEUR')
+        tickerresponse = await rest_kraken.ticker(pairs=['XBTEUR'])
         assert tickerresponse
         print(tickerresponse)
         # computing realistic price, but unlikely to be filled, even after relative_starttm delay.
@@ -80,13 +81,14 @@ async def test_cancel_limit_order_userref_execute(keyfile):
         # Ref : https://support.kraken.com/hc/en-us/articles/360000919926-Does-Kraken-offer-a-Test-API-or-Sandbox-Mode-
         high_price = tickerresponse.ask.price * Decimal(1.5)
         # delayed market order
-        bidresponse = await rest_kraken.ask(order=RequestOrderModel(
-            pair='XBTEUR',
-            volume='0.01',
-            relative_expiretm=15,  # expire in 15 seconds (better than cancelling since cancelling too often can lock us out)
-            execute=True,
+        bidresponse = await rest_kraken.addorder(order=RequestOrder(
+            pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR),
         ).limit(
-            limit_price=high_price,))
+            limit_price=high_price,).ask(
+            volume='0.01',).delay(
+            relative_expiretm=15,  # expire in 15 seconds (better than cancelling since cancelling too often can lock us out)
+        ).execute(
+            execute=True,))
         # TODO : verify balance before, this will trigger error if not enough funds.
         assert bidresponse
         print(bidresponse)
