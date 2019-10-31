@@ -1,31 +1,45 @@
 [[source]]
+
 name = "pypi"
 url = "https://pypi.org/simple"
 verify_ssl = true
 
+
 [dev-packages]
-pytest-recording = "==0.3.3"  # 0.3.4 is breaking on --block-network it seems
+
+pytest-recording = "==0.3.3"
 pytest-asyncio = "*"
 pytest-dependency = "*"
 
+
 [packages]
+
 aiohttp = "*"
 aiodns = "*"
 cchardet = "*"
 pytest = "*"
-aiokraken = {path = ".",editable = true}
 marshmallow = "*"
 pandas = "*"
 parameterized = "*"
-marshmallow-dataframe = "*"
+marshmallow-dataframe = "==0.1.4"
 jupyterlab = "*"
 ipympl = "*"
 jupyterlab-git = "*"
 pandas-ta = "*"
 pyjanitor = "*"
 
+
 [requires]
+
 python_version = "3.7"
 
+
 [pipenv]
+
 allow_prereleases = true
+
+
+[packages.aiokraken]
+
+path = "."
+editable = true
