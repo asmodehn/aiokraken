@@ -11,12 +11,6 @@ import logging
 rest_log = logging.getLogger("aiokraken_rest")
 rest_log.setLevel(logging.DEBUG)
 
-# define a Handler which writes INFO messages or higher to the sys.stderr
-console = logging.StreamHandler()
-console.setLevel(logging.INFO)
-# add the handler to the root logger
-rest_log.addHandler(console)
-
 
 """
 A dataclass representing a request

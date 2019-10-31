@@ -159,7 +159,7 @@ class OrderEnterBullishStrategy:
             # bull trend
             # TODO : how to pass 2 orders quicker (more " together") ??
             await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).market().bid(volume=volume))
-            await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).stop_loss(stop_loss_price=price * Decimal(0.95)))
+            await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).stop_loss(stop_loss_price=price * Decimal(0.95)).sell(volume=volume))
 
             # trigger exit strat
             LOGGER.info(f"Triggering Exit watch...")
@@ -190,7 +190,7 @@ class OrderExitBullishStrategy:
 
         ohlc = await self.rest_client_proxy.ohlcv(pair=self.pair)
         ohlc.rsi()
-        rsi = ohlc.dataframe[['time', 'RSI_14']][-1]  # getting last RSI value
+        rsi = ohlc.dataframe[['time', 'RSI_14']]  # getting last RSI value
 
         # making sure the time of the measure
         assert int(time.time()) - rsi.iloc[-1]['time'] < 100  # expected timeframe of 1 minutes by default  # TODO : manage TIME !!!
@@ -205,7 +205,7 @@ class OrderExitBullishStrategy:
             # Not bull any longer : pass the inverse/complementary order...
             # TODO : how to pass 2 orders quicker (more " together") ??
             await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).market().sell(volume=volume))
-            await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).stop_loss(stop_loss_price=price * Decimal(1.05)))
+            await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).stop_loss(stop_loss_price=price * Decimal(1.05)).buy(volume=volume))
 
             LOGGER.info(f"Bullish Strategy Terminated.")
         else:
@@ -259,7 +259,9 @@ async def basicbot(loop, pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR)
             await asyncio.wait([bullbot_run], loop=loop, return_when=asyncio.ALL_COMPLETED)
     except Exception as e:
         LOGGER.info(f"Exception caught : {e}. Terminating...")
+        raise
     finally:
+        # TODO : cleanup (cancel all tasks, maybe cancel orders, etc.)
         await rest_kraken.close()
 
 
