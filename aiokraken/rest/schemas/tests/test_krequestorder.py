@@ -147,7 +147,14 @@ class TestRequestOrderSchema(unittest.TestCase):
             "validate": True,
         }
 
-        if model.descr.leverage > 0:
+        # pattern matching on type would be nice here...
+        if hasattr(model.descr, "price"):
+            expected.update({"price": "{0:f}".format(model.descr.price)})
+
+        if  hasattr(model.descr, "price2"):
+            expected.update({"price2": "{0:f}".format(model.descr.price2)})
+
+        if  hasattr(model.descr, "leverage") and model.descr.leverage > 0:
             expected.update({"leverage": "{0:f}".format(model.descr.leverage)})
 
         if hasattr(model, 'userref') and model.userref:

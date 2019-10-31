@@ -618,6 +618,13 @@ class RequestOrderSchema(BaseSchema):
         data.setdefault('type', self.fields.get('abtype').serialize('v', {'v': original.descr.abtype}))
         data.setdefault('close', self.fields.get('close').serialize('v', {'v': original.descr.close}))
 
+        # some way of Pattern matching would be nice here
+        if hasattr(original.descr, "price"):
+            data.setdefault('price', self.fields.get('price').serialize('v', {'v': original.descr.price}))
+
+        if hasattr(original.descr, "price2"):
+            data.setdefault('price2', self.fields.get('price2').serialize('v', {'v': original.descr.price2}))
+
         # Removing fields with default semantic to use server defaults, and minimize serialization errors
         if original.descr.leverage > 0:
             data.setdefault('leverage', self.fields.get('leverage').serialize('v', {'v': original.descr.leverage}))
