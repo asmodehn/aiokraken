@@ -1,9 +1,13 @@
 # aiokraken
-[![Build Status](https://travis-ci.org/asmodehn/aiokraken.svg?branch=master)](https://travis-ci.org/asmodehn/aiokraken)
+[![Build Status](https://travis-ci.org/asmodehn/aiokraken.svg?branch=develop)](https://travis-ci.org/asmodehn/aiokraken)
 [![Updates](https://pyup.io/repos/github/asmodehn/aiokraken/shield.svg)](https://pyup.io/repos/github/asmodehn/aiokraken/)
 [![Python 3](https://pyup.io/repos/github/asmodehn/aiokraken/python-3-shield.svg)](https://pyup.io/repos/github/asmodehn/aiokraken/)
 
 Python asyncio client for Kraken REST and Websockets API
+
+We follow the [gitflow](https://danielkummer.github.io/git-flow-cheatsheet/) workflow for branches:
+  - Developer should base their work on `develop`.
+  - Users should use the version from `master` (also released as a PyPI package)
 
 ## Installation 
     pip install aiokraken
@@ -39,7 +43,7 @@ Python asyncio client for Kraken REST and Websockets API
 
 ## Contributing
 
-Contributions are welcome and i will do my best to merge PR quickly.
+Contributions are welcome and PR will be merged into develop as quickly as possible.
 
 Here are some guidelines that makes everything easier for everybody:
 
@@ -50,8 +54,6 @@ Here are some guidelines that makes everything easier for everybody:
 
 ### TODO
 
-- Add wrapper methods for all public and private REST CALLS
-- Write tests for the library
 - Write documentation for the library
 
 ## References
