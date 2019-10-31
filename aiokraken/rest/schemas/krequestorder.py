@@ -616,10 +616,13 @@ class RequestOrderSchema(BaseSchema):
         # TODO : better way to get marshmallow to call these by himself ??
         data.setdefault('ordertype', self.fields.get('ordertype').serialize('v', {'v': original.descr.ordertype}))
         data.setdefault('type', self.fields.get('abtype').serialize('v', {'v': original.descr.abtype}))
-        data.setdefault('leverage', self.fields.get('leverage').serialize('v', {'v': original.descr.leverage}))
         data.setdefault('close', self.fields.get('close').serialize('v', {'v': original.descr.close}))
 
         # Removing fields with default semantic to use server defaults, and minimize serialization errors
+        if original.descr.leverage > 0:
+            data.setdefault('leverage', self.fields.get('leverage').serialize('v', {'v': original.descr.leverage}))
+        # else we do not set it (defaults to 'none' as per API docs)
+
         if data.get('relative_starttm') in ['', '+0']:
             data.pop('relative_starttm')
         if data.get('relative_expiretm') in ['', '+0']:

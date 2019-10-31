@@ -142,11 +142,14 @@ class TestRequestOrderSchema(unittest.TestCase):
         expected = {
             "volume": "{0:f}".format(model.volume),
             "pair": PairField().serialize('v', {'v': model.pair}),
-            "leverage": "{0:f}".format(model.descr.leverage),
             "ordertype": KOrderTypeField().serialize('v', {'v': model.descr.ordertype}),
             "type": KABTypeField().serialize('v', {'v': model.descr.abtype}),
             "validate": True,
         }
+
+        if model.descr.leverage > 0:
+            expected.update({"leverage": "{0:f}".format(model.descr.leverage)})
+
         if hasattr(model, 'userref') and model.userref:
             expected.update({
             "userref": model.userref})
