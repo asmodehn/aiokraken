@@ -7,6 +7,17 @@ from ..utils import get_nonce
 from .response import Response
 import typing
 
+import logging
+rest_log = logging.getLogger("aiokraken_rest")
+rest_log.setLevel(logging.DEBUG)
+
+# define a Handler which writes INFO messages or higher to the sys.stderr
+console = logging.StreamHandler()
+console.setLevel(logging.INFO)
+# add the handler to the root logger
+rest_log.addHandler(console)
+
+
 """
 A dataclass representing a request
 """
@@ -31,7 +42,6 @@ def _sign_message(data, url_path, secret):
     return sig_digest.decode()
 
 
-
 @dataclass(frozen=False)
 class Request:
     """
@@ -44,6 +54,10 @@ class Request:
     headers: typing.Dict = field(default_factory=dict)
     expected: typing.Optional[Response] = None
 
+    def __post_init__(self):
+        rest_log.info(f"{self.urlpath}: {self.data}")
+        rest_log.debug(f"{self.headers}")
+
     async def __call__(self, response):
         """
         Locally modelling the request.
@@ -51,6 +65,7 @@ class Request:
         :return:
         """
         res = await response.json(encoding='utf-8', content_type=None)
+        rest_log.info(f"{res}")
         parsed_res = self.expected(status=response.status, data=res, request_data=asdict(self))  # validating response data
         return parsed_res
 
