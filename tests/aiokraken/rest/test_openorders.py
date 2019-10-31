@@ -39,6 +39,7 @@ async def test_openorders_one_high_limit_sell(keyfile):
         rest_kraken = RestClient(server=Server())
     try:
         tickerresponse = await rest_kraken.ticker(pairs=['XBTEUR'])
+        tickerresponse = tickerresponse.get(PairModel(base=KCurrency.XBT, quote=KCurrency.EUR))
         assert tickerresponse
         print(tickerresponse)
         # pass high limit sell order
@@ -76,6 +77,7 @@ async def test_openorders_one_low_limit_buy(keyfile):
         rest_kraken = RestClient(server=Server())
     try:
         tickerresponse = await rest_kraken.ticker(pairs=['XBTEUR'])
+        tickerresponse = tickerresponse.get(PairModel(base=KCurrency.XBT, quote=KCurrency.EUR))
         assert tickerresponse
         print(tickerresponse)
         # computing realistic price, but unlikely to be filled, even after relative_starttm delay.

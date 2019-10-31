@@ -27,6 +27,7 @@ async def test_cancel_limit_order_id_execute(keyfile):
     try:
 
         tickerresponse = await rest_kraken.ticker(pairs=['XBTEUR'])
+        tickerresponse = tickerresponse.get(PairModel(base=KCurrency.XBT, quote=KCurrency.EUR))
         assert tickerresponse
         print(tickerresponse)
         # computing realistic price, but unlikely to be filled, even after relative_starttm delay.
@@ -74,6 +75,7 @@ async def test_cancel_limit_order_userref_execute(keyfile):
     try:
 
         tickerresponse = await rest_kraken.ticker(pairs=['XBTEUR'])
+        tickerresponse = tickerresponse.get(PairModel(base=KCurrency.XBT, quote=KCurrency.EUR))
         assert tickerresponse
         print(tickerresponse)
         # computing realistic price, but unlikely to be filled, even after relative_starttm delay.

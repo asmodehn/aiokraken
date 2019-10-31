@@ -79,6 +79,7 @@ async def test_add_buy_limit_order_execute_low(keyfile):
     try:
 
         tickerresponse = await rest_kraken.ticker(pairs=['XBTEUR'])
+        tickerresponse = tickerresponse.get(PairModel(base=KCurrency.XBT, quote=KCurrency.EUR))
         assert tickerresponse
         print(tickerresponse)
         # computing realistic price, but unlikely to be filled, even after relative_starttm delay.
@@ -136,6 +137,7 @@ async def test_add_sell_limit_order_execute_high(keyfile):
     try:
 
         tickerresponse = await rest_kraken.ticker(pairs=['XBTEUR'])
+        tickerresponse = tickerresponse.get(PairModel(base=KCurrency.XBT, quote=KCurrency.EUR))
         assert tickerresponse
         print(tickerresponse)
         # computing realistic price, but unlikely to be filled, even after relative_starttm delay.
