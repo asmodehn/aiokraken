@@ -5,6 +5,7 @@ import hmac
 import base64
 import timeit
 import aiohttp
+import vcr
 from aiokraken.utils import get_kraken_logger, get_nonce
 from aiokraken.rest.api import Server, API
 
@@ -28,6 +29,12 @@ class RestClient:
             )
         }
 
+        self.vcr = vcr.VCR(
+            cassette_library_dir='custom_cassettes',
+            record_mode='all',
+            match_on=['uri', 'method'],
+        )
+
         self.session = aiohttp.ClientSession(headers=_headers, raise_for_status=True, trust_env=True)
 
     async def time(self):
@@ -35,7 +42,8 @@ class RestClient:
 
         kt = self.server.time()   # returns the request to be made for this API.
         print(kt.urlpath)
-        try:  # TODO : pass protocol & host into the request url in order to have it displayed when erroring !
+        try:
+            # TODO : pass protocol & host into the request url in order to have it displayed when erroring !
             async with self.session.post(self.protocol + self.server.url + kt.urlpath, headers=kt.headers, data=kt.data) as response:
 
                 return await kt(response)
@@ -48,7 +56,8 @@ class RestClient:
         """ make public requests to kraken api"""
 
         kt = self.server.ohlc(pair=pair)   # returns the request to be made for this API.)
-        try:  # TODO : pass protocol & host into the request url in order to have it displayed when erroring !
+        try:
+            # TODO : pass protocol & host into the request url in order to have it displayed when erroring !
             async with self.session.post(self.protocol + self.server.url + kt.urlpath, headers=kt.headers, data=kt.data) as response:
 
                 return await kt(response)
@@ -63,9 +72,10 @@ class RestClient:
         kt = self.server.balance()
         print(kt.urlpath)
         try:
-            async with self.session.post(self.protocol + self.server.url + kt.urlpath, headers=kt.headers, data=kt.data) as response:
+            with self.vcr.use_cassette('balance_record.yml', serializer='json', record_mode='once'):
+                async with self.session.post(self.protocol + self.server.url + kt.urlpath, headers=kt.headers, data=kt.data) as response:
 
-                return await kt(response)
+                    return await kt(response)
 
         except aiohttp.ClientResponseError as err:
             LOGGER.error(err)
