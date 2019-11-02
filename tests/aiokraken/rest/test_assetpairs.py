@@ -58,6 +58,23 @@ async def test_asset_oldstr():
         await rest_kraken.close()
 
 
+
+
+@pytest.mark.asyncio
+@pytest.mark.vcr()
+async def test_asset_all():
+    """ get kraken ohlc"""
+    rest_kraken = RestClient(server=Server())
+    try:
+        response = await rest_kraken.assetpairs()
+        print(f'response is \n{response}')
+        for asset in response:
+            assert isinstance(asset, KAssetPair)
+
+    finally:
+        await rest_kraken.close()
+
+
 if __name__ == '__main__':
     pytest.main(['-s', __file__, '--block-network'])
     # record run

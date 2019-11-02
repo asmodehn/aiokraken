@@ -165,7 +165,7 @@ class Server:
                                                      schema=AssetPayloadSchema())
         )
 
-    def assetpair(self, assets=['XBTEUR']): # TODO : use a model to typecheck pair symbols
+    def assetpair(self, assets=None): # TODO : use a model to typecheck pair symbols
         return self.public.request('AssetPairs',
                                    data={
                                        # info = info to retrieve (optional):
@@ -174,7 +174,7 @@ class Server:
                                        #     fees = fees schedule
                                        #     margin = margin info
                                        'pair':   ",".join([str(a) for a in assets])  # comma delimited list of asset pairs to get info on (optional.  default = all)
-                                   },
+                                   } if assets else {},
                                    expected=Response(status=200,
                                                      schema=AssetPairPayloadSchema())
         )

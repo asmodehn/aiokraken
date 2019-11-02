@@ -1,0 +1,33 @@
+interactions:
+- request:
+    body:
+      pair: XBTEUR
+    headers:
+      User-Agent:
+      - Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML,
+        like Gecko) Chrome/74.0.3729.131 Safari/537.36
+    method: POST
+    uri: https://api.kraken.com/0/public/AssetPairs
+  response:
+    body:
+      string: '{"error":[],"result":{"XXBTZEUR":{"altname":"XBTEUR","wsname":"XBT\/EUR","aclass_base":"currency","base":"XXBT","aclass_quote":"currency","quote":"ZEUR","lot":"unit","pair_decimals":1,"lot_decimals":8,"lot_multiplier":1,"leverage_buy":[2,3,4,5],"leverage_sell":[2,3,4,5],"fees":[[0,0.26],[50000,0.24],[100000,0.22],[250000,0.2],[500000,0.18],[1000000,0.16],[2500000,0.14],[5000000,0.12],[10000000,0.1]],"fees_maker":[[0,0.16],[50000,0.14],[100000,0.12],[250000,0.1],[500000,0.08],[1000000,0.06],[2500000,0.04],[5000000,0.02],[10000000,0]],"fee_volume_currency":"ZUSD","margin_call":80,"margin_stop":40}}}'
+    headers:
+      CF-Cache-Status: DYNAMIC
+      CF-RAY: 52ed1a12cc2fa8a9-CDG
+      Cache-Control: no-cache,max-age=0
+      Connection: keep-alive
+      Content-Encoding: gzip
+      Content-Type: application/json; charset=utf-8
+      Date: Fri, 01 Nov 2019 10:14:27 GMT
+      Expect-CT: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      Server: cloudflare
+      Set-Cookie: __cfduid=deb43db19833f6cdf440487560405ef9f1572603267; expires=Sat,
+        31-Oct-20 10:14:27 GMT; path=/; domain=.kraken.com; HttpOnly
+      Transfer-Encoding: chunked
+      Vary: Accept-Encoding
+      strict-transport-security: max-age=15768000
+    status:
+      code: 200
+      message: OK
+    url: https://api.kraken.com/0/public/AssetPairs
+version: 1

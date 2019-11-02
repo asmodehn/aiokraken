@@ -57,7 +57,7 @@ class RestClient:
             LOGGER.error(err)
             return {'error': err}
 
-    async def assetpairs(self, assets=['XBTEUR']):
+    async def assetpairs(self, assets=None):
         """ make public requests to kraken api"""
 
         kt = self.server.assetpair(assets=assets)   # returns the request to be made for this API.)
