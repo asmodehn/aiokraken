@@ -14,8 +14,8 @@ pytest-dependency = "*"
 
 [packages]
 
-aiohttp = "*"
-aiodns = "*"
+aiohttp = "==3.6.2"
+aiodns = "==2.0.0"
 cchardet = "==2.1.4"
 pytest = "*"
 marshmallow = "*"
