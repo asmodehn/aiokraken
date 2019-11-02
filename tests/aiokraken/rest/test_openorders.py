@@ -2,11 +2,11 @@ from decimal import Decimal
 
 import pytest
 
-from aiokraken.rest.api import API, Server
+from aiokraken.rest.api import Server
 from aiokraken.rest.client import RestClient
 #from aiokraken.model.order import MarketOrder, LimitOrder, StopLossOrder, bid, ask
-from aiokraken.rest.schemas.kcurrency import KCurrency
-from aiokraken.rest.schemas.kpair import PairModel
+from aiokraken.model.kcurrency import KCurrency
+from aiokraken.model.kpair import PairModel
 from aiokraken.rest.schemas.krequestorder import RequestOrder
 
 
@@ -39,13 +39,13 @@ async def test_openorders_one_high_limit_sell(keyfile):
         rest_kraken = RestClient(server=Server())
     try:
         tickerresponse = await rest_kraken.ticker(pairs=['XBTEUR'])
-        tickerresponse = tickerresponse.get(PairModel(base=KCurrency.XBT, quote=KCurrency.EUR))
+        tickerresponse = tickerresponse.get("XXBTZEUR")  # TODO : handle conversion problem...
         assert tickerresponse
         print(tickerresponse)
         # pass high limit sell order
         ask_high_price = tickerresponse.ask.price * Decimal(1.5)
         askresponse = await rest_kraken.addorder(order=RequestOrder(
-            pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR)
+            pair="XBTEUR"
         ).limit(
             limit_price=ask_high_price,)
         .ask(
@@ -77,14 +77,14 @@ async def test_openorders_one_low_limit_buy(keyfile):
         rest_kraken = RestClient(server=Server())
     try:
         tickerresponse = await rest_kraken.ticker(pairs=['XBTEUR'])
-        tickerresponse = tickerresponse.get(PairModel(base=KCurrency.XBT, quote=KCurrency.EUR))
+        tickerresponse = tickerresponse.get("XXBTZEUR")  # TODO : handle conversion problem...
         assert tickerresponse
         print(tickerresponse)
         # computing realistic price, but unlikely to be filled, even after relative_starttm delay.
         low_price = tickerresponse.bid.price * Decimal(0.5)
         # delayed market order
         bidresponse = await rest_kraken.addorder(order=RequestOrder(
-            pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR)
+            pair="XBTEUR"
         ).limit(
             limit_price=low_price,)
         .bid(

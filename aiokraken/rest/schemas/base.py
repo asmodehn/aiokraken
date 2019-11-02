@@ -1,6 +1,7 @@
 import marshmallow
 from ..exceptions import AIOKrakenSchemaValidationException
 
+
 class BaseSchema(marshmallow.Schema):
     """ defining common behavior for all schemas """
     class Meta:

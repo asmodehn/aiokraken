@@ -1,12 +1,10 @@
 from aiokraken.rest.schemas.kasset import AssetSchema
 from aiokraken.rest.schemas.kassetpair import KAssetPairSchema
-from aiokraken.rest.schemas.kcurrency import KCurrencyField
-from aiokraken.rest.schemas.ohlc import OHLCDataFrameSchema, PairOHLCSchema
+from aiokraken.rest.schemas.ohlc import PairOHLCSchema
 from marshmallow import fields, post_load
 from .schemas.base import BaseSchema
 from .schemas.errors import ErrorsField
 
-from .schemas.kpair import PairField
 from .schemas.ticker import TickerSchema
 
 
@@ -22,18 +20,19 @@ class PayloadBaseSchema(BaseSchema):
 
 
 class TickerPayloadSchema(PayloadBaseSchema):
-
-    result= fields.Dict(keys = PairField(), values = fields.Nested(TickerSchema))
+    # Note : Only getting strings from the network, not attempting to validate all assets
+    #  => requires human understanding and should probably be part of a "formal" modeling layer instead...
+    result= fields.Dict(keys = fields.String(), values = fields.Nested(TickerSchema))
 
 
 class AssetPayloadSchema(PayloadBaseSchema):
 
-    result= fields.Dict(keys = KCurrencyField(), values = fields.Nested(AssetSchema))
+    result= fields.Dict(keys = fields.String(), values = fields.Nested(AssetSchema))
 
 
 class AssetPairPayloadSchema(PayloadBaseSchema):
 
-    result= fields.Dict(keys = PairField(), values = fields.Nested(KAssetPairSchema))
+    result= fields.Dict(keys = fields.String(), values = fields.Nested(KAssetPairSchema))
 
 
 # Ref : https://stevenloria.com/dynamic-schemas-in-marshmallow/

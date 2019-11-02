@@ -4,7 +4,6 @@ import pytest
 
 from aiokraken.rest.api import API, Server
 from aiokraken.rest.client import RestClient
-from aiokraken.rest.schemas import KCurrency, PairModel
 from aiokraken.rest.schemas.krequestorder import RequestOrder
 
 # vcr configuration ? : https://github.com/kiwicom/pytest-recording#configuration
@@ -27,7 +26,7 @@ async def test_cancel_limit_order_id_execute(keyfile):
     try:
 
         tickerresponse = await rest_kraken.ticker(pairs=['XBTEUR'])
-        tickerresponse = tickerresponse.get(PairModel(base=KCurrency.XBT, quote=KCurrency.EUR))
+        tickerresponse = tickerresponse.get("XXBTZEUR")
         assert tickerresponse
         print(tickerresponse)
         # computing realistic price, but unlikely to be filled, even after relative_starttm delay.
@@ -36,7 +35,7 @@ async def test_cancel_limit_order_id_execute(keyfile):
         high_price = tickerresponse.ask.price * Decimal(1.5)
         # delayed market order
         bidresponse = await rest_kraken.addorder(order=RequestOrder(
-            pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR),
+            pair="XBTEUR",
         ).limit(limit_price=high_price).ask(
             volume='0.01',).delay(
             relative_expiretm=15,  # expire in 15 seconds (better than cancelling since cancelling too often can lock us out)
@@ -75,7 +74,7 @@ async def test_cancel_limit_order_userref_execute(keyfile):
     try:
 
         tickerresponse = await rest_kraken.ticker(pairs=['XBTEUR'])
-        tickerresponse = tickerresponse.get(PairModel(base=KCurrency.XBT, quote=KCurrency.EUR))
+        tickerresponse = tickerresponse.get("XXBTZEUR")
         assert tickerresponse
         print(tickerresponse)
         # computing realistic price, but unlikely to be filled, even after relative_starttm delay.
@@ -84,7 +83,7 @@ async def test_cancel_limit_order_userref_execute(keyfile):
         high_price = tickerresponse.ask.price * Decimal(1.5)
         # delayed market order
         bidresponse = await rest_kraken.addorder(order=RequestOrder(
-            pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR),
+            pair="XBTEUR",
         ).limit(
             limit_price=high_price,).ask(
             volume='0.01',).delay(

@@ -1,27 +1,21 @@
-import functools
 import typing
 from decimal import Decimal
-from enum import Enum
 
-import hypothesis
-import marshmallow
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass
 from marshmallow import fields, pre_load, post_load, post_dump, pre_dump
-from hypothesis import given, strategies as st
+from hypothesis import strategies as st
 
 
 if not __package__:
     __package__ = 'aiokraken.rest.schemas'
 from .base import BaseSchema
 from .ktm import TMModel, TimerField
-from .kpair import PairModel, PairStrategy, PairField
+from aiokraken.model.kpair import PairModel, PairStrategy, PairField
 from .kabtype import KABTypeModel, KABTypeField
 from .kordertype import KOrderTypeModel, KOrderTypeField
 
-from ..exceptions import AIOKrakenException
 #from ...model.order import Order, OpenOrder, RequestOrder
 
-from .kopenorder import KOpenOrderSchema
 from .korderdescr import (
     KOrderDescr, KOrderDescrNoPrice, KOrderDescrOnePrice, KOrderDescrTwoPrice,
     KOrderDescrTwoPriceData,
@@ -33,7 +27,6 @@ from .korderdescr import (
     KOrderDescrNoPriceStrategy,
     KOrderDescrOnePriceStrategy,
     KOrderDescrTwoPriceStrategy,
-    KOrderDescrSchema,
     KOrderDescrCloseSchema,
 )
 
@@ -106,7 +99,7 @@ class OrderNotFinalized(Exception):
 
 @dataclass(frozen=True, init=False)
 class RequestOrderMixin:
-    pair: PairModel
+    pair: fields.String()
 
     fee_currency_base: bool  # TODO
     market_price_protection: bool  # TODO
@@ -114,7 +107,7 @@ class RequestOrderMixin:
     userref: typing.Optional[int]  # TODO
 
     # Explicit init to manage defaults without impacting inheritance...
-    def __init__(self, pair: PairModel, userref: typing.Optional[int] = None, fee_currency_base:bool = True, market_price_protection: bool = True, **kwargs):
+    def __init__(self, pair: str, userref: typing.Optional[int] = None, fee_currency_base:bool = True, market_price_protection: bool = True, **kwargs):
         object.__setattr__(self, "pair", pair)
         object.__setattr__(self, "userref", userref)
         object.__setattr__(self, "fee_currency_base", fee_currency_base)
@@ -327,7 +320,7 @@ class RequestOrder(RequestOrderMixin):
     TODO
     """
 
-    def __init__(self,  pair: PairModel, userref: typing.Optional[int] = None, fee_currency_base=True, market_price_protection=True):
+    def __init__(self,  pair: str, userref: typing.Optional[int] = None, fee_currency_base=True, market_price_protection=True):
 
         super(RequestOrder, self).__init__(pair=pair, userref=userref, fee_currency_base=fee_currency_base, market_price_protection=market_price_protection)
 
@@ -522,7 +515,7 @@ class RequestOrderSchema(BaseSchema):
     abtype = KABTypeField(required=True, data_key='type')  # need rename to not confuse python on this...
     ordertype = KOrderTypeField(required=True)
 
-    pair= PairField(required=False)  # to load/dump to/from internals of descr
+    pair= fields.String(required=False)  #PairField(required=False)  # to load/dump to/from internals of descr
     price = fields.Decimal(allow_nan=False, allow_infinity=False, as_string=True)
     price2 = fields.Decimal(allow_nan=False, allow_infinity=False, as_string=True)
 

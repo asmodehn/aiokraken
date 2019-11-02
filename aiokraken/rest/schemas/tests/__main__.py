@@ -8,7 +8,10 @@ uses integrated python tools only.
 
 # import your test modules
 if __package__ is not None:
-    from . import test_time, test_ticker, test_payload, test_ohlc, test_kabtype, test_ktm, test_krequestorder, test_kpair, test_kordertype, test_korderdescr, test_kopenorder, test_kcurrency
+    from . import test_time, test_ticker, test_payload, test_ohlc, test_kabtype, test_ktm, test_krequestorder, \
+        test_kordertype, test_korderdescr, test_kopenorder
+    from aiokraken.model.tests import test_kpair
+    from aiokraken.model import test_kcurrency
 else:
     import test_time, test_ticker, test_payload, test_ohlc, test_kabtype, test_ktm, test_krequestorder, test_kpair, test_kordertype, test_korderdescr, test_kopenorder, test_kcurrency
 

@@ -5,8 +5,6 @@ import aiohttp
 import asyncio
 import signal
 
-from aiokraken.rest.schemas.kcurrency import KCurrency
-from aiokraken.rest.schemas.kpair import PairModel
 from aiokraken.utils import get_kraken_logger, get_nonce
 from aiokraken.rest.api import Server, API
 from aiokraken.rest.client import RestClient
@@ -216,7 +214,7 @@ class OrderExitBullishStrategy:
         # exit and die.
 
 
-async def bullbot(loop, proxy, pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR)):
+async def bullbot(loop, proxy, pair="XBTEUR"):
     try:
 
         bull_enter = OrderEnterBullishStrategy(rest_client_proxy=proxy, pair=pair)
@@ -242,7 +240,7 @@ async def bullbot(loop, proxy, pair=PairModel(base=KCurrency.XBT, quote=KCurrenc
         pass
 
 
-async def basicbot(loop, pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR)):
+async def basicbot(loop, pair="XBTEUR"):
 
     from aiokraken.config import load_api_keyfile
     keystruct = load_api_keyfile()
@@ -273,4 +271,4 @@ for signame in ('SIGINT', 'SIGTERM'):
         lambda: asyncio.ensure_future(ask_exit(signame))
     )
 
-loop.run_until_complete(basicbot(loop, pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR)))
+loop.run_until_complete(basicbot(loop, pair="XBTEUR"))

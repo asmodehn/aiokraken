@@ -6,15 +6,20 @@ from hypothesis import strategies as st
 from marshmallow import fields, post_load, post_dump
 from marshmallow.schema import BaseSchema
 
-from aiokraken.rest.schemas import KCurrency
 from aiokraken.rest.schemas.kasset import KAssetStrategy, KAssetClass
-from aiokraken.rest.schemas.kcurrency import KCurrencyField
 
 
 @dataclass
 class VolumeFee:
     volume: decimal.Decimal  # unit ??
     fee: decimal.Decimal  # pct
+
+
+@st.composite
+def VolumeFeeStrategy(draw, ):
+    return VolumeFee(draw(st.decimals(allow_nan=False, allow_infinity=False)),
+                     draw(st.decimals(allow_nan=False, allow_infinity=False))
+                          )
 
 
 
@@ -48,8 +53,7 @@ class VolumeFeeField(fields.Field):
         :param dict kwargs: Field-specific keyword arguments.
         :return: The serialized value
         """
-        # TODO : manage that to list / str of list / via simplejson ??
-        return str([value.volume, value.fee])
+        return [value.volume, value.fee]
 
 
 @dataclass
@@ -58,9 +62,9 @@ class KAssetPair:
     altname: str  # alternate pair name
     wsname: str   # WebSocket pair name (if available)
     aclass_base: KAssetClass  # asset class of base component
-    base: KCurrency  # asset id of base component
+    base: str  # asset id of base component
     aclass_quote: str  # asset class of quote component
-    quote: KCurrency  # asset id of quote component
+    quote: str  # asset id of quote component
     lot: str  # volume lot size
     pair_decimals: int  # scaling decimal places for pair
     lot_decimals: int  # scaling decimal places for volume
@@ -69,7 +73,7 @@ class KAssetPair:
     leverage_sell: list  # array of leverage amounts available when selling
     fees: list  # fee schedule array in [volume, percent fee] tuples
     fees_maker: list  # maker fee schedule array in [volume, percent fee] tuples (if on maker/taker)
-    fee_volume_currency: KCurrency  # volume discount currency
+    fee_volume_currency: str  # volume discount currency
     margin_call: int  # margin call level
     margin_stop: int  # stop-out/liquidation margin level
 
@@ -81,9 +85,9 @@ def KAssetPairStrategy(draw):
         altname= draw(st.text(max_size=5)),
         wsname= draw(st.text(max_size=5)),
 
-        aclass_base = draw(KAssetStrategy()),
+        aclass_base = draw(st.text(max_size=5)),
         base = draw(st.text(max_size=5)),
-        aclass_quote = draw(KAssetStrategy()),
+        aclass_quote = draw(st.text(max_size=5)),
         quote = draw(st.text(max_size=5)),
 
         lot = draw(st.decimals(allow_nan=False, allow_infinity=False)),
@@ -94,9 +98,9 @@ def KAssetPairStrategy(draw):
         leverage_buy=draw(st.lists(st.integers(max_value=255), max_size=5 )),
         leverage_sell= draw(st.lists(st.integers(max_value=255), max_size=5 )),
 
-        fees = draw(st.lists(st.integers(max_value=255), max_size=5 )),
-        fees_maker = draw(st.lists(st.integers(max_value=255), max_size=5 )),
-        fee_volume_currency = draw(st.lists(st.integers(max_value=255), max_size=5 )),
+        fees = draw(st.lists(VolumeFeeStrategy(), max_size=5 )),
+        fees_maker = draw(st.lists(VolumeFeeStrategy(), max_size=5 )),
+        fee_volume_currency = draw(st.text(max_size=5)),
 
         margin_call = draw(st.integers(max_value=255)),
         margin_stop = draw(st.integers(max_value=255))
@@ -142,7 +146,7 @@ class KAssetPairSchema(BaseSchema):
     leverage_sell= fields.List(fields.Integer())   # array of leverage amounts available when selling
     fees=fields.List(VolumeFeeField())  # fee schedule array in [volume, percent fee] tuples
     fees_maker=fields.List(VolumeFeeField())  # maker fee schedule array in [volume, percent fee] tuples (if on maker/taker)
-    fee_volume_currency=KCurrencyField()  # volume discount currency
+    fee_volume_currency=fields.String()  # volume discount currency
     margin_call= fields.Integer()  # margin call level
     margin_stop= fields.Integer()  # stop-out/liquidation margin level
 

@@ -1,27 +1,11 @@
 import pytest
 
-from aiokraken.rest.schemas import PairModel, KCurrency
 from aiokraken.rest.api import API, Server
 from aiokraken.rest.client import RestClient
 from aiokraken.rest.schemas.kasset import KAsset
 
 
 # TODO : test multiple assets... multiple ways...
-
-@pytest.mark.asyncio
-@pytest.mark.vcr()
-async def test_asset_model():
-    """ get kraken ohlc"""
-    rest_kraken = RestClient(server=Server())
-    try:
-        response = await rest_kraken.assets(assets=[KCurrency.XBT])
-        asset = response[KCurrency.XBT]
-        print(f'response is \n{response}')
-
-        assert isinstance(asset, KAsset)
-
-    finally:
-        await rest_kraken.close()
 
 
 @pytest.mark.asyncio
@@ -31,7 +15,7 @@ async def test_asset_newstr():
     rest_kraken = RestClient(server=Server())
     try:
         response = await rest_kraken.assets(assets=["XBT"])
-        asset = response[KCurrency.XBT]  # PB : convert between representations of currency ?
+        asset = response["XXBT"]  # PB : convert between representations of currency ? => job of the domain model layer
         print(f'response is \n{response}')
 
         assert isinstance(asset, KAsset)
@@ -47,7 +31,7 @@ async def test_asset_oldstr():
     rest_kraken = RestClient(server=Server())
     try:
         response = await rest_kraken.assets(assets=["XXBT"])
-        asset = response[KCurrency.XBT]  # PB : convert between representations of currency ?
+        asset = response["XXBT"]  # PB : convert between representations of currency ? => job of the domain model layer
         print(f'response is \n{response}')
 
         assert isinstance(asset, KAsset)
@@ -65,7 +49,7 @@ async def test_asset_all():
     try:
         response = await rest_kraken.assets()
         print(f'response is \n{response}')
-        for asset in response:
+        for name, asset in response.items():
             assert isinstance(asset, KAsset)
 
     finally:

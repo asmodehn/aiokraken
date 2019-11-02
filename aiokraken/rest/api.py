@@ -1,38 +1,21 @@
 import types
-import urllib
-import hashlib
-import base64
-import hmac
-import time
-import signal
-import asyncio
-from dataclasses import dataclass, asdict, field
 
-import typing
-from marshmallow import fields
-
-from aiokraken.rest.payloads import TickerPayloadSchema, OHLCPayloadSchema, AssetPayloadSchema, AssetPairPayloadSchema
-from aiokraken.rest.schemas.kasset import AssetSchema
-from aiokraken.rest.schemas.kpair import PairField
+from aiokraken.rest.payloads import TickerPayloadSchema, AssetPayloadSchema, AssetPairPayloadSchema
 
 if not __package__:
     __package__ = 'aiokraken.rest'
 
 from .request import Request
-from ..utils import get_nonce, get_kraken_logger
-from .schemas.payload import PayloadSchema, PayloadSchemaWithField
+from .schemas.payload import PayloadSchema
 from .schemas.time import TimeSchema
 from .schemas.ohlc import PairOHLCSchema
 from .schemas.balance import BalanceSchema
-from .schemas.kopenorder import KOpenOrderSchema, OpenOrdersResponseSchema
+from .schemas.kopenorder import OpenOrdersResponseSchema
 from .schemas.krequestorder import (
     RequestOrderFinalized, AddOrderResponseSchema, CancelOrderResponseSchema,
     RequestOrderSchema,
 )
-from .schemas.ticker import TickerSchema
 from .response import Response
-from ..model.ohlc import OHLC
-
 
 
 def private(api, key, secret):

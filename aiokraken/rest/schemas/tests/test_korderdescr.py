@@ -1,17 +1,12 @@
-import time
 import unittest
 from decimal import Decimal
 from dataclasses import asdict
 
-from parameterized import parameterized
-import json
-import marshmallow
-import decimal
 from hypothesis import given, settings, Verbosity, strategies as st
 
 from ..kabtype import KABTypeModel
 from ..kordertype import KOrderTypeModel
-from ..kpair import PairModel
+from aiokraken.model.kpair import PairModel
 from ..korderdescr import (
     KOrderDescr,
     KOrderDescrStrategy,
@@ -29,7 +24,6 @@ from ..korderdescr import (
     KOrderDescrSchema,
     KOrderDescrCloseSchema,
 )
-from ...exceptions import AIOKrakenException
 
 """
 Test module.

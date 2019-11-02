@@ -1,12 +1,35 @@
+import functools
 from dataclasses import dataclass
 
 import typing
+from enum import Enum
+
 from marshmallow import fields, post_load, post_dump, pre_load
 
 from aiokraken.rest.schemas.base import BaseSchema
 
-
 from hypothesis import strategies as st
+
+
+class KAssetClass(Enum):
+    """
+
+    """
+    # currency
+    currency = 'currency'
+
+    def __str__(self) -> str:
+        """Kraken default representation for sending data."""
+        return f'{self.value}'
+
+    def __repr__(self) -> str:
+        """Internal representation, unique."""
+        return f'{self.name}'
+
+
+# Using partial call here to delay evaluation (and get same semantics as potentially more complex strategies)
+KAssetClassStrategy = functools.partial(st.sampled_from, KAssetClass)
+
 
 @dataclass
 class KAsset:
@@ -69,7 +92,6 @@ def KDictStrategy(draw, strategy= KAssetStrategy()):
     model = draw(strategy)
     schema = AssetSchema()
     return schema.dump(model)
-
 
 
 if __name__ == "__main__":

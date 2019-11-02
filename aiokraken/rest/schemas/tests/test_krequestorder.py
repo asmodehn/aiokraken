@@ -1,18 +1,11 @@
-import time
 import unittest
-from decimal import Decimal
 
-from parameterized import parameterized
-import json
-import marshmallow
-import decimal
 from hypothesis import given, strategies as st, settings, Verbosity
 
-from ..kcurrency import KCurrency
-from ..kabtype import KABTypeModel, KABTypeField
+from ..kabtype import KABTypeField
 from ..kordertype import KOrderTypeModel, KOrderTypeField
-from ..korderdescr import KOrderDescrSchema, KOrderDescrCloseSchema
-from ..kpair import PairModel, PairField
+from ..korderdescr import KOrderDescrCloseSchema
+from aiokraken.model.kpair import PairModel, PairField
 from ..ktm import TimerField
 from ..krequestorder import (
     RequestOrder,
@@ -30,7 +23,6 @@ from ..krequestorder import (
     RequestOrderSchema,
     KDictStrategy,
 )
-from ...exceptions import AIOKrakenException
 
 """
 Test module.
