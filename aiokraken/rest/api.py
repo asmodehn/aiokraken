@@ -11,7 +11,7 @@ from dataclasses import dataclass, asdict, field
 import typing
 from marshmallow import fields
 
-from aiokraken.rest.payloads import TickerPayloadSchema, OHLCPayloadSchema, AssetPayloadSchema
+from aiokraken.rest.payloads import TickerPayloadSchema, OHLCPayloadSchema, AssetPayloadSchema, AssetPairPayloadSchema
 from aiokraken.rest.schemas.kasset import AssetSchema
 from aiokraken.rest.schemas.kpair import PairField
 
@@ -152,7 +152,7 @@ class Server:
     def time(self):
         return self.public.request('Time', data=None, expected=Response(status=200, schema=PayloadSchema(TimeSchema)))
 
-    def assets(self, assets=['XBTEUR']): # TODO : use a model to typecheck pair symbols
+    def assets(self, assets=None): # TODO : use a model to typecheck pair symbols
         return self.public.request('Assets',
                                    data={
                                        # info = info to retrieve (optional):
@@ -160,9 +160,23 @@ class Server:
                                        # aclass = asset class (optional):
                                        #     currency (default)
                                        'asset': ",".join([str(a) for a in assets])
-                                   },
+                                    } if assets else {},
                                    expected=Response(status=200,
                                                      schema=AssetPayloadSchema())
+        )
+
+    def assetpair(self, assets=['XBTEUR']): # TODO : use a model to typecheck pair symbols
+        return self.public.request('AssetPairs',
+                                   data={
+                                       # info = info to retrieve (optional):
+                                       #     info = all info (default)
+                                       #     leverage = leverage info
+                                       #     fees = fees schedule
+                                       #     margin = margin info
+                                       'pair':   ",".join([str(a) for a in assets])  # comma delimited list of asset pairs to get info on (optional.  default = all)
+                                   },
+                                   expected=Response(status=200,
+                                                     schema=AssetPairPayloadSchema())
         )
 
 

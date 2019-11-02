@@ -1,4 +1,5 @@
 from aiokraken.rest.schemas.kasset import AssetSchema
+from aiokraken.rest.schemas.kassetpair import KAssetPairSchema
 from aiokraken.rest.schemas.kcurrency import KCurrencyField
 from aiokraken.rest.schemas.ohlc import OHLCDataFrameSchema, PairOHLCSchema
 from marshmallow import fields, post_load
@@ -28,6 +29,11 @@ class TickerPayloadSchema(PayloadBaseSchema):
 class AssetPayloadSchema(PayloadBaseSchema):
 
     result= fields.Dict(keys = KCurrencyField(), values = fields.Nested(AssetSchema))
+
+
+class AssetPairPayloadSchema(PayloadBaseSchema):
+
+    result= fields.Dict(keys = PairField(), values = fields.Nested(KAssetPairSchema))
 
 
 # Ref : https://stevenloria.com/dynamic-schemas-in-marshmallow/
