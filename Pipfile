@@ -16,7 +16,7 @@ pytest-dependency = "*"
 
 aiohttp = "==3.6.2"
 aiodns = "==2.0.0"
-cchardet = "*"
+cchardet = "==2.1.4"
 pytest = "*"
 marshmallow = "*"
 pandas = "*"
