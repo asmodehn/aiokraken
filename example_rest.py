@@ -120,7 +120,7 @@ class Proxy:
         if self._last_ohlcv is None or now - self._last_public_call > self.public_period_limit:
             self._last_public_call = now
             self._last_ohlcv = await self.rest_client.ohlc(pair=pair)
-            LOGGER.info(f"OHLCV for {pair} : {self._last_ohlcv}")
+            LOGGER.debug(f"OHLCV for {pair} : {self._last_ohlcv}")
 
         res = self._last_ohlcv
         return res
@@ -222,7 +222,8 @@ class OrderEnterBullishStrategy:
         # making sure the time of the measure
         assert int(time.time()) - rsi.iloc[-1]['time'] < 100  # expected timeframe of 1 minutes by default  # TODO : manage TIME !!!
 
-        if rsi.iloc[-1]['RSI_14'] > 60:
+        if rsi.iloc[-1]['RSI_14'] > 65:
+            except_count = 0
             LOGGER.debug(f"RSI: \n{rsi}.")
             LOGGER.info(f"RSI: {rsi.iloc[-1]['RSI_14']} Commencing Bullish strategy...")
             ticker = (await self.rest_client_proxy.ticker(pairs=[self.pair]))[self.pairinfo.base + self.pairinfo.quote]  #TODO : find better way to handle both names...
@@ -234,32 +235,41 @@ class OrderEnterBullishStrategy:
 
             LOGGER.info(f"Price for {self.pair}: {price}. Passing Enter Order with trailing stop at {trailing_stop_offset}")
             # bull trend
+            try:
+                mo = await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).market().bid(volume=volume, close=KOrderDescr(pair=self.pair)
+                                                                                                     .trailing_stop(trailing_stop_offset=trailing_stop_offset))
+                                                                                                     .execute(execute))
+                #slo = await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).stop_loss(stop_loss_price=stop_loss_price).sell(volume=volume))
+                # TODO : trailing stop probably better here ? as close order ?
 
-            mo = await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).market().bid(volume=volume, close=KOrderDescr(pair=self.pair).trailing_stop(trailing_stop_offset=trailing_stop_offset)))
-            #slo = await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).stop_loss(stop_loss_price=stop_loss_price).sell(volume=volume))
-            # TODO : trailing stop probably better here ? as close order ?
+                if execute:  # We should get transaction ID, so we can track the open orders...
+                    print(f"MarketOrder returned : {mo}")
+                    #print(f"StopLossOrder returned : {mo}")
 
-            if execute:  # We should get transaction ID, so we can track the open orders...
-                print(f"MarketOrder returned : {mo}")
-                #print(f"StopLossOrder returned : {mo}")
+                    # TODO : we should go to exit strat after market order is fullfilled.
+                    # As a profit  optimisation on the trailing stop...
+                    oo = await self.rest_client_proxy.openorders()
+                    print(oo)  # NOTE : We need execute = True to get anything here...
 
-            # TODO : we should go to exit strat after market order is fullfilled.
-            # As a profit  optimisation on the trailing stop...
-            oo = await self.rest_client_proxy.openorders()
-            print(oo)
+                # trigger exit strat
+                LOGGER.info(f"Triggering Bull Exit watch...")
+                return asyncio.create_task(exit_coro)
 
-            # trigger exit strat
-            LOGGER.info(f"Triggering Bull Exit watch...")
-            return asyncio.create_task(exit_coro)
-
-            # exit and die.
-
+                # exit and die.
+            except Exception as e:
+                except_count +=1
+                LOGGER.warning(f"Exception caught : {e}.")
+                # TODO :FIX this : need to be passed to recursive call
+                # if except_count < 3:
+                #     LOGGER.warning(f"Retrying...")
+                # else:
+                raise
         else:
             LOGGER.debug(f"RSI: \n{rsi}")
             LOGGER.info(f"RSI: {rsi.iloc[-1]['RSI_14']} sleeping for a bit...")
             await asyncio.sleep(10)
             # looping...
-            return asyncio.create_task(self(volume=volume, exit_coro=exit_coro))
+            return asyncio.create_task(self(volume=volume, exit_coro=exit_coro, execute=execute))
 
 
 class OrderExitBullishStrategy:
@@ -287,7 +297,8 @@ class OrderExitBullishStrategy:
         # making sure the time of the measure
         assert int(time.time()) - rsi.iloc[-1]['time'] < 100  # expected timeframe of 1 minutes by default  # TODO : manage TIME !!!
 
-        if rsi.iloc[-1]['RSI_14'] < 60:
+        if rsi.iloc[-1]['RSI_14'] < 65:
+            except_count = 0
             LOGGER.debug(f"RSI: \n{rsi}")
             LOGGER.info(f"RSI: {rsi.iloc[-1]['RSI_14']} Terminating Bullish strategy...")
             ticker = (await self.rest_client_proxy.ticker(pairs=[self.pair]))[self.pairinfo.base + self.pairinfo.quote]  #TODO : find better way to handle both names...
@@ -297,25 +308,33 @@ class OrderExitBullishStrategy:
 
             LOGGER.info(f"Price for {self.pair}: {price}. Passing Exit Order ")  #with stop loss at {stop_loss_price}")
             # Not bull any longer : pass the inverse/complementary order...
+            try:
+                mo = await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).market().sell(volume=volume).execute(execute))
+                #slo = await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).stop_loss(stop_loss_price=stop_loss_price).buy(volume=volume))
+                # TODO : trailing stop probably better here ? as close order ?
 
-            mo = await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).market().sell(volume=volume))
-            #slo = await self.rest_client_proxy.addorder(RequestOrder(pair=self.pair).stop_loss(stop_loss_price=stop_loss_price).buy(volume=volume))
-            # TODO : trailing stop probably better here ? as close order ?
+                # TODO: if market sell fullfilled, we should cancel the trailing stop from entering the position...
 
-            # TODO: if market sell fullfilled, we should cancel the trailing stop from entering the position...
+                if execute:  # We should get transaction ID, so we can track the open orders...
+                    print(f"MarketOrder returned : {mo}")
+                    #print(f"StopLossOrder returned : {mo}")
 
-            if execute:  # We should get transaction ID, so we can track the open orders...
-                print(f"MarketOrder returned : {mo}")
-                #print(f"StopLossOrder returned : {mo}")
+                LOGGER.info(f"Bullish Strategy Terminated.")
+            except Exception as e:
+                except_count +=1
+                LOGGER.warning(f"Exception caught : {e}.")
 
-            LOGGER.info(f"Bullish Strategy Terminated.")
-
+                # TODO :FIX this : need to be passed to recursive call
+                # if except_count < 3:
+                #     LOGGER.warning(f"Retrying...")
+                # else:
+                raise
         else:
             LOGGER.debug(f"RSI: \n{rsi}")
             LOGGER.info(f"RSI: {rsi.iloc[-1]['RSI_14']} sleeping for a bit...")
             await asyncio.sleep(10)
             # looping...
-            return asyncio.create_task(self(volume=volume))
+            return asyncio.create_task(self(volume=volume, execute=execute))
         # exit and die.
 
 
@@ -327,8 +346,9 @@ async def bullbot(loop, proxy, pair="XBTEUR", pairinfo = None):
         task_gen = await bull_enter(volume=Decimal(0.01),
                                  # obvious CPS... TODO : better design ?
                    exit_coro= OrderExitBullishStrategy(rest_client_proxy=proxy, pair=pair, pairinfo=pairinfo)(
-                       volume=Decimal(0.01))
-                   )
+                       volume=Decimal(0.01), execute=True),
+                   execute=True)
+        ### Main execute point for now (TESTING)
 
         while task_gen:
             LOGGER.debug(f"Waiting for sequence of tasks...")
@@ -340,7 +360,7 @@ async def bullbot(loop, proxy, pair="XBTEUR", pairinfo = None):
 
         # no tasks left -> exiting # TODO : tracking profit ??
     except Exception as e:
-        LOGGER.info(f"Exception caught in bullbot : {e}. Terminating...")
+        LOGGER.warning(f"Exception caught in bullbot : {e}. Terminating...")
         raise
     finally:
         # TODO : cleaning up bot data, cancel left over orders, etc.
@@ -366,7 +386,9 @@ async def basicbot(loop):
             bullbot_run = await bullbot(loop=asyncio.get_event_loop(),
                               proxy=proxy,
                               pair="XBTEUR", pairinfo=assetpairs["XXBTZEUR"])
-            await asyncio.wait([bullbot_run], loop=loop, return_when=asyncio.ALL_COMPLETED)
+            if bullbot_run:
+                await asyncio.wait([bullbot_run], loop=loop, return_when=asyncio.ALL_COMPLETED)
+
     except Exception as e:
         LOGGER.info(f"Exception caught : {e}. Terminating...")
         raise
