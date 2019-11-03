@@ -135,8 +135,10 @@ class TestRequestOrderSchema(unittest.TestCase):
             "pair": model.pair,
             "ordertype": KOrderTypeField().serialize('v', {'v': model.descr.ordertype}),
             "type": KABTypeField().serialize('v', {'v': model.descr.abtype}),
-            "validate": model.validate,
         }
+
+        if model.validate:
+            expected.update({"validate": model.validate})
 
         # pattern matching on type would be nice here...
         if hasattr(model.descr, "price"):

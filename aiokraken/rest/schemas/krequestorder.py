@@ -542,8 +542,8 @@ class RequestOrderSchema(BaseSchema):
         # grab volume :
         volume = data.pop("volume")
 
-        # grab validate :
-        validate = data.pop("validate")
+        # grab validate (not present means false. but should be True by default!)
+        validate = data.get("validate", False)
 
         # build order model
         rom= RequestOrder(**{
@@ -619,6 +619,9 @@ class RequestOrderSchema(BaseSchema):
             data.setdefault('price2', self.fields.get('price2').serialize('v', {'v': original.descr.price2}))
 
         # Removing fields with default semantic to use server defaults, and minimize serialization errors
+        if not original.validate:
+            data.pop('validate')
+
         if original.descr.leverage > 0:
             data.setdefault('leverage', self.fields.get('leverage').serialize('v', {'v': original.descr.leverage}))
         # else we do not set it (defaults to 'none' as per API docs)
