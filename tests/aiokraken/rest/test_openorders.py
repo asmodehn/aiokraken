@@ -4,9 +4,6 @@ import pytest
 
 from aiokraken.rest.api import Server
 from aiokraken.rest.client import RestClient
-#from aiokraken.model.order import MarketOrder, LimitOrder, StopLossOrder, bid, ask
-from aiokraken.model.kcurrency import KCurrency
-from aiokraken.model.kpair import PairModel
 from aiokraken.rest.schemas.krequestorder import RequestOrder
 
 
