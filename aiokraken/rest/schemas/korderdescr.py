@@ -11,8 +11,6 @@ if not __package__:
     __package__ = "aiokraken.rest.schemas"
 
 from .base import BaseSchema
-from aiokraken.model.kcurrency import KCurrency
-from aiokraken.model.kpair import PairModel, PairField, PairStrategy
 from .kabtype import KABTypeModel, KABTypeField
 from .kordertype import KOrderTypeModel, KOrderTypeField
 
@@ -26,7 +24,7 @@ from .kordertype import KOrderTypeModel, KOrderTypeField
 
 @dataclass(frozen=True, init=True)
 class KOrderDescrData:
-    pair: PairModel  # always needed, usually from context
+    pair: str  # always needed, usually from context
 
 
 @dataclass(frozen=True, init=True)
@@ -197,9 +195,9 @@ class KOrderDescrTwoPrice(KOrderDescrTwoPriceData):
 # Initial
 class KOrderDescr(KOrderDescrData):
     """
-    >>> KOrderDescr(pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR))
+    >>> KOrderDescr(pair="XBTEUR")
     KOrderDescr(pair=XBT/EUR)
-    >>> o = KOrderDescr(pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR))
+    >>> o = KOrderDescr(pair="XBTEUR")
     >>> o.market()
     KOrderDescrNoPrice(pair=XBT/EUR, ordertype=market)
     >>> o.limit(limit_price=Decimal(1234))
@@ -321,7 +319,7 @@ class KOrderDescr(KOrderDescrData):
 
 @st.composite
 def KOrderDescrStrategy(draw,):
-    return KOrderDescr(pair=draw(PairStrategy()))
+    return KOrderDescr(pair=draw(st.text(max_size=5)))
 
 
 @st.composite

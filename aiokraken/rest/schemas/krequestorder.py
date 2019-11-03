@@ -10,7 +10,6 @@ if not __package__:
     __package__ = 'aiokraken.rest.schemas'
 from .base import BaseSchema
 from .ktm import TMModel, TimerField
-from aiokraken.model.kpair import PairModel, PairStrategy, PairField
 from .kabtype import KABTypeModel, KABTypeField
 from .kordertype import KOrderTypeModel, KOrderTypeField
 
@@ -400,7 +399,7 @@ class RequestOrder(RequestOrderMixin):
 
 @st.composite
 def RequestOrderStrategy(draw,):
-    return RequestOrder(pair=draw(PairStrategy()), userref=draw(st.integers(min_value=0)), ) # TODO : add more arg for strategy, after implementation complete...
+    return RequestOrder(pair=draw(st.text(max_size=5)), userref=draw(st.integers(min_value=0)), ) # TODO : add more arg for strategy, after implementation complete...
 
 
 @st.composite
@@ -493,6 +492,7 @@ def RequestOrderFinalizeStrategy(
             KOrderDescrTwoPriceStrategy(),
             st.none(),
         ),
+        execute=st.booleans()
 ):
     op = draw(strategy)
     oab = draw(st.sampled_from([KABTypeModel.buy, KABTypeModel.sell]))
@@ -501,9 +501,9 @@ def RequestOrderFinalizeStrategy(
     c = draw(close)
 
     if oab == KABTypeModel.buy:
-        of = op.buy(volume=draw(volume), leverage=draw(leverage), close=c)
+        of = op.buy(volume=draw(volume), leverage=draw(leverage), close=c).execute(execute)
     elif oab == KABTypeModel.sell:
-        of = op.sell(volume=draw(volume), leverage=draw(leverage), close=c)
+        of = op.sell(volume=draw(volume), leverage=draw(leverage), close=c).execute(execute)
     else:
         raise NotImplementedError
 

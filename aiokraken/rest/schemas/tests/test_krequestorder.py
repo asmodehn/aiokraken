@@ -5,7 +5,6 @@ from hypothesis import given, strategies as st, settings, Verbosity
 from ..kabtype import KABTypeField
 from ..kordertype import KOrderTypeModel, KOrderTypeField
 from ..korderdescr import KOrderDescrCloseSchema
-from aiokraken.model.kpair import PairModel, PairField
 from ..ktm import TimerField
 from ..krequestorder import (
     RequestOrder,
@@ -36,7 +35,7 @@ class TestRequestOrder(unittest.TestCase):
     @given(st.builds(RequestOrder))
     def test_model(self, model):
         assert isinstance(model, RequestOrder)
-        assert hasattr(model, "pair") and isinstance(model.pair, PairModel)
+        assert hasattr(model, "pair") and isinstance(model.pair, str)
 
         assert hasattr(model, "market") and callable(model.market)
         assert hasattr(model, "limit") and callable(model.limit)
@@ -133,10 +132,10 @@ class TestRequestOrderSchema(unittest.TestCase):
         serialized = self.schema.dump(model)
         expected = {
             "volume": "{0:f}".format(model.volume),
-            "pair": PairField().serialize('v', {'v': model.pair}),
+            "pair": model.pair,
             "ordertype": KOrderTypeField().serialize('v', {'v': model.descr.ordertype}),
             "type": KABTypeField().serialize('v', {'v': model.descr.abtype}),
-            "validate": True,
+            "validate": model.validate,
         }
 
         # pattern matching on type would be nice here...
