@@ -1,33 +1,21 @@
 import types
-import urllib
-import hashlib
-import base64
-import hmac
-import time
-import signal
-import asyncio
-from dataclasses import dataclass, asdict, field
 
-import typing
+from aiokraken.rest.payloads import TickerPayloadSchema, AssetPayloadSchema, AssetPairPayloadSchema
 
 if not __package__:
     __package__ = 'aiokraken.rest'
 
 from .request import Request
-from ..utils import get_nonce, get_kraken_logger
 from .schemas.payload import PayloadSchema
 from .schemas.time import TimeSchema
 from .schemas.ohlc import PairOHLCSchema
 from .schemas.balance import BalanceSchema
-from .schemas.kopenorder import KOpenOrderSchema, OpenOrdersResponseSchema
+from .schemas.kopenorder import OpenOrdersResponseSchema
 from .schemas.krequestorder import (
     RequestOrderFinalized, AddOrderResponseSchema, CancelOrderResponseSchema,
     RequestOrderSchema,
 )
-from .schemas.ticker import TickerSchema, PairTickerSchema
 from .response import Response
-from ..model.ohlc import OHLC
-
 
 
 def private(api, key, secret):
@@ -147,6 +135,34 @@ class Server:
     def time(self):
         return self.public.request('Time', data=None, expected=Response(status=200, schema=PayloadSchema(TimeSchema)))
 
+    def assets(self, assets=None): # TODO : use a model to typecheck pair symbols
+        return self.public.request('Assets',
+                                   data={
+                                       # info = info to retrieve (optional):
+                                       #     info = all info (default)
+                                       # aclass = asset class (optional):
+                                       #     currency (default)
+                                       'asset': ",".join([str(a) for a in assets])
+                                    } if assets else {},
+                                   expected=Response(status=200,
+                                                     schema=AssetPayloadSchema())
+        )
+
+    def assetpair(self, assets=None): # TODO : use a model to typecheck pair symbols
+        return self.public.request('AssetPairs',
+                                   data={
+                                       # info = info to retrieve (optional):
+                                       #     info = all info (default)
+                                       #     leverage = leverage info
+                                       #     fees = fees schedule
+                                       #     margin = margin info
+                                       'pair':   ",".join([str(a) for a in assets])  # comma delimited list of asset pairs to get info on (optional.  default = all)
+                                   } if assets else {},
+                                   expected=Response(status=200,
+                                                     schema=AssetPairPayloadSchema())
+        )
+
+
     def ohlc(self, pair='XBTEUR'):  # TODO : use a model to typecheck pair symbols
         pair_alias ='XXBTZEUR' # TODO : fix this hardcoded stuff !!!!
         return self.public.request('OHLC',
@@ -173,10 +189,7 @@ class Server:
         return self.public.request('Ticker',
                                    data={'pair': ",".join(pairs)},
                                    expected=Response(status=200,
-                                                     schema=PayloadSchema(
-                                                        result_schema=PairTickerSchema(
-                                                            pair=pair_alias)
-                                                        )
+                                                     schema=TickerPayloadSchema()
                                                      )
                                    )
 

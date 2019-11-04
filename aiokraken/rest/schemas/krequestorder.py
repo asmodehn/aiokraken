@@ -1,27 +1,20 @@
-import functools
 import typing
 from decimal import Decimal
-from enum import Enum
 
-import hypothesis
-import marshmallow
-from dataclasses import dataclass, field, asdict
+from dataclasses import dataclass
 from marshmallow import fields, pre_load, post_load, post_dump, pre_dump
-from hypothesis import given, strategies as st
+from hypothesis import strategies as st
 
 
 if not __package__:
     __package__ = 'aiokraken.rest.schemas'
 from .base import BaseSchema
 from .ktm import TMModel, TimerField
-from .kpair import PairModel, PairStrategy, PairField
 from .kabtype import KABTypeModel, KABTypeField
 from .kordertype import KOrderTypeModel, KOrderTypeField
 
-from ..exceptions import AIOKrakenException
 #from ...model.order import Order, OpenOrder, RequestOrder
 
-from .kopenorder import KOpenOrderSchema
 from .korderdescr import (
     KOrderDescr, KOrderDescrNoPrice, KOrderDescrOnePrice, KOrderDescrTwoPrice,
     KOrderDescrTwoPriceData,
@@ -33,7 +26,6 @@ from .korderdescr import (
     KOrderDescrNoPriceStrategy,
     KOrderDescrOnePriceStrategy,
     KOrderDescrTwoPriceStrategy,
-    KOrderDescrSchema,
     KOrderDescrCloseSchema,
 )
 
@@ -106,7 +98,7 @@ class OrderNotFinalized(Exception):
 
 @dataclass(frozen=True, init=False)
 class RequestOrderMixin:
-    pair: PairModel
+    pair: fields.String()
 
     fee_currency_base: bool  # TODO
     market_price_protection: bool  # TODO
@@ -114,7 +106,7 @@ class RequestOrderMixin:
     userref: typing.Optional[int]  # TODO
 
     # Explicit init to manage defaults without impacting inheritance...
-    def __init__(self, pair: PairModel, userref: typing.Optional[int] = None, fee_currency_base:bool = True, market_price_protection: bool = True, **kwargs):
+    def __init__(self, pair: str, userref: typing.Optional[int] = None, fee_currency_base:bool = True, market_price_protection: bool = True, **kwargs):
         object.__setattr__(self, "pair", pair)
         object.__setattr__(self, "userref", userref)
         object.__setattr__(self, "fee_currency_base", fee_currency_base)
@@ -327,7 +319,7 @@ class RequestOrder(RequestOrderMixin):
     TODO
     """
 
-    def __init__(self,  pair: PairModel, userref: typing.Optional[int] = None, fee_currency_base=True, market_price_protection=True):
+    def __init__(self,  pair: str, userref: typing.Optional[int] = None, fee_currency_base=True, market_price_protection=True):
 
         super(RequestOrder, self).__init__(pair=pair, userref=userref, fee_currency_base=fee_currency_base, market_price_protection=market_price_protection)
 
@@ -407,7 +399,7 @@ class RequestOrder(RequestOrderMixin):
 
 @st.composite
 def RequestOrderStrategy(draw,):
-    return RequestOrder(pair=draw(PairStrategy()), userref=draw(st.integers(min_value=0)), ) # TODO : add more arg for strategy, after implementation complete...
+    return RequestOrder(pair=draw(st.text(max_size=5)), userref=draw(st.integers(min_value=0)), ) # TODO : add more arg for strategy, after implementation complete...
 
 
 @st.composite
@@ -500,6 +492,7 @@ def RequestOrderFinalizeStrategy(
             KOrderDescrTwoPriceStrategy(),
             st.none(),
         ),
+        execute=st.booleans()
 ):
     op = draw(strategy)
     oab = draw(st.sampled_from([KABTypeModel.buy, KABTypeModel.sell]))
@@ -508,9 +501,9 @@ def RequestOrderFinalizeStrategy(
     c = draw(close)
 
     if oab == KABTypeModel.buy:
-        of = op.buy(volume=draw(volume), leverage=draw(leverage), close=c)
+        of = op.buy(volume=draw(volume), leverage=draw(leverage), close=c).execute(execute)
     elif oab == KABTypeModel.sell:
-        of = op.sell(volume=draw(volume), leverage=draw(leverage), close=c)
+        of = op.sell(volume=draw(volume), leverage=draw(leverage), close=c).execute(execute)
     else:
         raise NotImplementedError
 
@@ -522,7 +515,7 @@ class RequestOrderSchema(BaseSchema):
     abtype = KABTypeField(required=True, data_key='type')  # need rename to not confuse python on this...
     ordertype = KOrderTypeField(required=True)
 
-    pair= PairField(required=False)  # to load/dump to/from internals of descr
+    pair= fields.String(required=False)  #PairField(required=False)  # to load/dump to/from internals of descr
     price = fields.Decimal(allow_nan=False, allow_infinity=False, as_string=True)
     price2 = fields.Decimal(allow_nan=False, allow_infinity=False, as_string=True)
 
@@ -549,8 +542,8 @@ class RequestOrderSchema(BaseSchema):
         # grab volume :
         volume = data.pop("volume")
 
-        # grab validate :
-        validate = data.pop("validate")
+        # grab validate (not present means false. but should be True by default!)
+        validate = data.get("validate", False)
 
         # build order model
         rom= RequestOrder(**{
@@ -626,6 +619,9 @@ class RequestOrderSchema(BaseSchema):
             data.setdefault('price2', self.fields.get('price2').serialize('v', {'v': original.descr.price2}))
 
         # Removing fields with default semantic to use server defaults, and minimize serialization errors
+        if not original.validate:
+            data.pop('validate')
+
         if original.descr.leverage > 0:
             data.setdefault('leverage', self.fields.get('leverage').serialize('v', {'v': original.descr.leverage}))
         # else we do not set it (defaults to 'none' as per API docs)

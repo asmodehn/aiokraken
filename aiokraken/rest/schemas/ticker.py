@@ -194,28 +194,3 @@ class TickerSchema(BaseSchema):
     def build_model(self, data, **kwargs):
         return Ticker(**data)
 
-#  a runtime cache of schemas (class !) for different pairs
-_pair_ticker_schemas = {}
-
-# TODO : Change that into a class (functor) to have both a call to build instance and a item accessor for the schema/class itself...
-def PairTickerSchema(pair):
-    """helper function to embed OHLC data frame parsing into a field with any name...
-        returns a new instance of the class, creating the class if needed
-    """
-
-    def build_model(self, data, **kwargs):
-        assert len(data.get('error', [])) == 0  # Errors should have raised exception previously !
-        return data.get('pair')
-
-
-    try:
-        return _pair_ticker_schemas[pair]()
-    except KeyError:
-        _pair_ticker_schemas[pair] = type(f"{pair}_TickerSchema", (BaseSchema,), {
-            'pair': marshmallow.fields.Nested(TickerSchema, data_key=pair),
-            'make_model': marshmallow.post_load(pass_many=False)(build_model)
-
-        })
-    finally:
-        return _pair_ticker_schemas[pair]()
-

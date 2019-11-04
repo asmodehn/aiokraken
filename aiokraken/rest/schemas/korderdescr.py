@@ -1,10 +1,8 @@
 from __future__ import annotations
-import functools
 import typing
 from decimal import Decimal
 
-from enum import IntEnum
-from dataclasses import dataclass, field, asdict, make_dataclass
+from dataclasses import dataclass, field
 
 from marshmallow import fields, post_load, pre_dump, post_dump, pre_load
 from hypothesis import strategies as st
@@ -13,10 +11,9 @@ if not __package__:
     __package__ = "aiokraken.rest.schemas"
 
 from .base import BaseSchema
-from .kcurrency import KCurrency
-from .kpair import PairModel, PairField, PairStrategy
-from .kabtype import KABTypeModel, KABTypeField, KABTypeStrategy
-from .kordertype import KOrderTypeModel, KOrderTypeField, KOrderTypeStrategy
+from .kabtype import KABTypeModel, KABTypeField
+from .kordertype import KOrderTypeModel, KOrderTypeField
+
 
 # TODO : repr for dataclasses ! (should be isomorphic to order string representation frmo kraken)
 
@@ -27,7 +24,7 @@ from .kordertype import KOrderTypeModel, KOrderTypeField, KOrderTypeStrategy
 
 @dataclass(frozen=True, init=True)
 class KOrderDescrData:
-    pair: PairModel  # always needed, usually from context
+    pair: str  # always needed, usually from context
 
 
 @dataclass(frozen=True, init=True)
@@ -198,9 +195,9 @@ class KOrderDescrTwoPrice(KOrderDescrTwoPriceData):
 # Initial
 class KOrderDescr(KOrderDescrData):
     """
-    >>> KOrderDescr(pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR))
+    >>> KOrderDescr(pair="XBTEUR")
     KOrderDescr(pair=XBT/EUR)
-    >>> o = KOrderDescr(pair=PairModel(base=KCurrency.XBT, quote=KCurrency.EUR))
+    >>> o = KOrderDescr(pair="XBTEUR")
     >>> o.market()
     KOrderDescrNoPrice(pair=XBT/EUR, ordertype=market)
     >>> o.limit(limit_price=Decimal(1234))
@@ -322,7 +319,7 @@ class KOrderDescr(KOrderDescrData):
 
 @st.composite
 def KOrderDescrStrategy(draw,):
-    return KOrderDescr(pair=draw(PairStrategy()))
+    return KOrderDescr(pair=draw(st.text(max_size=5)))
 
 
 @st.composite
@@ -464,9 +461,8 @@ class KOrderDescrCloseSchema(BaseSchema):
     #     return data
 
 
-
 class KOrderDescrSchema(BaseSchema):
-    pair = PairField(required=True)
+    pair = fields.String()  # PairField(required=True)
     abtype = KABTypeField(required=True)  # need rename to not confuse python on this...
     ordertype = KOrderTypeField(required=True)
     price = fields.Decimal(required=False, as_string=True)
@@ -474,7 +470,7 @@ class KOrderDescrSchema(BaseSchema):
     leverage = fields.Decimal(
         required=False, as_string=True
     )  # Kraken returns 'none' on this (cf cassettes)...
-    order = fields.Str()  # TODO ??? idea : should be isomorphic to repr()
+    order = fields.String()  # TODO ??? idea : should be isomorphic to repr()
     close = fields.Nested(nested=KOrderDescrCloseSchema(), required=False)
 
     @pre_load

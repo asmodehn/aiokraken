@@ -1,17 +1,11 @@
-import time
 import unittest
 from decimal import Decimal
 from dataclasses import asdict
 
-from parameterized import parameterized
-import json
-import marshmallow
-import decimal
 from hypothesis import given, settings, Verbosity, strategies as st
 
 from ..kabtype import KABTypeModel
 from ..kordertype import KOrderTypeModel
-from ..kpair import PairModel
 from ..korderdescr import (
     KOrderDescr,
     KOrderDescrStrategy,
@@ -29,7 +23,6 @@ from ..korderdescr import (
     KOrderDescrSchema,
     KOrderDescrCloseSchema,
 )
-from ...exceptions import AIOKrakenException
 
 """
 Test module.
@@ -44,7 +37,7 @@ class TestOrderDescr(unittest.TestCase):
     @given(KOrderDescrStrategy())
     def test_model(self, model):
         assert isinstance(model, KOrderDescr)
-        assert hasattr(model, "pair") and isinstance(model.pair, PairModel)
+        assert hasattr(model, "pair") and isinstance(model.pair, str)
 
         assert hasattr(model, "market") and callable(model.market)
         assert hasattr(model, "limit") and callable(model.limit)
@@ -71,7 +64,7 @@ class TestOrderDescr_NoPrice(unittest.TestCase):
     @given(KOrderDescrNoPriceStrategy())
     def test_model(self, model):
         assert isinstance(model, KOrderDescrNoPrice)
-        assert hasattr(model, "pair") and isinstance(model.pair, PairModel)
+        assert hasattr(model, "pair") and isinstance(model.pair, str)
         assert hasattr(model, "ordertype") and isinstance(
             model.ordertype, KOrderTypeModel
         )
@@ -83,7 +76,7 @@ class TestOrderDescr_NoPrice(unittest.TestCase):
     @given(KOrderDescrFinalizeStrategy(strategy=KOrderDescrNoPriceStrategy()))
     def test_finalize(self, model):
         assert isinstance(model, KOrderDescrNoPriceFinalized)
-        assert hasattr(model, "pair") and isinstance(model.pair, PairModel)
+        assert hasattr(model, "pair") and isinstance(model.pair, str)
         assert hasattr(model, "ordertype") and isinstance(
             model.ordertype, KOrderTypeModel
         )
@@ -99,7 +92,7 @@ class TestOrderDescr_OnePrice(unittest.TestCase):
     @given(KOrderDescrOnePriceStrategy())
     def test_model(self, model):
         assert isinstance(model, KOrderDescrOnePrice)
-        assert hasattr(model, "pair") and isinstance(model.pair, PairModel)
+        assert hasattr(model, "pair") and isinstance(model.pair, str)
         assert hasattr(model, "ordertype") and isinstance(
             model.ordertype, KOrderTypeModel
         )
@@ -111,7 +104,7 @@ class TestOrderDescr_OnePrice(unittest.TestCase):
     @given(KOrderDescrFinalizeStrategy(strategy=KOrderDescrOnePriceStrategy()))
     def test_finalize(self, model):
         assert isinstance(model, KOrderDescrOnePriceFinalized)
-        assert hasattr(model, "pair") and isinstance(model.pair, PairModel)
+        assert hasattr(model, "pair") and isinstance(model.pair, str)
         assert hasattr(model, "ordertype") and isinstance(
             model.ordertype, KOrderTypeModel
         )
@@ -127,7 +120,7 @@ class TestOrderDescr_TwoPrice(unittest.TestCase):
     @given(KOrderDescrTwoPriceStrategy())
     def test_model(self, model):
         assert isinstance(model, KOrderDescrTwoPrice)
-        assert hasattr(model, "pair") and isinstance(model.pair, PairModel)
+        assert hasattr(model, "pair") and isinstance(model.pair, str)
         assert hasattr(model, "ordertype") and isinstance(
             model.ordertype, KOrderTypeModel
         )
@@ -139,7 +132,7 @@ class TestOrderDescr_TwoPrice(unittest.TestCase):
     @given(KOrderDescrFinalizeStrategy(strategy=KOrderDescrTwoPriceStrategy()))
     def test_finalize(self, model):
         assert isinstance(model, KOrderDescrTwoPriceFinalized)
-        assert hasattr(model, "pair") and isinstance(model.pair, PairModel)
+        assert hasattr(model, "pair") and isinstance(model.pair, str)
         assert hasattr(model, "ordertype") and isinstance(
             model.ordertype, KOrderTypeModel
         )

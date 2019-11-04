@@ -1,18 +1,10 @@
-import time
 import unittest
-from decimal import Decimal
 
-from parameterized import parameterized
-import json
-import marshmallow
-import decimal
 from hypothesis import given, strategies as st, settings, Verbosity
 
-from ..kcurrency import KCurrency
-from ..kabtype import KABTypeModel, KABTypeField
+from ..kabtype import KABTypeField
 from ..kordertype import KOrderTypeModel, KOrderTypeField
-from ..korderdescr import KOrderDescrSchema, KOrderDescrCloseSchema
-from ..kpair import PairModel, PairField
+from ..korderdescr import KOrderDescrCloseSchema
 from ..ktm import TimerField
 from ..krequestorder import (
     RequestOrder,
@@ -30,7 +22,6 @@ from ..krequestorder import (
     RequestOrderSchema,
     KDictStrategy,
 )
-from ...exceptions import AIOKrakenException
 
 """
 Test module.
@@ -44,7 +35,7 @@ class TestRequestOrder(unittest.TestCase):
     @given(st.builds(RequestOrder))
     def test_model(self, model):
         assert isinstance(model, RequestOrder)
-        assert hasattr(model, "pair") and isinstance(model.pair, PairModel)
+        assert hasattr(model, "pair") and isinstance(model.pair, str)
 
         assert hasattr(model, "market") and callable(model.market)
         assert hasattr(model, "limit") and callable(model.limit)
@@ -141,11 +132,13 @@ class TestRequestOrderSchema(unittest.TestCase):
         serialized = self.schema.dump(model)
         expected = {
             "volume": "{0:f}".format(model.volume),
-            "pair": PairField().serialize('v', {'v': model.pair}),
+            "pair": model.pair,
             "ordertype": KOrderTypeField().serialize('v', {'v': model.descr.ordertype}),
             "type": KABTypeField().serialize('v', {'v': model.descr.abtype}),
-            "validate": True,
         }
+
+        if model.validate:
+            expected.update({"validate": model.validate})
 
         # pattern matching on type would be nice here...
         if hasattr(model.descr, "price"):
