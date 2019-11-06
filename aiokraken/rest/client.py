@@ -21,7 +21,7 @@ LOGGER = get_kraken_logger(__name__)
 # Also Time control...
 
 # Because we need one limiter for multiple decorators
-public_limiter = limiter(period=1)
+public_limiter = limiter(period=3)
 private_limiter = limiter(period=5)
 
 

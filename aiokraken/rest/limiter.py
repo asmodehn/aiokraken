@@ -4,47 +4,11 @@ import asyncio
 
 
 # TODO : print -> logging
-def synclimiter(period, skippable=False, timer=time.time):
-    """
-    A synchronous limiter. useful mostly for testing, and sharing code with the useful async limiter.
-    :param period:
-    :param skippable:
-    :param timer:
-    :return:
-    """
-    async def limiter_decorator(async_fun):
-        cached_result = None
-        last_call = timer()  # calling timer to assume last call on limiter() call.
-        # we cannot limit restart of software !
-        # So it is better to start slowly, just in case...
-
-        async def wrapper(*args, **kwargs):
-            nonlocal cached_result, last_call
-            now = timer()
-            # CAREFUL with timer,
-
-            epsilon = 1  # needed to workaround inaccurate time measurements on sleep (depend on OS...)
-
-            if cached_result is None or (not skippable and now - last_call < period):
-                await asyncio.sleep(period - now + last_call + epsilon)
-                now = timer()
-            if cached_result is None or now - last_call > period:
-                last_call = now
-                cached_result = await async_fun(*args, **kwargs)
-
-            return cached_result
-        return wrapper
-    return limiter_decorator
-
-
 from collections import namedtuple
 
+from aiokraken.rest.exceptions import AIOKrakenServerError
 
 PeriodCheck = namedtuple("PeriodCheck", ["last", "now", "period"])
-
-
-def period_passed(p: PeriodCheck):
-    return p.now - p.last > p.period
 
 
 def limiter(period, timer=time.time, sleeper=asyncio.sleep):
@@ -57,6 +21,14 @@ def limiter(period, timer=time.time, sleeper=asyncio.sleep):
     :param sleeper:
     :return:
     """
+
+    # A backoff period, in case we get the rate limit error
+    # Ref : https://en.wikipedia.org/wiki/Exponential_backoff
+    # Ref : https://en.wikipedia.org/wiki/Control_theory
+    backoff = 0
+    num_ratelimited = 0
+    def period_passed(p: PeriodCheck):
+        return p.now - p.last > (p.period + backoff)
 
     # To prevent multiple calls at the same time (coroutines are reentrant)
     #  we need a semaphore here, to have unicity of call for a limiter
@@ -91,14 +63,30 @@ def limiter(period, timer=time.time, sleeper=asyncio.sleep):
         return fun(*args, **kwargs)
 
     async def just_callit(async_fun, args, kwargs):
-        async with sem:  # we need to prevent reentrant calls here, to get linearizability.
-            # blocks should be minimal since most of it should be handled by sleeping...
-            # TODO : maybe better code structure ?? Some timer + event ? Condition ?
-            print(f"Call now !")
-            args = () if args is None else args
-            kwargs = {} if kwargs is None else kwargs
-            assert callable(async_fun), print(f"{async_fun} not callable!")
-            return await async_fun(*args, **kwargs)
+        nonlocal backoff, num_ratelimited
+        try:
+            async with sem:  # we need to prevent reentrant calls here, to get linearizability.
+                # blocks should be minimal since most of it should be handled by sleeping...
+                # TODO : maybe better code structure ?? Some timer + event ? Condition ?
+                print(f"Call now !")
+                args = () if args is None else args
+                kwargs = {} if kwargs is None else kwargs
+                assert callable(async_fun), print(f"{async_fun} not callable!")
+                result= await async_fun(*args, **kwargs)
+                # call passed : reducing backoff
+                backoff = backoff // 2
+                return result
+
+        except AIOKrakenServerError as kse:
+            if str(kse) == 'EAPI:Rate limit exceeded':  # TODO : better error handling as clean exception types...
+                # call blocked
+                num_ratelimited +=1
+                if num_ratelimited > 5:
+                    raise  AIOKrakenServerError("Rate Limit exceeded multiple times ! you need to increase the limiter period !") from kse
+                # extending backoff (dumb algorithm TODO : better)
+                backoff = backoff + period * num_ratelimited
+            else:
+                raise
 
     def maybe_callit_sync(p: PeriodCheck, fun, *args, **kwargs):
         if period_passed(p):

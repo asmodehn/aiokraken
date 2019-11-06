@@ -20,11 +20,11 @@ class Response():
         :param schema: schema to validate against
         """
         self.status = status
-        rest_log.info(f"Expecting {schema} ...")
+        rest_log.debug(f"Expecting {schema} ...")
         self.schema = schema
 
     def __call__(self, status, data, request_data):   # request data as dict (for now) # Goal : display on error)
         assert status == self.status
         # TODO : manage errors here
-        rest_log.info(data)
+        rest_log.debug(data)
         return self.schema.load(data)
