@@ -15,6 +15,10 @@ class TestLimiterSync(unittest.TestCase):
         self.limited_call = True
         return self.result
 
+    def limited_bis(self):
+        self.limited_bis_call = True
+        return self.result
+
     def setUp(self) -> None:
         self.clock = 0
         self.slept = 0
@@ -28,7 +32,7 @@ class TestLimiterSync(unittest.TestCase):
     def test_nonskippable(self):
         assert self.limited_call is False
         # setting up limiter
-        limited = self.limiter(period=5, skippable=False)(self.limited)
+        limited = self.limiter(period=5)(skippable=False)(self.limited)
 
         # First call should pass, with minimum sleeping
         r = limited()
@@ -68,7 +72,7 @@ class TestLimiterSync(unittest.TestCase):
     def test_skippable(self):
         assert self.limited_call is False
         # setting up limiter
-        limited = self.limiter(period=5, skippable=True)(self.limited)
+        limited = self.limiter(period=5)(skippable=True)(self.limited)
 
         # First call should pass, with minimum sleeping
         r = limited()
@@ -104,12 +108,42 @@ class TestLimiterSync(unittest.TestCase):
         assert self.limited_call is True
         assert rt == self.result
 
+    def test_global_limit(self):
+        assert self.limited_call is False
+        # setting up limiter
+        l = self.limiter(period=5)
+        limited = l(skippable=False)(self.limited)
+        limited_bis = l(skippable=False)(self.limited_bis)
 
+        # First call should pass, with minimum sleeping
+        r = limited()
+        assert self.limited_call is True
+        assert self.slept == 6  # + epsilon !
+        assert r == self.result
+
+        # reset
+        self.limited_call = False
+        self.result = 51
+
+        # move clock forward but not enough
+        self.clock = 3
+        self.slept = 0  # and reset slept
+
+        # Second fast call to ANOTHER function with same limiter should call sleep for the period missing
+        rb = limited_bis()
+        assert self.slept == 3  # dont forget the epsilon !
+        assert self.limited_bis_call is True
+        # return should be the cached result (since we didnt call it).
+        # Note this is not a valid usecase in practice when sleep is actually sleeping
+        assert rb == self.result
+
+    # TODO : test concurrent call to justify using semaphore (prevent multiple calls at the same time)
 
 # class TestLimiterASync(unittest.TestCase):
 #     raise NotImplementedError  # TODO HOWTO ???
 # Ref : see https://blog.miguelgrinberg.com/post/unit-testing-asyncio-code
 
+# TODO : property based test ? HOW ? this is a basic P-controller...
 
 if __name__ == '__main__':
     unittest.main()

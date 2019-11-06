@@ -1,4 +1,5 @@
 """ AIOKraken rest client """
+import functools
 import urllib
 import hashlib
 import hmac
@@ -9,6 +10,7 @@ from aiokraken.utils import get_kraken_logger, get_nonce
 from aiokraken.rest.api import Server, API
 
 from aiokraken.rest.schemas.time import TimeSchema
+from aiokraken.rest.limiter import limiter
 
 BASE_URL = 'https://api.kraken.com'
 LOGGER = get_kraken_logger(__name__)
@@ -16,6 +18,13 @@ LOGGER = get_kraken_logger(__name__)
 # TODO : see sans-io to get a clearer picture about how to design this cleanly...
 
 # MINIMAL CLIENT (only control flow & IO)
+# Also Time control...
+
+# Because we need one limiter for multiple decorators
+public_limiter = limiter(period=1)
+private_limiter = limiter(period=5)
+
+
 class RestClient:
 
     def __init__(self, server, protocol = "https://"):
@@ -30,6 +39,7 @@ class RestClient:
 
         self.session = aiohttp.ClientSession(headers=_headers, raise_for_status=True, trust_env=True)
 
+    @public_limiter(skippable=True)
     async def time(self):
         """ make public requests to kraken api"""
 
@@ -44,6 +54,7 @@ class RestClient:
             LOGGER.error(err)
             return {'error': err}
 
+    @public_limiter(skippable=True)
     async def assets(self, assets=None):
         """ make public requests to kraken api"""
 
@@ -57,6 +68,7 @@ class RestClient:
             LOGGER.error(err)
             return {'error': err}
 
+    @public_limiter(skippable=True)
     async def assetpairs(self, assets=None):
         """ make public requests to kraken api"""
 
@@ -70,6 +82,7 @@ class RestClient:
             LOGGER.error(err)
             return {'error': err}
 
+    @public_limiter(skippable=True)  # skippable because OHLC is not supposed to change very often, and changes should apper in later results.
     async def ohlc(self, pair='XBTEUR'):
         """ make public requests to kraken api"""
 
@@ -83,6 +96,7 @@ class RestClient:
             LOGGER.error(err)
             return {'error': err}
 
+    @private_limiter(skippable=False)
     async def balance(self):
         """ make public requests to kraken api"""
 
@@ -97,6 +111,7 @@ class RestClient:
             LOGGER.error(err)
             return {'error': err}
 
+    @public_limiter(skippable=False)
     async def ticker(self, pairs=['XBTEUR']):  # TODO : model currency pair/'market' in ccxt (see crypy)
         """ make public requests to kraken api"""
 
@@ -112,6 +127,7 @@ class RestClient:
             LOGGER.error(err)
             return {'error': err}
 
+    @private_limiter(skippable=False)
     async def openorders(self, trades=False):  # TODO : trades
         """ make public requests to kraken api"""
 
@@ -125,6 +141,7 @@ class RestClient:
             LOGGER.error(err)
             return {'error': err}
 
+    @private_limiter(skippable=False)
     async def addorder(self, order):
         """ make public requests to kraken api"""
 
@@ -140,6 +157,7 @@ class RestClient:
             LOGGER.error(err)
             return {'error': err}
 
+    @private_limiter(skippable=False)
     async def cancel(self, txid_userref):
         """ make public requests to kraken api"""
         # TODO : accept order, (but only use its userref or id)
