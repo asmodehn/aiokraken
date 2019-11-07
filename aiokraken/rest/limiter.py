@@ -56,7 +56,7 @@ def limiter(period, timer=time.time, sleeper=asyncio.sleep):
 
     def just_callit_sync(fun, args=None, kwargs=None):
 
-        print(f"Call now !")
+        # print(f"Call now !")
         args = () if args is None else args
         kwargs = {} if kwargs is None else kwargs
         assert callable(fun), print(f"{fun} not callable!")
@@ -68,7 +68,7 @@ def limiter(period, timer=time.time, sleeper=asyncio.sleep):
             async with sem:  # we need to prevent reentrant calls here, to get linearizability.
                 # blocks should be minimal since most of it should be handled by sleeping...
                 # TODO : maybe better code structure ?? Some timer + event ? Condition ?
-                print(f"Call now !")
+                # print(f"Call now !")
                 args = () if args is None else args
                 kwargs = {} if kwargs is None else kwargs
                 assert callable(async_fun), print(f"{async_fun} not callable!")
