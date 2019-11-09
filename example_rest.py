@@ -233,6 +233,7 @@ class OrderEnterBullishStrategy:
             except_count = 0
             LOGGER.debug(f"RSI: \n{rsi}.")
             LOGGER.info(f"RSI: {rsi.iloc[-1]['RSI_14']} Commencing Bullish strategy...")
+            # if error here, no big deal we can loop again...
             ticker = (await self.rest_client.ticker(pairs=[self.pair]))[self.pairinfo.base + self.pairinfo.quote]  #TODO : find better way to handle both names...
 
             # extract current price as midpoint of bid and ask from ticker
@@ -339,8 +340,15 @@ class OrderExitBullishStrategy:
         # making sure the time of the measure
         assert int(time.time()) - rsi.iloc[-1]['time'] < 100  # expected timeframe of 1 minutes by default  # TODO : manage TIME !!!
 
-        ticker = (await self.rest_client.ticker(pairs=[self.pair]))[
-            self.pairinfo.base + self.pairinfo.quote]  # TODO : find better way to handle both names...
+        try:
+            ticker = (await self.rest_client.ticker(pairs=[self.pair]))[
+                self.pairinfo.base + self.pairinfo.quote]  # TODO : find better way to handle both names...
+        except Exception as e:  # in case of aiohttp.client_exceptions.ClientOSError: [Errno 104] Connection reset by peer
+            # or other errors like SSLError
+            # just try again
+            ticker = (await self.rest_client.ticker(pairs=[self.pair]))[
+                self.pairinfo.base + self.pairinfo.quote]  
+        
         # extract current price as midpoint of bid and ask from ticker
         price = round((ticker.ask.price + ticker.bid.price) / 2, self.pairinfo.pair_decimals)
 
