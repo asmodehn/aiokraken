@@ -25,7 +25,7 @@ marshmallow-dataframe = "==0.1.4"
 jupyterlab = "*"
 ipympl = "*"
 jupyterlab-git = "*"
-pandas-ta = "*"
+pandas-ta = "==0.1.36b"
 pyjanitor = "*"
 
 
