@@ -14,9 +14,12 @@ install:
   - pipenv install --dev --pre --skip-lock --sequential
 
 script:
-  - python -m aiokraken.model.tests
   - python -m aiokraken.utils.tests
+  - python -m aiokraken.model.tests
   - python -m aiokraken.rest.schemas.tests
+  - python -m aiokraken.rest.tests
+  - python -m aiokraken.websockets.schemas.tests
+  - python -m aiokraken.websockets.tests
   - python -m aiokraken.tests
   - pytest -s tests --block-network
 
