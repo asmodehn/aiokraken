@@ -16,3 +16,5 @@ def keyfile(request):
         from aiokraken.config import load_api_keyfile
         keystruct = load_api_keyfile()
     return keystruct
+
+# TODO : disable rate limiter when testing with replay...
