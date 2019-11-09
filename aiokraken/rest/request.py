@@ -59,7 +59,7 @@ class Request:
         :return:
         """
         res = await response.json(encoding='utf-8', content_type=None)
-        rest_log.info(f"{res}")
+        rest_log.debug(f"{res}")
         parsed_res = self.expected(status=response.status, data=res, request_data=asdict(self))  # validating response data
         return parsed_res
 

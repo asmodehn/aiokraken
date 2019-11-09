@@ -104,7 +104,6 @@ venv.bak/
 .mypy_cache/
 
 .idea/*
-.envrc
 .python-version
 .DS_Store
 wss_private.py
