@@ -26,7 +26,7 @@ jupyterlab = "*"
 ipympl = "==0.3.3"
 jupyterlab-git = "*"
 pandas-ta = "==0.1.36b"
-pyjanitor = "*"
+pyjanitor = "==0.18.3"
 
 
 [requires]
