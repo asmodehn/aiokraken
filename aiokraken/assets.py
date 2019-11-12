@@ -1,6 +1,8 @@
 import asyncio
 import time
-from collections import Mapping
+from collections.abc import Mapping
+
+from pprint import pprint
 
 import typing
 
@@ -12,12 +14,8 @@ from aiokraken.rest.schemas.krequestorder import RequestOrder
 from aiokraken.rest.schemas.kopenorder import KOpenOrderModel
 from aiokraken.rest.schemas.korderdescr import KOrderDescrOnePrice, KOrderDescr
 
-from .scheduler import  scheduler
 
 LOGGER = get_kraken_logger(__name__)
-
-
-asset_scheduler = scheduler(60)
 
 
 # TODO : unicity of the class instance in the semantics here (we connect to one exchange only)
@@ -25,13 +23,10 @@ asset_scheduler = scheduler(60)
 #  Remember : python is better as a set of fancy scripts.
 class Assets(Mapping):
 
-    def __init__(self, rest_kraken, ws_kraken=None):  # refresh period as none means never.
-
-        self.rest_kraken = rest_kraken
-        self.ws_kraken = ws_kraken
+    def __init__(self, rest_kraken = None):  # refresh period as none means never.
+        self.rest_kraken = rest_kraken or RestClient()
         self.assets = None
 
-    @asset_scheduler()
     async def __call__(self, assets):
         """
 
@@ -39,8 +34,8 @@ class Assets(Mapping):
         :param loop_period: a falsy loop_period will prevent looping
         :return:
         """
-
         self.assets = (await self.rest_kraken.assets(assets=assets))
+        return self
 
     def __getitem__(self, key):
         if self.assets is None:
@@ -56,3 +51,22 @@ class Assets(Mapping):
         if self.assets is None:
             return 0
         return len(self.assets)
+
+
+if __name__ == '__main__':
+
+    async def assets_retrieve_nosession():
+        assets = Assets()
+        await assets(["XBT", "EUR"])
+        for k, p in assets.items():
+            print(f" - {k}: {p}")
+
+    loop = asyncio.get_event_loop()
+
+    loop.run_until_complete(assets_retrieve_nosession())
+
+    loop.close()
+
+
+
+
