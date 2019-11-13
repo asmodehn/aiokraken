@@ -23,18 +23,15 @@ LOGGER = get_kraken_logger(__name__)
 #  Remember : python is better as a set of fancy scripts.
 class Assets(Mapping):
 
-    def __init__(self, rest_kraken = None):  # refresh period as none means never.
-        self.rest_kraken = rest_kraken or RestClient()
-        self.assets = None
+    def __init__(self, assets = None):  # refresh period as none means never.
+        self._desired_assets = assets  # None means all
 
-    async def __call__(self, assets):
+    async def __call__(self, rest_client=None):
         """
-
-        :param assets:
-        :param loop_period: a falsy loop_period will prevent looping
         :return:
         """
-        self.assets = (await self.rest_kraken.assets(assets=assets))
+        rest_client = rest_client or RestClient()
+        self.assets = (await rest_client.assets(assets=self._desired_assets))
         return self
 
     def __getitem__(self, key):
@@ -56,8 +53,8 @@ class Assets(Mapping):
 if __name__ == '__main__':
 
     async def assets_retrieve_nosession():
-        assets = Assets()
-        await assets(["XBT", "EUR"])
+        assets = Assets(["XBT", "EUR"])
+        await assets()
         for k, p in assets.items():
             print(f" - {k}: {p}")
 

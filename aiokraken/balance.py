@@ -8,18 +8,18 @@ from collections.abc import Mapping
 
 class Balance(Mapping):
 
-    def __init__(self, rest_kraken=None):  # refresh period as none means never.
-        self.rest_kraken = rest_kraken or RestClient()
-        self.balance = None
+    def __init__(self, assets = None):  # refresh period as none means never.
+        self._visible_assets = assets  # None means all
+        self.balance = {}  # TODO : make immutable
 
-    async def __call__(self):
+    async def __call__(self, rest_client):
         """
+        """
+        rest_client = rest_client or RestClient()
+        accounts = (await rest_client.balance()).accounts  # TODO : why the extra level ? can we get rid of it somehow ?
 
-        :param assets:
-        :param loop_period: a falsy loop_period will prevent looping
-        :return:
-        """
-        self.balance = (await self.rest_kraken.balance()).accounts  # TODO : whythe extra level ? can we get rid of it somehow ?
+        self.balance = {k: v for k, v in accounts.items() if self._visible_assets is None or k in self._visible_assets}
+
         return self
 
     def __getitem__(self, key):
@@ -47,8 +47,8 @@ if __name__ == '__main__':
         keystruct = load_api_keyfile()
         rest = RestClient(server=Server(key=keystruct.get('key'),
                                              secret=keystruct.get('secret')))
-        balance = Balance(rest_kraken=rest)
-        await balance()
+        balance = Balance()
+        await balance(rest_client=rest)
         for k, p in balance.items():
             print(f" - {k}: {p}")
 
