@@ -31,7 +31,8 @@ class Assets(Mapping):
         :return:
         """
         rest_client = rest_client or RestClient()
-        self.assets = (await rest_client.assets(assets=self._desired_assets))
+        assets_run = rest_client.assets(assets=self._desired_assets)
+        self.assets = await assets_run()
         return self
 
     def __getitem__(self, key):

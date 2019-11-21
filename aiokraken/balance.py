@@ -16,7 +16,8 @@ class Balance(Mapping):
         """
         """
         rest_client = rest_client or RestClient()
-        accounts = (await rest_client.balance()).accounts  # TODO : why the extra level ? can we get rid of it somehow ?
+        balance_run = rest_client.balance()  # TODO pass visible_assets
+        accounts = (await balance_run()).accounts  # TODO : why the extra 'accounts' level ? can we get rid of it somehow ?
 
         self.balance = {k: v for k, v in accounts.items() if self._visible_assets is None or k in self._visible_assets}
 

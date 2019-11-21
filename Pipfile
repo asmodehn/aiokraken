@@ -26,6 +26,8 @@ ipympl = "*"
 parameterized = "*"
 hypothesis = "*"
 mypy = "*"
+aiounittest = "*"
+timecontrol = "*"
 
 [requires]
 python_version = "3.7"
