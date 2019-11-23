@@ -37,8 +37,11 @@ class Markets(Mapping):
         """
         rest_client = rest_client or RestClient()
         # Note : we leave session creation to the context.
-        self.markets = (await rest_client.assetpairs(assets=self._desired_markets))
+        market_run = rest_client.assetpairs(assets=self._desired_markets)
+        self.markets = await market_run()
         return self
+
+    # TODO : howto make display to string / repr ??
 
     def __getitem__(self, key):
         if self.markets is None:

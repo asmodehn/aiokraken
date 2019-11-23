@@ -1,5 +1,6 @@
 """ AIOKraken rest client """
 import asyncio
+import datetime
 import functools
 import ssl
 import urllib
@@ -25,6 +26,7 @@ LOGGER = get_kraken_logger(__name__)
 # Because we need one limiter for multiple decorators
 public_limiter = UnderLimiter(period=3)
 private_limiter = UnderLimiter(period=5)
+rest_command = Command(timer=datetime.datetime.now)
 
 
 class RestClient:
@@ -117,7 +119,7 @@ class RestClient:
             LOGGER.error(err, exc_info=True)
             return {'error': err}
 
-    @Command()
+    @rest_command
     @public_limiter
     async def time(self):
         """ make public requests to kraken api"""
@@ -125,7 +127,7 @@ class RestClient:
         req = self.server.time()   # returns the request to be made for this API.
         return await self._get(request=req)
 
-    @Command()
+    @rest_command
     @public_limiter
     async def assets(self, assets=None):
         """ make public requests to kraken api"""
@@ -133,7 +135,7 @@ class RestClient:
         req = self.server.assets(assets=assets)   # returns the request to be made for this API.)
         return await self._get(request=req)
 
-    @Command()
+    @rest_command
     @public_limiter
     async def assetpairs(self, assets=None):
         """ make public requests to kraken api"""
@@ -141,7 +143,7 @@ class RestClient:
         req = self.server.assetpair(assets=assets)   # returns the request to be made for this API.)
         return await self._get(request=req)
 
-    @Command()
+    @rest_command
     @public_limiter  # skippable because OHLC is not supposed to change very often, and changes should apper in later results.
     async def ohlc(self, pair='XBTEUR'):
         """ make public requests to kraken api"""
@@ -149,7 +151,7 @@ class RestClient:
         req = self.server.ohlc(pair=pair)   # returns the request to be made for this API.)
         return await self._get(request=req)
 
-    @Command()
+    @rest_command
     @private_limiter
     async def balance(self):
         """ make public requests to kraken api"""
@@ -157,7 +159,7 @@ class RestClient:
         req = self.server.balance()
         return await self._post(request=req)
 
-    @Command()
+    @rest_command
     @public_limiter
     async def ticker(self, pairs=['XBTEUR']):  # TODO : model currency pair/'market' in ccxt (see crypy)
         """ make public requests to kraken api"""
@@ -165,7 +167,7 @@ class RestClient:
         req = self.server.ticker(pairs=pairs)   # returns the request to be made for this API.)
         return await self._get(request=req)
 
-    @Command()
+    @rest_command
     @private_limiter
     async def openorders(self, trades=False):  # TODO : trades
         """ make public requests to kraken api"""
@@ -173,7 +175,7 @@ class RestClient:
         req = self.server.openorders(trades=trades)   # returns the request to be made for this API.)
         return await self._post(request=req)
 
-    @Command()
+    @rest_command
     @private_limiter
     async def addorder(self, order):
         """ make public requests to kraken api"""
@@ -181,7 +183,7 @@ class RestClient:
         req = self.server.addorder(order=order)
         return await self._post(request=req)
 
-    @Command()
+    @rest_command
     @private_limiter
     async def cancel(self, txid_userref):
         """ make public requests to kraken api"""

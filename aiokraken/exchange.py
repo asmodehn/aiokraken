@@ -59,7 +59,7 @@ class Exchange:  # todo : enforce unicity of this ??  Singleton via metaclass ??
 
 if __name__ == '__main__':
 
-    # Minimum client usage
+    # Minimum exchange usage
     # TODO : doctest as well
 
     async def exchange_info():

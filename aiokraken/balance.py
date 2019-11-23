@@ -23,6 +23,8 @@ class Balance(Mapping):
 
         return self
 
+    # TODO : howto make display to string / repr ??
+
     def __getitem__(self, key):
         if self.balance is None:
             raise KeyError
