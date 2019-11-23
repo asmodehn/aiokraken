@@ -11,49 +11,40 @@ from aiokraken.rest.schemas.kasset import KAsset
 @pytest.mark.asyncio
 @pytest.mark.vcr()
 async def test_asset_newstr():
-    """ get kraken ohlc"""
-    rest_kraken = RestClient(server=Server())
-    try:
-        response = await rest_kraken.assets(assets=["XBT"])
+    """ get kraken assets"""
+    async with RestClient(server=Server()) as rest_kraken:
+        asset_run = rest_kraken.assets(assets=["XBT"])
+        response = await asset_run()
         asset = response["XXBT"]  # PB : convert between representations of currency ? => job of the domain model layer
         print(f'response is \n{response}')
 
         assert isinstance(asset, KAsset)
-
-    finally:
-        await rest_kraken.close()
 
 
 @pytest.mark.asyncio
 @pytest.mark.vcr()
 async def test_asset_oldstr():
-    """ get kraken ohlc"""
-    rest_kraken = RestClient(server=Server())
-    try:
-        response = await rest_kraken.assets(assets=["XXBT"])
+    """ get kraken assets"""
+    async with RestClient(server=Server()) as rest_kraken:
+        asset_run = rest_kraken.assets(assets=["XXBT"])
+        response = await asset_run()
         asset = response["XXBT"]  # PB : convert between representations of currency ? => job of the domain model layer
         print(f'response is \n{response}')
 
         assert isinstance(asset, KAsset)
-
-    finally:
-        await rest_kraken.close()
 
 
 
 @pytest.mark.asyncio
 @pytest.mark.vcr()
 async def test_asset_all():
-    """ get kraken ohlc"""
-    rest_kraken = RestClient(server=Server())
-    try:
-        response = await rest_kraken.assets()
+    """ get kraken assets"""
+    async with RestClient(server=Server()) as rest_kraken:
+        asset_run = rest_kraken.assets()
+        response = await asset_run()
         print(f'response is \n{response}')
         for name, asset in response.items():
             assert isinstance(asset, KAsset)
-
-    finally:
-        await rest_kraken.close()
 
 
 if __name__ == '__main__':
