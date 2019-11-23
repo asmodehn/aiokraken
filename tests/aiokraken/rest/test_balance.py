@@ -9,21 +9,11 @@ from aiokraken.rest.schemas.balance import Balance, BalanceSchema
 @pytest.mark.vcr(filter_headers=['API-Key', 'API-Sign'])
 async def test_balance(keyfile):
     """ get kraken balance"""
-    if keyfile:
-        rest_kraken = RestClient(server=Server(key=keyfile.get('key'),
-                                               secret=keyfile.get('secret')))
-    else:
-        # test from cassette doesnt need authentication
-        rest_kraken = RestClient(server=Server())
-    try:
-        response = await rest_kraken.balance()
-
+    async with RestClient(server=Server()) as rest_kraken:
+        balance_run= rest_kraken.balance()
+        response = await balance_run()
         assert isinstance(response, Balance)
         print(response)
-
-
-    finally:
-        await rest_kraken.close()
 
 
 if __name__ == '__main__':

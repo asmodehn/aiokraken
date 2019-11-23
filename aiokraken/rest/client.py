@@ -157,7 +157,7 @@ class RestClient:
         """ make public requests to kraken api"""
 
         req = self.server.balance()
-        return await self._post(request=req)
+        return await self._get(request=req)
 
     @rest_command
     @public_limiter
@@ -173,7 +173,7 @@ class RestClient:
         """ make public requests to kraken api"""
 
         req = self.server.openorders(trades=trades)   # returns the request to be made for this API.)
-        return await self._post(request=req)
+        return await self._get(request=req)
 
     @rest_command
     @private_limiter

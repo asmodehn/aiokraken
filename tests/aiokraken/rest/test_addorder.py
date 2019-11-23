@@ -59,7 +59,7 @@ async def test_add_buy_limit_order_execute_low(keyfile):
         # Ref : https://support.kraken.com/hc/en-us/articles/360000919926-Does-Kraken-offer-a-Test-API-or-Sandbox-Mode-
         low_price = tickerresponse.bid.price * Decimal(0.5)
         # delayed market order
-        addorder_run = await rest_kraken.addorder(
+        addorder_run = rest_kraken.addorder(
             order=RequestOrder(pair="XBTEUR",  # userref=12345
         ).limit(limit_price=low_price,)
          .bid(volume='0.01',)
@@ -102,7 +102,7 @@ async def test_add_sell_limit_order_execute_high(keyfile):
         # Ref : https://support.kraken.com/hc/en-us/articles/360000919926-Does-Kraken-offer-a-Test-API-or-Sandbox-Mode-
         high_price = tickerresponse.ask.price * Decimal(1.5)
         # delayed market order
-        addorder_run = await rest_kraken.addorder(
+        addorder_run = rest_kraken.addorder(
             order=RequestOrder(pair="XBTEUR")
                 .limit(limit_price=high_price,)
                 .ask(volume='0.01',)
