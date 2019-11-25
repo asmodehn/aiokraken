@@ -177,6 +177,14 @@ class RestClient:
 
     @rest_command
     @private_limiter
+    async def closedorders(self, trades=False):  # TODO : trades
+        """ make public requests to kraken api"""
+
+        req = self.server.closedorders(trades=trades)   # returns the request to be made for this API.)
+        return await self._get(request=req)
+
+    @rest_command
+    @private_limiter
     async def addorder(self, order):
         """ make public requests to kraken api"""
 
