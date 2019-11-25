@@ -10,6 +10,7 @@ from .schemas.payload import PayloadSchema
 from .schemas.time import TimeSchema
 from .schemas.ohlc import PairOHLCSchema
 from .schemas.balance import BalanceSchema
+from .schemas.trade_balance import TradeBalanceSchema
 from .schemas.kopenorder import OpenOrdersResponseSchema
 from .schemas.krequestorder import (
     RequestOrderFinalized, AddOrderResponseSchema, CancelOrderResponseSchema,
@@ -181,6 +182,20 @@ class Server:
                                     expected=Response(status=200,
                                                       schema=PayloadSchema(
                                                           result_schema=BalanceSchema
+                                                      ))
+                                    )
+
+    def trade_balance(self, asset= 'ZEUR'):
+        return self.private.request('TradeBalance',
+                                    data={
+                                        # TODO : not working just yet (Invalid arguments)
+                                        # aclass = asset class (optional):
+                                        #     currency (default)
+                                        #'asset': asset   # base asset used to determine balance (default = ZUSD)
+                                    },
+                                    expected=Response(status=200,
+                                                      schema=PayloadSchema(
+                                                          result_schema=TradeBalanceSchema
                                                       ))
                                     )
 
