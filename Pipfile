@@ -34,7 +34,8 @@ pyjanitor = "*"
 hypothesis = "*"
 mypy = "*"
 aiounittest = "*"
-timecontrol = "*"
+timecontrol = "==0.2.2"
+tinydb = "*"
 
 
 [requires]
@@ -45,9 +46,3 @@ python_version = "3.7"
 [pipenv]
 
 allow_prereleases = true
-
-
-[packages.aiokraken]
-
-path = "."
-editable = true
