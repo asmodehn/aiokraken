@@ -42,7 +42,7 @@ def load_persist():
 
     db = TinyDB(KRAKEN_PERSIST_FILE)
 
-    return {db.table(t).name: db.table(t) for t in db.tables()}
+    return db # {db.table(t).name: db.table(t) for t in db.tables()}
 
 
 # def connect_db():
