@@ -11,6 +11,7 @@ from tinydb import TinyDB
 
 DEFAULT_KRAKEN_API_KEYFILE = os.path.expanduser('~/.config/aiokraken/kraken.key')
 DEFAULT_KRAKEN_PERSIST = os.path.expanduser('~/.config/aiokraken/kraken.json')
+DEFAULT_KRAKEN_ACCOUNT_PERSIST = os.path.expanduser('~/.config/aiokraken/account.json')
 #DEFAULT_KRAKEN_DB_FILE = os.path.expanduser('~/.config/aiokraken/kraken.db')
 
 # If the environment variable is set, override the default value
@@ -19,6 +20,9 @@ KRAKEN_API_KEYFILE = os.path.normpath(KRAKEN_API_KEYFILE)
 
 KRAKEN_PERSIST_FILE = os.getenv('AIOKRAKEN_PERSIST', DEFAULT_KRAKEN_PERSIST)
 KRAKEN_PERSIST_FILE = os.path.normpath(KRAKEN_PERSIST_FILE)
+
+KRAKEN_ACCOUNT_PERSIST_FILE = os.getenv('AIOKRAKEN_ACCOUNT_PERSIST', DEFAULT_KRAKEN_ACCOUNT_PERSIST)
+KRAKEN_ACCOUNT_PERSIST_FILE = os.path.normpath(KRAKEN_ACCOUNT_PERSIST_FILE)
 
 # KRAKEN_DB_FILE = os.getenv('AIOKRAKEN_DB_FILE', DEFAULT_KRAKEN_DB_FILE)
 # KRAKEN_DB_FILE = os.path.normpath(KRAKEN_DB_FILE)
@@ -44,6 +48,13 @@ def load_persist():
 
     return db # {db.table(t).name: db.table(t) for t in db.tables()}
 
+
+def load_account_persist():
+    """Load persistance layer"""
+
+    db = TinyDB(KRAKEN_ACCOUNT_PERSIST_FILE)
+
+    return db
 
 # def connect_db():
 #     """ Load the Kraken DB file"""
