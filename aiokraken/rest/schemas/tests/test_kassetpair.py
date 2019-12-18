@@ -45,7 +45,7 @@ class TestKAssetPair(unittest.TestCase):
 #     margin_stop = stop-out/liquidation margin level
 
 
-    @settings(verbosity=Verbosity.verbose)
+    # @settings(verbosity=Verbosity.verbose)
     @given(KAssetPairStrategy())
     def test_model(self, model):
         assert isinstance(model.altname, str)
@@ -72,14 +72,14 @@ class TestKAssetPairSchema(unittest.TestCase):
     def setUp(self) -> None:
         self.schema = KAssetPairSchema()
 
-    @settings(verbosity=Verbosity.verbose)
+    # @settings(verbosity=Verbosity.verbose)
     @given(
         KDictStrategy( KAssetPairStrategy()))
     def test_deserialize(self, modeldict):
         a = self.schema.load(modeldict)
         assert isinstance(a, KAssetPair)
 
-    @settings(verbosity=Verbosity.verbose)
+    # @settings(verbosity=Verbosity.verbose)
     @given(KAssetPairStrategy())
     def test_serialize(self, model):
         a = self.schema.dump(model)

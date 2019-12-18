@@ -20,7 +20,7 @@ For simple usecase examples, we should rely on doctests.
 
 class TestBalance(unittest.TestCase):
 
-    @settings(verbosity=Verbosity.verbose)
+    #@settings(verbosity=Verbosity.verbose)
     @given(BalanceStrategy())
     def test_model(self, model):
         assert isinstance(model.accounts, dict)
@@ -34,14 +34,14 @@ class TestBalanceSchema(unittest.TestCase):
     def setUp(self) -> None:
         self.schema = BalanceSchema()
 
-    @settings(verbosity=Verbosity.verbose)
+    #@settings(verbosity=Verbosity.verbose)
     @given(
         KDictStrategy( BalanceStrategy()))
     def test_deserialize(self, modeldict):
         a = self.schema.load(modeldict)
         assert isinstance(a, Balance)
 
-    @settings(verbosity=Verbosity.verbose)
+    #@settings(verbosity=Verbosity.verbose)
     @given(BalanceStrategy())
     def test_serialize(self, model):
         d = self.schema.dump(model)

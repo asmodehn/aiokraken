@@ -24,7 +24,7 @@ class TestTMModel(unittest.TestCase):
         with self.assertRaises(ValueError):
             TMModel('unknown')
 
-    @settings(verbosity=Verbosity.verbose)
+    # @settings(verbosity=Verbosity.verbose)
     @given(TMStrategy())
     def test_expired(self, model):
         if model.relative:

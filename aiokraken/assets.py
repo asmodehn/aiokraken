@@ -1,19 +1,11 @@
 import asyncio
-import time
+import dataclasses
 from collections.abc import Mapping
 
-from pprint import pprint
-
-import typing
-
-from aiokraken.utils import get_kraken_logger, get_nonce
-from aiokraken.rest.api import Server, API
+from aiokraken.config import load_persist
+from aiokraken.utils import get_kraken_logger
 from aiokraken.rest.client import RestClient
-
-from aiokraken.rest.schemas.krequestorder import RequestOrder
-from aiokraken.rest.schemas.kopenorder import KOpenOrderModel
-from aiokraken.rest.schemas.korderdescr import KOrderDescrOnePrice, KOrderDescr
-
+from aiokraken.rest.schemas.kasset import AssetSchema
 
 LOGGER = get_kraken_logger(__name__)
 
@@ -23,41 +15,42 @@ LOGGER = get_kraken_logger(__name__)
 #  Remember : python is better as a set of fancy scripts.
 class Assets(Mapping):
 
-    def __init__(self, assets = None):  # refresh period as none means never.
-        self._desired_assets = assets  # None means all
+    def __init__(self, blacklist = None, whitelist=None):
+        self._blacklist = blacklist   # NONE black list means everything forbidden. Empty list means EVERYTHING ALLOWED.
+        self._whitelist = whitelist   # NONE white list means everything allowed. Empty list means NOTHNG ALLOWED.
+        #TODO : a better way ?
 
     async def __call__(self, rest_client=None):
         """
         :return:
         """
         rest_client = rest_client or RestClient()
-        assets_run = rest_client.assets(assets=self._desired_assets)
-        self.assets = await assets_run()
+        # On retrieval white list determines what data is knowable into the system.
+        assets_run = rest_client.assets(assets=self._whitelist) if self._whitelist else rest_client.assets()  # get all
+        self.impl = await assets_run()
+
         return self
 
     # TODO : howto make display to string / repr ??
 
     def __getitem__(self, key):
-        if self.assets is None:
-            raise KeyError
-        return self.assets[key]
+        if key not in self._blacklist:  # filtering on local access based on blacklist.
+            return self.impl[key]
+        else:
+            raise KeyError(f"{key} is marked as undesired Asset and is not accessible.")
 
     def __iter__(self):
-        if self.assets is None:
-            raise StopIteration
-        return iter(self.assets)
+        return iter(self.impl.keys())
 
     def __len__(self):
-        if self.assets is None:
-            return 0
-        return len(self.assets)
+        return len(self.impl)
 
 
 if __name__ == '__main__':
 
     async def assets_retrieve_nosession():
-        assets = Assets(["XBT", "EUR"])
-        await assets()
+        assets = Assets(blacklist=[])
+        await assets()  # Optional from the moment we have Local storage
         for k, p in assets.items():
             print(f" - {k}: {p}")
 

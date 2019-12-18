@@ -154,10 +154,10 @@ class RestClient:
     @rest_command
     @private_limiter
     async def balance(self):
-        """ make public requests to kraken api"""
+        """ make balance requests to kraken api"""
 
         req = self.server.balance()
-        return await self._get(request=req)
+        return await self._post(request=req)  # Private request must use POST !
 
     @rest_command
     @public_limiter
