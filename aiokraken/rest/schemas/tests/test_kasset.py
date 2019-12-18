@@ -21,7 +21,7 @@ For simple usecase examples, we should rely on doctests.
 
 class TestKAsset(unittest.TestCase):
 
-    @settings(verbosity=Verbosity.verbose)
+    #@settings(verbosity=Verbosity.verbose)
     @given(KAssetStrategy())
     def test_model(self, model):
         assert isinstance(model.altname, str)
@@ -35,14 +35,14 @@ class TestKAssetSchema(unittest.TestCase):
     def setUp(self) -> None:
         self.schema = AssetSchema()
 
-    @settings(verbosity=Verbosity.verbose)
+    #@settings(verbosity=Verbosity.verbose)
     @given(
         KDictStrategy( KAssetStrategy()))
     def test_deserialize(self, modeldict):
         a = self.schema.load(modeldict)
         assert isinstance(a, KAsset)
 
-    @settings(verbosity=Verbosity.verbose)
+    #@settings(verbosity=Verbosity.verbose)
     @given(KAssetStrategy())
     def test_serialize(self, model):
         a = self.schema.dump(model)

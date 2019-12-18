@@ -18,24 +18,6 @@ from .schemas.krequestorder import (
 from .response import Response
 
 
-def private(api, key, secret):
-    api.api_url = 'private/'
-
-    # TODO :call function (arg) to grab them from somewhere...
-    api.key = key
-    api.secret = secret
-
-    def request(self, endpoint, headers=None, data=None, expected=None):
-        h = headers or {}
-        d = data or {}
-        r = Request(urlpath=self.url_path + '/' + endpoint, headers=h, data=d, expected=expected)
-        s = r.sign(key=key, secret = secret)
-        return s
-
-    api.request = types.MethodType(request, api)
-    return api
-
-
 class API:
 
     def __init__(self, URId):
@@ -106,6 +88,24 @@ pairs_id = {
 }
 
 
+def private(api: API, key, secret):
+    api.api_url = 'private/'
+
+    # TODO :call function (arg) to grab them from somewhere...
+    api.key = key
+    api.secret = secret
+
+    def request(self, endpoint, headers=None, data=None, expected=None):
+        h = headers or {}
+        d = data or {}
+        r = Request(urlpath=self.url_path + '/' + endpoint, headers=h, data=d, expected=expected)
+        s = r.sign(key=key, secret = secret)
+        return s
+
+    api.request = types.MethodType(request, api)
+    return api
+
+
 
 class Server:
     # TODO : LOG actual requests. Important for usage and for testing...
@@ -115,7 +115,11 @@ class Server:
         self.API = Host(hostname='api.kraken.com')  # TODO : pass as argument ?
         self.API['0'] = Version()
         self.API['0']['public'] = API('public')
-        self.API['0']['private'] = private(api=API('private'), key=key, secret=secret)
+
+        if key and secret:  # we only have private API access if we provide key and secret
+            self.API['0']['private'] = private(api=API('private'), key=key, secret=secret)
+        else:  # But we still need to have access simulated for replays (no key)
+            self.API['0']['private'] = API('private')
         # TODO : do this declaratively ???
 
     @property
@@ -226,6 +230,17 @@ class Server:
                                                             result_schema=CancelOrderResponseSchema
                                                         ))
                                 )
+
+    #
+    # def query_orders(self):
+    #     pass
+    #
+    #
+    # def trades_history(self):
+    #     pass
+    #
+    # def query_trades(self):
+    #     pass
 
 # API DEFINITION - TODO
 

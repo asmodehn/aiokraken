@@ -4,7 +4,7 @@ from decimal import Decimal
 from enum import (IntEnum)
 from dataclasses import dataclass, field
 
-from hypothesis._strategies import composite
+from hypothesis.strategies import composite
 from marshmallow import fields, post_load
 from hypothesis import strategies as st
 

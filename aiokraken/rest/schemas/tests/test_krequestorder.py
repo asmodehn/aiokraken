@@ -119,7 +119,7 @@ class TestRequestOrderSchema(unittest.TestCase):
     def setUp(self) -> None:
         self.schema = RequestOrderSchema()
 
-    @settings(verbosity=Verbosity.verbose)
+    # @settings(verbosity=Verbosity.verbose)
     @given(
             st.one_of(
                 RequestOrderFinalizeStrategy(strategy=RequestOrderNoPriceStrategy()),
@@ -164,7 +164,7 @@ class TestRequestOrderSchema(unittest.TestCase):
         # check equality on dicts with usual python types, but display strings.
         assert serialized == expected, print(str(serialized) + '\n' + str(expected))
 
-    @settings(verbosity=Verbosity.verbose)
+    # @settings(verbosity=Verbosity.verbose)
     @given(
         KDictStrategy(
         st.one_of(
@@ -178,7 +178,7 @@ class TestRequestOrderSchema(unittest.TestCase):
         ro = self.schema.load(model)
         assert isinstance(ro, (RequestOrderNoPriceFinalized, RequestOrderOnePriceFinalized, RequestOrderTwoPriceFinalized))
 
-    @settings(verbosity=Verbosity.verbose)
+    # @settings(verbosity=Verbosity.verbose)
     @given(
         st.one_of(
             [
