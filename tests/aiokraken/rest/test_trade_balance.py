@@ -9,7 +9,7 @@ from aiokraken.rest.schemas.trade_balance import TradeBalance, TradeBalanceSchem
 @pytest.mark.vcr(filter_headers=['API-Key', 'API-Sign'])
 async def test_trade_balance(keyfile):
     """ get kraken trade balance"""
-    async with RestClient(server=Server()) as rest_kraken:
+    async with RestClient(server=Server(**keyfile)) as rest_kraken:
         tradebalance_run= rest_kraken.trade_balance()
         response = await tradebalance_run()
         assert isinstance(response, TradeBalance)
@@ -17,6 +17,6 @@ async def test_trade_balance(keyfile):
 
 
 if __name__ == '__main__':
-    #pytest.main(['-s', __file__, '--block-network'])
+    pytest.main(['-s', __file__, '--block-network'])
     # record run
-    pytest.main(['-s', __file__, '--with-keyfile', '--record-mode=all']) #new_episodes'])
+    # pytest.main(['-s', __file__, '--with-keyfile', '--record-mode=all']) #new_episodes'])

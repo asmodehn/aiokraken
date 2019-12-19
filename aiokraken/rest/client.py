@@ -162,10 +162,10 @@ class RestClient:
     @rest_command
     @private_limiter
     async def trade_balance(self):
-        """ make public requests to kraken api"""
+        """ make trade balance requests to kraken api"""
 
         req = self.server.trade_balance()
-        return await self._get(request=req)
+        return await self._post(request=req)
 
     @rest_command
     @public_limiter
