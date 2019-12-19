@@ -29,8 +29,8 @@ from .kopenorder import KOpenOrderModel, KOpenOrderSchema
 @dataclass(frozen=True)
 class KClosedOrderModel(KOpenOrderModel):
 
-    closetm: str
-    reason: str
+    closetm: TMModel = None  # this must have a default because base class has defaults...
+    reason: str = ""  # TODO : fix this defaults thing somehow...
 
 @composite
 def ClosedOrderStrategy(draw,
@@ -97,7 +97,7 @@ def ClosedOrderStrategy(draw,
 
 class KClosedOrderSchema(KOpenOrderSchema):
 
-    closetm = fields.Str()  # unix timestamp of when order was closed
+    closetm = TimerField()  # unix timestamp of when order was closed
     reason = fields.Str()  # additional info on status (if any)
 
     @post_load
@@ -167,10 +167,11 @@ def ClosedOrderDictStrategy(draw,
 
 class ClosedOrdersResponseSchema(BaseSchema):
     closed = fields.Dict(keys=fields.Str(), values=fields.Nested(KClosedOrderSchema()))
+    count = fields.Integer()  # amount of available order info matching criteria
 
     @post_load
     def build_model(self, data, **kwargs):
-        return data['open']
+        return data['closed']
 
 
 

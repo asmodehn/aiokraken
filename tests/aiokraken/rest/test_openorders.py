@@ -10,7 +10,7 @@ from aiokraken.rest.schemas.krequestorder import RequestOrder
 @pytest.mark.asyncio
 @pytest.mark.vcr(filter_headers=['API-Key', 'API-Sign'])
 async def test_openorders_empty(keyfile):
-    async with RestClient(server=Server()) as rest_kraken:
+    async with RestClient(server=Server(**keyfile)) as rest_kraken:
         openorders_run = rest_kraken.openorders()
         response = await openorders_run()
     print(f'response is {response}')
@@ -21,7 +21,7 @@ async def test_openorders_empty(keyfile):
 @pytest.mark.asyncio
 @pytest.mark.vcr(filter_headers=['API-Key', 'API-Sign'])
 async def test_openorders_one_high_limit_sell(keyfile):
-    async with RestClient(server=Server()) as rest_kraken:
+    async with RestClient(server=Server(**keyfile)) as rest_kraken:
         ticker_run = rest_kraken.ticker(pairs=['XBTEUR'])
         tickerresponse = (await ticker_run()).get("XXBTZEUR")  # TODO : handle conversion problem...
         assert tickerresponse
@@ -52,7 +52,7 @@ async def test_openorders_one_high_limit_sell(keyfile):
 @pytest.mark.asyncio
 @pytest.mark.vcr(filter_headers=['API-Key', 'API-Sign'])
 async def test_openorders_one_low_limit_buy(keyfile):
-    async with RestClient(server=Server()) as rest_kraken:
+    async with RestClient(server=Server(**keyfile)) as rest_kraken:
         ticker_run = rest_kraken.ticker(pairs=['XBTEUR'])
         tickerresponse = (await ticker_run()).get("XXBTZEUR")  # TODO : handle conversion problem...
         assert tickerresponse

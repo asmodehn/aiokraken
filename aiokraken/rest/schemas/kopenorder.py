@@ -49,8 +49,10 @@ class KOpenOrderModel:
     misc: str  # TODO
     oflags: str  # TODO
 
-    refid: int  # TODO
-    userref: int  # TODO
+    refid: typing.Optional[int] = None  # TODO
+    userref: typing.Optional[int] = None  # TODO
+
+    trades: typing.Optional[typing.List[str]] = None
 
 
 @composite
@@ -109,7 +111,7 @@ def OpenOrderStrategy(draw,
 
 class KOpenOrderSchema(BaseSchema):
     refid = fields.Integer(allow_none=True)
-    userref = fields.Integer()
+    userref = fields.Integer(allow_none=True)
     status = fields.Str()
         # pending = order pending book entry
         # open = open order
@@ -137,7 +139,7 @@ class KOpenOrderSchema(BaseSchema):
         # fcib = prefer fee in base currency (default if selling)
         # fciq = prefer fee in quote currency (default if buying)
         # nompp = no market price protection
-    trades = fields.List(fields.Number())  #array of trade ids related to order
+    trades = fields.List(fields.Str())  #array of trade ids related to order
 
     @post_load
     def build_model(self, data, **kwargs):
