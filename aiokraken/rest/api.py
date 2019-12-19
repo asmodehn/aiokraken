@@ -1,6 +1,7 @@
 import types
 
 from aiokraken.rest.payloads import TickerPayloadSchema, AssetPayloadSchema, AssetPairPayloadSchema
+from aiokraken.rest.schemas.kclosedorder import ClosedOrdersResponseSchema
 
 if not __package__:
     __package__ = 'aiokraken.rest'
@@ -209,6 +210,31 @@ class Server:
                                                         )
                                                      )
                                    )
+
+    def closedorders(self, trades=False, userref=None):
+        data = {'trades': trades}
+
+        # trades = whether or not to include trades in output (optional.  default = false)
+        # userref = restrict results to given user reference id (optional)
+        # start = starting unix timestamp or order tx id of results (optional.  exclusive)
+        # end = ending unix timestamp or order tx id of results (optional.  inclusive)
+        # ofs = result offset
+        # closetime = which time to use (optional)
+        #     open
+        #     close
+        #     both (default)
+
+        if userref is not None:
+            data.update({'userref': userref})
+        return self.private.request('ClosedOrders',
+                                   data=data,
+                                   expected=Response(status=200,
+                                                     schema=PayloadSchema(
+                                                        result_schema=ClosedOrdersResponseSchema
+                                                        )
+                                                     )
+                                   )
+
 
     def addorder(self, order: RequestOrderFinalized):
         data = RequestOrderSchema().dump(order)

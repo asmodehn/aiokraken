@@ -11,11 +11,11 @@ import decimal
 from ..ktm import TMModel, TimerField
 from ..kabtype import KABTypeModel
 from ..kordertype import KOrderTypeModel
-from ..kopenorder import (KOpenOrderSchema, KOpenOrderModel,
+from ..kclosedorder import (KClosedOrderSchema, KClosedOrderModel,
 KOrderDescrNoPriceFinalized,
 KOrderDescrOnePriceFinalized,
 KOrderDescrTwoPriceFinalized,
-    OpenOrderStrategy, OpenOrderDictStrategy)
+    ClosedOrderStrategy, ClosedOrderDictStrategy)
 from ..korderdescr import KOrderDescrSchema
 from ...exceptions import AIOKrakenException
 
@@ -26,32 +26,32 @@ For simple usecase examples, we should rely on doctests.
 """
 
 
-class TestOpenOrderModel(unittest.TestCase):
+class TestClosedOrderModel(unittest.TestCase):
 
-    @given(OpenOrderStrategy())
-    def test_init(self, openorder):
-        assert isinstance(openorder.cost, decimal.Decimal)
-        assert isinstance(openorder.descr, (KOrderDescrNoPriceFinalized,
-           KOrderDescrOnePriceFinalized,
-           KOrderDescrTwoPriceFinalized))
-        assert isinstance(openorder.expiretm, TMModel)
-        assert isinstance(openorder.fee, decimal.Decimal)
-        assert isinstance(openorder.limitprice, decimal.Decimal)
-        assert isinstance(openorder.opentm, TMModel)
-        assert isinstance(openorder.price, decimal.Decimal)
-        assert isinstance(openorder.starttm, TMModel)
-        assert isinstance(openorder.stopprice, decimal.Decimal)
-        assert isinstance(openorder.vol, decimal.Decimal)
-        assert isinstance(openorder.vol_exec, decimal.Decimal)
+    @given(ClosedOrderStrategy())
+    def test_init(self, closedorder):
+        assert isinstance(closedorder.cost, decimal.Decimal)
+        assert isinstance(closedorder.descr, (KOrderDescrNoPriceFinalized,
+                                              KOrderDescrOnePriceFinalized,
+                                              KOrderDescrTwoPriceFinalized))
+        assert isinstance(closedorder.expiretm, TMModel)
+        assert isinstance(closedorder.fee, decimal.Decimal)
+        assert isinstance(closedorder.limitprice, decimal.Decimal)
+        assert isinstance(closedorder.opentm, TMModel)
+        assert isinstance(closedorder.price, decimal.Decimal)
+        assert isinstance(closedorder.starttm, TMModel)
+        assert isinstance(closedorder.stopprice, decimal.Decimal)
+        assert isinstance(closedorder.vol, decimal.Decimal)
+        assert isinstance(closedorder.vol_exec, decimal.Decimal)
         # TODO : improve
 
 
 class TestOpenOrderSchema(unittest.TestCase):
 
     def setUp(self) -> None:
-        self.schema = KOpenOrderSchema()
+        self.schema = KClosedOrderSchema()
 
-    @given(OpenOrderStrategy())
+    @given(ClosedOrderStrategy())
     def test_dump_ok(self, model):
         """ Verifying that expected data parses properly """
         serialized = self.schema.dump(model)
@@ -66,7 +66,8 @@ class TestOpenOrderSchema(unittest.TestCase):
             "vol": "{0:f}".format(model.vol),
             "userref": model.userref,
             "expiretm": TimerField().serialize('v', {'v': model.expiretm}),
-            "trades": model.trades
+            "trades": model.trades,
+            "reason": model.reason
         }
         expected["limitprice"] = "{0:f}".format(model.limitprice)
         expected["cost"] = "{0:f}".format(model.cost)
@@ -74,6 +75,7 @@ class TestOpenOrderSchema(unittest.TestCase):
         expected["opentm"] = TimerField().serialize('v', {'v': model.opentm})
         expected["starttm"] = TimerField().serialize('v', {'v': model.starttm})
         expected["price"] = "{0:f}".format(model.price)
+        expected["closetm"] = TimerField().serialize('v', {'v': model.closetm})
 
         # check equality on dicts with usual python types, but display strings.
         assert serialized == expected, print(str(serialized) + '\n' + str(expected))
@@ -82,10 +84,10 @@ class TestOpenOrderSchema(unittest.TestCase):
     # Testing for this seems redundant.
     # load() should be used to parse unknown data structure, internal is assumed correct (typechecks !)
 
-    @given(OpenOrderDictStrategy())
+    @given(ClosedOrderDictStrategy())
     def test_load_ok(self, model):
         oo = self.schema.load(model)
-        assert isinstance(oo, KOpenOrderModel)
+        assert isinstance(oo, KClosedOrderModel)
 
 
     def test_load_fail(self):

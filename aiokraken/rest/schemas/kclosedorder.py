@@ -4,7 +4,6 @@ from decimal import Decimal
 from enum import (IntEnum)
 from dataclasses import dataclass, field
 
-from hypothesis.strategies import composite
 from marshmallow import fields, post_load
 from hypothesis import strategies as st
 
@@ -24,39 +23,17 @@ from .korderdescr import (KOrderDescrNoPriceFinalized,
 
 KOrderDescrSchema,
 )
+from .kopenorder import KOpenOrderModel, KOpenOrderSchema
 
 @dataclass(frozen=True)
-class KOpenOrderModel:
-    descr: typing.Union[KOrderDescrNoPriceFinalized,
-           KOrderDescrOnePriceFinalized,
-           KOrderDescrTwoPriceFinalized, ]
+class KClosedOrderModel(KOpenOrderModel):
 
-    status: str  # TODO
-    starttm: TMModel
-    opentm: TMModel
-    expiretm: TMModel
+    closetm: TMModel = None  # this must have a default because base class has defaults...
+    reason: str = ""  # TODO : fix this defaults thing somehow...
 
-    price: Decimal
-    limitprice: Decimal
-    stopprice: Decimal
+@st.composite
+def ClosedOrderStrategy(draw,
 
-    vol: Decimal
-    vol_exec: Decimal
-
-    fee: Decimal
-    cost: Decimal
-
-    misc: str  # TODO
-    oflags: str  # TODO
-
-    refid: typing.Optional[int] = None  # TODO
-    userref: typing.Optional[int] = None  # TODO
-
-    trades: typing.Optional[typing.List[str]] = None
-
-
-@composite
-def OpenOrderStrategy(draw,
                       descr= st.one_of([
                           KOrderDescrFinalizeStrategy(strategy=KOrderDescrNoPriceStrategy()),
                           KOrderDescrFinalizeStrategy(strategy=KOrderDescrOnePriceStrategy()),
@@ -83,10 +60,14 @@ def OpenOrderStrategy(draw,
                       refid=st.integers(),  # TODO
                       userref= st.integers(),  # TODO
 
-                      trades= st.lists(st.text(max_size=5),max_size=5)
+                        trades=st.lists(st.text(max_size=5), max_size=5),
+
+                        closetm=TMStrategy(),
+                        reason=st.text(max_size=5)
+
 ):
 
-    return KOpenOrderModel(
+    return KClosedOrderModel(
         descr = draw(descr),
         status = draw(status),
         starttm= draw(starttm),
@@ -110,49 +91,25 @@ def OpenOrderStrategy(draw,
         userref=draw(userref),
 
         trades=draw(trades),
+
+        closetm=draw(closetm),
+        reason=draw(reason)
     )
 
 
-class KOpenOrderSchema(BaseSchema):
-    refid = fields.Integer(allow_none=True)
-    userref = fields.Integer(allow_none=True)
-    status = fields.Str()
-        # pending = order pending book entry
-        # open = open order
-        # closed = closed order
-        # canceled = order canceled
-        # expired = order expired
-    opentm = TimerField()
-    starttm = TimerField()
-    expiretm = TimerField()
-    descr = fields.Nested(KOrderDescrSchema())
-    vol = fields.Decimal(as_string=True)  #(base currency unless viqc set in oflags)
-    vol_exec = fields.Decimal(as_string=True) #(base currency unless viqc set in oflags)
-    cost = fields.Decimal(as_string=True)  #(quote currency unless unless viqc set in oflags)
-    fee = fields.Decimal(as_string=True) #(quote currency)
-    price = fields.Decimal(as_string=True)  #(quote currency unless viqc set in oflags)
-    stopprice = fields.Decimal(as_string=True)  #(quote currency, for trailing stops)
-    limitprice = fields.Decimal(as_string=True)  #(quote currency, when limit based order type triggered)
-    misc = fields.Str()  #comma delimited list of miscellaneous info
-        # stopped = triggered by stop price
-        # touched = triggered by touch price
-        # liquidated = liquidation
-        # partial = partial fill
-    oflags = fields.Str() #comma delimited list of order flags
-        # viqc = volume in quote currency
-        # fcib = prefer fee in base currency (default if selling)
-        # fciq = prefer fee in quote currency (default if buying)
-        # nompp = no market price protection
-    trades = fields.List(fields.Str(), required=False)  #array of trade ids related to order
+
+class KClosedOrderSchema(KOpenOrderSchema):
+
+    closetm = TimerField()  # unix timestamp of when order was closed
+    reason = fields.Str()  # additional info on status (if any)
 
     @post_load
     def build_model(self, data, **kwargs):
-        return KOpenOrderModel(**data)
-
+        return KClosedOrderModel(**data)
 
 
 @st.composite
-def OpenOrderDictStrategy(draw,
+def ClosedOrderDictStrategy(draw,
                           # Here we mirror arguments for the model strategy
                           descr= st.one_of([
                               KOrderDescrFinalizeStrategy(strategy=KOrderDescrNoPriceStrategy()),
@@ -180,9 +137,12 @@ def OpenOrderDictStrategy(draw,
                           refid=st.integers(),  # TODO
                           userref= st.integers(),  # TODO
 
-                            trades= st.lists(st.text(max_size=5),max_size=5),
+                            trades=st.lists(st.text(max_size=5), max_size=5),
+
+                            closetm= TMStrategy(),
+                            reason=st.text(max_size=5)
                           ):
-    model = draw(OpenOrderStrategy(descr= descr,
+    model = draw(ClosedOrderStrategy(descr= descr,
                       status= status,
                       starttm= starttm,
                       opentm= opentm,
@@ -204,19 +164,29 @@ def OpenOrderDictStrategy(draw,
                       refid=refid,  # TODO
                       userref= userref,  # TODO
 
-                    trades=trades,
+                        trades=trades,
+
+                        closetm= closetm,
+                        reason=reason
     ))
-    schema = KOpenOrderSchema()
+    schema = KClosedOrderSchema()
     return schema.dump(model)
 
 
-class OpenOrdersResponseSchema(BaseSchema):
-    open = fields.Dict(keys=fields.Str(), values=fields.Nested(KOpenOrderSchema()))
+class ClosedOrdersResponseSchema(BaseSchema):
+    closed = fields.Dict(keys=fields.Str(), values=fields.Nested(KClosedOrderSchema()))
+    count = fields.Integer()  # amount of available order info matching criteria
 
     @post_load
     def build_model(self, data, **kwargs):
-        return data['open']
+        return data['closed']
 
+
+
+# closed = array of order info.  See Get open orders.  Additional fields:
+#     closetm = unix timestamp of when order was closed
+#     reason = additional info on status (if any)
+# count = amount of available order info matching criteria
 
 if __name__ == "__main__":
     import pytest

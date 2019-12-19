@@ -7,7 +7,7 @@ interactions:
       User-Agent:
       - Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML,
         like Gecko) Chrome/74.0.3729.131 Safari/537.36
-    method: GET
+    method: POST
     uri: https://api.kraken.com/0/private/OpenOrders
   response:
     body:
