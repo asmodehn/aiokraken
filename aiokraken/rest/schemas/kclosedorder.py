@@ -60,7 +60,9 @@ def ClosedOrderStrategy(draw,
                       refid=st.integers(),  # TODO
                       userref= st.integers(),  # TODO
 
-                        closetm=st.text(max_size=5),
+                        trades=st.lists(st.text(max_size=5), max_size=5),
+
+                        closetm=TMStrategy(),
                         reason=st.text(max_size=5)
 
 ):
@@ -87,6 +89,8 @@ def ClosedOrderStrategy(draw,
 
         refid=draw(refid),
         userref=draw(userref),
+
+        trades=draw(trades),
 
         closetm=draw(closetm),
         reason=draw(reason)
@@ -133,7 +137,9 @@ def ClosedOrderDictStrategy(draw,
                           refid=st.integers(),  # TODO
                           userref= st.integers(),  # TODO
 
-                            closetm= st.text(max_size=5),
+                            trades=st.lists(st.text(max_size=5), max_size=5),
+
+                            closetm= TMStrategy(),
                             reason=st.text(max_size=5)
                           ):
     model = draw(ClosedOrderStrategy(descr= descr,
@@ -157,6 +163,9 @@ def ClosedOrderDictStrategy(draw,
 
                       refid=refid,  # TODO
                       userref= userref,  # TODO
+
+                        trades=trades,
+
                         closetm= closetm,
                         reason=reason
     ))

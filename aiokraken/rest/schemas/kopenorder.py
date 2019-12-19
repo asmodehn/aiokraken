@@ -81,7 +81,9 @@ def OpenOrderStrategy(draw,
                       oflags= st.text(max_size=5),  # TODO
 
                       refid=st.integers(),  # TODO
-                      userref= st.integers()  # TODO
+                      userref= st.integers(),  # TODO
+
+                      trades= st.lists(st.text(max_size=5),max_size=5)
 ):
 
     return KOpenOrderModel(
@@ -105,7 +107,9 @@ def OpenOrderStrategy(draw,
         oflags=draw(oflags),
 
         refid=draw(refid),
-        userref=draw(userref)
+        userref=draw(userref),
+
+        trades=draw(trades),
     )
 
 
@@ -139,7 +143,7 @@ class KOpenOrderSchema(BaseSchema):
         # fcib = prefer fee in base currency (default if selling)
         # fciq = prefer fee in quote currency (default if buying)
         # nompp = no market price protection
-    trades = fields.List(fields.Str())  #array of trade ids related to order
+    trades = fields.List(fields.Str(), required=False)  #array of trade ids related to order
 
     @post_load
     def build_model(self, data, **kwargs):
@@ -174,7 +178,9 @@ def OpenOrderDictStrategy(draw,
                           oflags= st.text(max_size=5),  # TODO
 
                           refid=st.integers(),  # TODO
-                          userref= st.integers()  # TODO
+                          userref= st.integers(),  # TODO
+
+                            trades= st.lists(st.text(max_size=5),max_size=5),
                           ):
     model = draw(OpenOrderStrategy(descr= descr,
                       status= status,
@@ -196,7 +202,9 @@ def OpenOrderDictStrategy(draw,
                       oflags= oflags, # TODO
 
                       refid=refid,  # TODO
-                      userref= userref  # TODO
+                      userref= userref,  # TODO
+
+                    trades=trades,
     ))
     schema = KOpenOrderSchema()
     return schema.dump(model)
