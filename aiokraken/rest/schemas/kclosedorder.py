@@ -4,7 +4,6 @@ from decimal import Decimal
 from enum import (IntEnum)
 from dataclasses import dataclass, field
 
-from hypothesis._strategies import composite
 from marshmallow import fields, post_load
 from hypothesis import strategies as st
 
@@ -32,7 +31,7 @@ class KClosedOrderModel(KOpenOrderModel):
     closetm: TMModel = None  # this must have a default because base class has defaults...
     reason: str = ""  # TODO : fix this defaults thing somehow...
 
-@composite
+@st.composite
 def ClosedOrderStrategy(draw,
 
                       descr= st.one_of([
