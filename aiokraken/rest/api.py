@@ -1,6 +1,7 @@
 import types
 
 from aiokraken.rest.payloads import TickerPayloadSchema, AssetPayloadSchema, AssetPairPayloadSchema
+from aiokraken.rest.schemas.kclosedorder import ClosedOrdersResponseSchema
 
 if not __package__:
     __package__ = 'aiokraken.rest'
@@ -17,24 +18,6 @@ from .schemas.krequestorder import (
     RequestOrderSchema,
 )
 from .response import Response
-
-
-def private(api, key, secret):
-    api.api_url = 'private/'
-
-    # TODO :call function (arg) to grab them from somewhere...
-    api.key = key
-    api.secret = secret
-
-    def request(self, endpoint, headers=None, data=None, expected=None):
-        h = headers or {}
-        d = data or {}
-        r = Request(urlpath=self.url_path + '/' + endpoint, headers=h, data=d, expected=expected)
-        s = r.sign(key=key, secret = secret)
-        return s
-
-    api.request = types.MethodType(request, api)
-    return api
 
 
 class API:
@@ -107,6 +90,24 @@ pairs_id = {
 }
 
 
+def private(api: API, key, secret):
+    api.api_url = 'private/'
+
+    # TODO :call function (arg) to grab them from somewhere...
+    api.key = key
+    api.secret = secret
+
+    def request(self, endpoint, headers=None, data=None, expected=None):
+        h = headers or {}
+        d = data or {}
+        r = Request(urlpath=self.url_path + '/' + endpoint, headers=h, data=d, expected=expected)
+        s = r.sign(key=key, secret = secret)
+        return s
+
+    api.request = types.MethodType(request, api)
+    return api
+
+
 
 class Server:
     # TODO : LOG actual requests. Important for usage and for testing...
@@ -116,7 +117,11 @@ class Server:
         self.API = Host(hostname='api.kraken.com')  # TODO : pass as argument ?
         self.API['0'] = Version()
         self.API['0']['public'] = API('public')
-        self.API['0']['private'] = private(api=API('private'), key=key, secret=secret)
+
+        if key and secret:  # we only have private API access if we provide key and secret
+            self.API['0']['private'] = private(api=API('private'), key=key, secret=secret)
+        else:  # But we still need to have access simulated for replays (no key)
+            self.API['0']['private'] = API('private')
         # TODO : do this declaratively ???
 
     @property
@@ -221,6 +226,31 @@ class Server:
                                                      )
                                    )
 
+    def closedorders(self, trades=False, userref=None):
+        data = {'trades': trades}
+
+        # trades = whether or not to include trades in output (optional.  default = false)
+        # userref = restrict results to given user reference id (optional)
+        # start = starting unix timestamp or order tx id of results (optional.  exclusive)
+        # end = ending unix timestamp or order tx id of results (optional.  inclusive)
+        # ofs = result offset
+        # closetime = which time to use (optional)
+        #     open
+        #     close
+        #     both (default)
+
+        if userref is not None:
+            data.update({'userref': userref})
+        return self.private.request('ClosedOrders',
+                                   data=data,
+                                   expected=Response(status=200,
+                                                     schema=PayloadSchema(
+                                                        result_schema=ClosedOrdersResponseSchema
+                                                        )
+                                                     )
+                                   )
+
+
     def addorder(self, order: RequestOrderFinalized):
         data = RequestOrderSchema().dump(order)
         print(f"Serialized Order: {data}")
@@ -241,6 +271,17 @@ class Server:
                                                             result_schema=CancelOrderResponseSchema
                                                         ))
                                 )
+
+    #
+    # def query_orders(self):
+    #     pass
+    #
+    #
+    # def trades_history(self):
+    #     pass
+    #
+    # def query_trades(self):
+    #     pass
 
 # API DEFINITION - TODO
 

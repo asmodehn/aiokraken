@@ -154,10 +154,10 @@ class RestClient:
     @rest_command
     @private_limiter
     async def balance(self):
-        """ make public requests to kraken api"""
+        """ make balance requests to kraken api"""
 
         req = self.server.balance()
-        return await self._get(request=req)
+        return await self._post(request=req)  # Private request must use POST !
 
     @rest_command
     @private_limiter
@@ -178,10 +178,18 @@ class RestClient:
     @rest_command
     @private_limiter
     async def openorders(self, trades=False):  # TODO : trades
-        """ make public requests to kraken api"""
+        """ make private openorders request to kraken api"""
 
         req = self.server.openorders(trades=trades)   # returns the request to be made for this API.)
-        return await self._get(request=req)
+        return await self._post(request=req)
+
+    @rest_command
+    @private_limiter
+    async def closedorders(self, trades=False):  # TODO : trades
+        """ make private closedorders request to kraken api"""
+
+        req = self.server.closedorders(trades=trades)   # returns the request to be made for this API.)
+        return await self._post(request=req)
 
     @rest_command
     @private_limiter

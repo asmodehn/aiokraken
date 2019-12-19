@@ -1,12 +1,9 @@
 [[source]]
-
 name = "pypi"
 url = "https://pypi.org/simple"
 verify_ssl = true
 
-
 [dev-packages]
-
 pytest-recording = "==0.3.3"    # 0.3.4 is breaking on --block-network it seems
 pytest-asyncio = "==0.10.0"
 pytest-dependency = "*"
@@ -15,9 +12,7 @@ jupyterlab = "*"
 jupyterlab-git = "*"
 aiokraken = {path = ".",editable = true}
 
-
 [packages]
-
 aiohttp = "==3.6.2"
 aiodns = "==2.0.0"
 cchardet = "==2.1.4"
@@ -34,20 +29,11 @@ pyjanitor = "*"
 hypothesis = "*"
 mypy = "*"
 aiounittest = "*"
-timecontrol = "*"
-
+timecontrol = "==0.2.2"
+tinydb = "*"
 
 [requires]
-
 python_version = "3.7"
 
-
 [pipenv]
-
 allow_prereleases = true
-
-
-[packages.aiokraken]
-
-path = "."
-editable = true

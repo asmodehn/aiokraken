@@ -33,7 +33,7 @@ For simple usecase examples, we should rely on doctests.
 
 class TestOrderDescr(unittest.TestCase):
 
-    @settings(verbosity=Verbosity.verbose)
+    # @settings(verbosity=Verbosity.verbose)
     @given(KOrderDescrStrategy())
     def test_model(self, model):
         assert isinstance(model, KOrderDescr)
@@ -60,7 +60,7 @@ class TestOrderDescr(unittest.TestCase):
 
 
 class TestOrderDescr_NoPrice(unittest.TestCase):
-    @settings(verbosity=Verbosity.verbose)
+    # @settings(verbosity=Verbosity.verbose)
     @given(KOrderDescrNoPriceStrategy())
     def test_model(self, model):
         assert isinstance(model, KOrderDescrNoPrice)
@@ -72,7 +72,7 @@ class TestOrderDescr_NoPrice(unittest.TestCase):
         assert hasattr(model, "buy") and callable(model.buy)
         assert hasattr(model, "sell") and callable(model.sell)
 
-    @settings(verbosity=Verbosity.verbose)
+    # @settings(verbosity=Verbosity.verbose)
     @given(KOrderDescrFinalizeStrategy(strategy=KOrderDescrNoPriceStrategy()))
     def test_finalize(self, model):
         assert isinstance(model, KOrderDescrNoPriceFinalized)
@@ -88,7 +88,7 @@ class TestOrderDescr_NoPrice(unittest.TestCase):
 
 
 class TestOrderDescr_OnePrice(unittest.TestCase):
-    @settings(verbosity=Verbosity.verbose)
+    # @settings(verbosity=Verbosity.verbose)
     @given(KOrderDescrOnePriceStrategy())
     def test_model(self, model):
         assert isinstance(model, KOrderDescrOnePrice)
@@ -100,7 +100,7 @@ class TestOrderDescr_OnePrice(unittest.TestCase):
         assert hasattr(model, "buy") and callable(model.buy)
         assert hasattr(model, "sell") and callable(model.sell)
 
-    @settings(verbosity=Verbosity.verbose)
+    # @settings(verbosity=Verbosity.verbose)
     @given(KOrderDescrFinalizeStrategy(strategy=KOrderDescrOnePriceStrategy()))
     def test_finalize(self, model):
         assert isinstance(model, KOrderDescrOnePriceFinalized)
@@ -150,7 +150,7 @@ class TestOrderDescrSchema(unittest.TestCase):
     def setUp(self) -> None:
         self.schema = KOrderDescrSchema()
 
-    @settings(verbosity=Verbosity.verbose)
+    # @settings(verbosity=Verbosity.verbose)
     @given(
         KDictStrategy(
             st.one_of(
@@ -173,7 +173,7 @@ class TestOrderDescrSchema(unittest.TestCase):
 
     # TODO :validate deserialize fail on unexpected / incomplete data...
 
-    @settings(verbosity=Verbosity.verbose)
+    # @settings(verbosity=Verbosity.verbose)
     @given(
         st.one_of(
             [
@@ -204,7 +204,7 @@ class TestOrderDescrSchema(unittest.TestCase):
             )  # careful with exponents on decimal https://stackoverflow.com/a/27053722
         assert p == expected, print(str(p) + "\n" + str(expected))
 
-    @settings(verbosity=Verbosity.verbose)
+    # @settings(verbosity=Verbosity.verbose)
     @given(
         st.one_of(
             [
