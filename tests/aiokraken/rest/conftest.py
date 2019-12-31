@@ -1,4 +1,3 @@
-# content of conftest.py
 import pytest
 
 
@@ -11,8 +10,11 @@ def pytest_addoption(parser):
 @pytest.fixture
 def keyfile(request):
     kf = request.config.getoption("--with-keyfile")
-    keystruct = None
+    keystruct = {
+    }
     if kf:
         from aiokraken.config import load_api_keyfile
         keystruct = load_api_keyfile()
     return keystruct
+
+# TODO : disable rate limiter when testing with replay...

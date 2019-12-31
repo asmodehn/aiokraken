@@ -2,28 +2,19 @@ import pytest
 
 from aiokraken.rest.api import API, Server
 from aiokraken.rest.client import RestClient
-#from aiokraken.model. import Balance
+from aiokraken.rest.schemas.balance import Balance, BalanceSchema
 
 
 @pytest.mark.asyncio
 @pytest.mark.vcr(filter_headers=['API-Key', 'API-Sign'])
 async def test_balance(keyfile):
     """ get kraken balance"""
-    if keyfile:
-        rest_kraken = RestClient(server=Server(key=keyfile.get('key'),
-                                               secret=keyfile.get('secret')))
-    else:
-        # test from cassette doesnt need authentication
-        rest_kraken = RestClient(server=Server())
-    try:
-        response = await rest_kraken.balance()
-        await rest_kraken.close()
-        print(f'response is {response}')
-
-        # TODO : assert smthg ?
-
-    finally:
-        await rest_kraken.close()
+    server = Server(key = keyfile.get('key'), secret = keyfile.get('secret'))
+    async with RestClient(server=server) as rest_kraken:
+        balance_run= rest_kraken.balance()
+        response = await balance_run()
+        assert isinstance(response, Balance)
+        print(response)
 
 
 if __name__ == '__main__':

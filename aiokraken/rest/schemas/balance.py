@@ -1,32 +1,66 @@
+from dataclasses import dataclass
+
 import marshmallow
-from marshmallow import fields, pre_load, post_load
+import typing
 from decimal import Decimal
 
-from ..exceptions import AIOKrakenException
-from ...model.time import Time
+from marshmallow import fields, post_load, post_dump, pre_dump, pre_load
+from hypothesis import strategies as st
+from .base import BaseSchema, BaseOptionalSchema
 
 
-class BalanceSchema(marshmallow.Schema):
-    class Meta:
-        # Pass EXCLUDE as Meta option to keep marshmallow 2 behavior
-        # ref: https://marshmallow.readthedocs.io/en/stable/upgrading.html#upgrading-to-3-0
-        unknown = getattr(marshmallow, "EXCLUDE", None)
+@dataclass(frozen=True, init=False)
+class Balance:
 
-    # """ Schema to parse the string received"""
-    # unixtime = marshmallow.fields.Int(required=True)
-    # # rfc1123 ??
+    accounts: typing.Dict[str, Decimal]  # TODO : str => Asset ???  Maybe one field per asset allowed/present ??
 
-    ZEUR = marshmallow.fields.Decimal(default=Decimal(0.0))
-    XXBT = marshmallow.fields.Decimal(default=Decimal(0.0))
-    XXRP = marshmallow.fields.Decimal(default=Decimal(0.0))
+    def __init__(self, **accounts):
+        object.__setattr__(self, 'accounts', {})
+        for c, a in accounts.items():
+            try:
+                # we can cast directly to KCurrency here, schema has taken care of the aliases from kraken side.
+                self.accounts[c] = Decimal(a)  # todo : change to "money" to embed currency in there...
+            except Exception as e:
+                raise e  # TODO : handle properly
+
+    def __repr__(self):
+        """ Unambiguous internal representation"""
+        return repr([f"{c}: {a}" for c, a in self.accounts.items()])
 
 
-    @marshmallow.pre_load(pass_many=False)
-    def get_data(self, data, **kwargs):
-        return data
+@st.composite
+def BalanceStrategy(draw, assets=st.text(min_size=1, max_size=5), amount=st.decimals(allow_nan=False, allow_infinity=False)):
+    return Balance(**{ draw(assets): draw(amount)})
 
-    @marshmallow.post_load(pass_many=False)
+
+class BalanceSchema(BaseSchema):
+    accounts = fields.Dict(keys=fields.String(), values=fields.Decimal())
+
+    @post_dump
+    def adjust_currencies(self, data, **kwargs):
+        # Using aliases manually via the field to convert currencies
+        # We need to output string keys for marshmallow to recognize them
+        return {c: v for c, v in data['accounts'].items()}
+
+    @pre_load
+    def accounts_field(self, data, **kwargs):
+        return {'accounts': data}
+
+    @post_load
     def make_balance(self, data, **kwargs):
-        return data
-        #return Time(data.get("unixtime"))
+        # Note : data is supposed to be a dict
+        assert isinstance(data, dict)
+        return Balance(**data['accounts'])
 
+
+@st.composite
+def KDictStrategy(draw, model_strategy):
+    model = draw(model_strategy)
+    schema = BalanceSchema()
+    return schema.dump(model)
+
+
+if __name__ == "__main__":
+    import pytest
+
+    pytest.main(["-s", "--doctest-modules", "--doctest-continue-on-failure", __file__])
