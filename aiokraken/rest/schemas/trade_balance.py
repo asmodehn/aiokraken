@@ -17,15 +17,15 @@ from decimal import Decimal
 
 @dataclass(frozen=True, init=True)
 class TradeBalance:
-    equivalent_balance : str
-    trade_balance : str
-    margin: str
-    net_pnl: str
-    cost: str
-    valuation:str
-    equity : str
-    free_margin : str
-    margin_level : str
+    equivalent_balance : Decimal
+    trade_balance : Decimal
+    margin: Decimal
+    net_pnl: Decimal
+    cost: Decimal
+    valuation: Decimal
+    equity: Decimal
+    free_margin: Decimal
+    #margin_level: typing.Optional[str]  #missing sometimes ?
 
     # eb = equivalent balance (combined balance of all currencies)
     # tb = trade balance (combined balance of all equity currencies)
@@ -45,15 +45,15 @@ class TradeBalance:
 
 
 class TradeBalanceSchema(BaseSchema):
-    equivalent_balance = fields.Str(data_key='eb')
-    trade_balance = fields.Str(data_key='tb')
-    margin = fields.Str(data_key='m')
-    net_pnl = fields.Str(data_key='n')
-    cost = fields.Str(data_key='c')
-    valuation = fields.Str(data_key='v')
-    equity = fields.Str(data_key='e')
-    free_margin = fields.Str(data_key='mf')
-    margin_level = fields.Str(data_key='ml')
+    equivalent_balance = fields.Decimal(data_key='eb', as_string=True)
+    trade_balance = fields.Decimal(data_key='tb', as_string=True)
+    margin = fields.Decimal(data_key='m', as_string=True)
+    net_pnl = fields.Decimal(data_key='n', as_string=True)
+    cost = fields.Decimal(data_key='c', as_string=True)
+    valuation = fields.Decimal(data_key='v', as_string=True)
+    equity = fields.Decimal(data_key='e', as_string=True)
+    free_margin = fields.Decimal(data_key='mf', as_string=True)
+    #margin_level = fields.Str(data_key='ml')  # can be missing (?)
 
     @post_load
     def build_model(self, data, **kwargs):
