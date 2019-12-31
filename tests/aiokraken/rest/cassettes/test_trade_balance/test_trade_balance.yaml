@@ -1,0 +1,33 @@
+interactions:
+- request:
+    body:
+      nonce: 1576773017569
+    headers:
+      User-Agent:
+      - Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML,
+        like Gecko) Chrome/74.0.3729.131 Safari/537.36
+    method: POST
+    uri: https://api.kraken.com/0/private/TradeBalance
+  response:
+    body:
+      string: '{"error":[],"result":{"eb":"176.2212","tb":"20.6451","m":"0.0000","n":"0.0000","c":"0.0000","v":"0.0000","e":"20.6451","mf":"20.6451"}}'
+    headers:
+      CF-Cache-Status: DYNAMIC
+      CF-RAY: 547ac2a05951b78d-CDG
+      Connection: keep-alive
+      Content-Encoding: gzip
+      Content-Type: application/json; charset=utf-8
+      Date: Thu, 19 Dec 2019 16:30:17 GMT
+      Expect-CT: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      Server: cloudflare
+      Set-Cookie: __cf_bm=dbc37378b7dcdbdfd509e4e8286852d602ca681f-1576773017-1800-AVC/0IR+jQuf8X4ZPPsFN0YHTM/40yMNmaOUmzzyKRnrIfvSVmvxJxYCUNl97jc13PRI1+Zuy8wGxpFXaKQSt3w=;
+        path=/; expires=Thu, 19-Dec-19 17:00:17 GMT; domain=.kraken.com; HttpOnly;
+        Secure
+      Transfer-Encoding: chunked
+      Vary: Accept-Encoding
+      strict-transport-security: max-age=15768000
+    status:
+      code: 200
+      message: OK
+    url: https://api.kraken.com/0/private/TradeBalance
+version: 1

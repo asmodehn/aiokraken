@@ -160,6 +160,14 @@ class RestClient:
         return await self._post(request=req)  # Private request must use POST !
 
     @rest_command
+    @private_limiter
+    async def trade_balance(self):
+        """ make trade balance requests to kraken api"""
+
+        req = self.server.trade_balance()
+        return await self._post(request=req)
+
+    @rest_command
     @public_limiter
     async def ticker(self, pairs=['XBTEUR']):  # TODO : model currency pair/'market' in ccxt (see crypy)
         """ make public requests to kraken api"""
