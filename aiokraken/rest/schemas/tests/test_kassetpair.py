@@ -7,9 +7,8 @@ import json
 import marshmallow
 import decimal
 
-from aiokraken.rest.schemas.kasset import Asset
-from aiokraken.rest.schemas.kassetpair import (
-    KAssetPair, KAssetPairStrategy, KDictStrategy,
+from aiokraken.model.tests.strats.st_assetpair import AssetPair, AssetPairStrategy
+from aiokraken.rest.schemas.kassetpair import ( KDictStrategy,
     KAssetPairSchema,
 )
 from ..kabtype import KABTypeModel, KABTypeField, KABTypeStrategy, KABTypeStringStrategy
@@ -29,13 +28,13 @@ class TestKAssetPairSchema(unittest.TestCase):
 
     # @settings(verbosity=Verbosity.verbose)
     @given(
-        KDictStrategy( KAssetPairStrategy()))
+        KDictStrategy(AssetPairStrategy()))
     def test_deserialize(self, modeldict):
         a = self.schema.load(modeldict)
-        assert isinstance(a, KAssetPair)
+        assert isinstance(a, AssetPair)
 
     # @settings(verbosity=Verbosity.verbose)
-    @given(KAssetPairStrategy())
+    @given(AssetPairStrategy())
     def test_serialize(self, model):
         a = self.schema.dump(model)
 

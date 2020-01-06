@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from aiokraken.model.currency import KCurrency
 
 
+# TODO : merge with assetpair somehow (same in/out data structure - translation between domains done by schemas)
+
 @dataclass(frozen=True)
 class PairModel:
     """

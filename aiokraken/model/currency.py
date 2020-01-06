@@ -24,6 +24,8 @@ To use types to filter out what we are not interested in.
 """
 
 
+#TODO : merge with asset somehow (same in/out datatype - domain translation done by schemas)
+
 # Enum to store accepted currencies.
 # Unknown currencies will be ignored
 # Ref : https://support.kraken.com/hc/en-us/articles/360000678446
