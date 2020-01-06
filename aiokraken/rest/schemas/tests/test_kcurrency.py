@@ -20,22 +20,7 @@ This is intended for extensive testing, using parameterized, hypothesis or simil
 For simple usecase examples, we should rely on doctests.
 """
 
-
-class TestKCurrency(unittest.TestCase):
-
-    def test_unknown(self):
-        """simple error verification"""
-        with self.assertRaises(ValueError):
-            KCurrency('unknown')
-
-    @given(KCurrencyStrategy())
-    def test_enum(self, model):
-        assert model.value in ['EUR', 'USD', 'CAD', 'KRW', 'JPY',
-                               # TODO : deal with aliases properly
-                               'XBT', 'BTC', 'ETC', 'ETH', 'XRP', 'EOS', 'BCH', 'ADA', 'XTZ', 'BSV'], model.value
-
-
-class TestOrderTypeField(unittest.TestCase):
+class TestCurrencyField(unittest.TestCase):
 
     def setUp(self) -> None:
         self.field = KCurrencyField()

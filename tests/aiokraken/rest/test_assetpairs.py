@@ -2,11 +2,10 @@ import pytest
 
 from aiokraken.rest.api import API, Server
 from aiokraken.rest.client import RestClient
-from aiokraken.rest.schemas.kasset import KAsset
 
 
 # TODO : test multiple assets... multiple ways...
-from aiokraken.rest.schemas.kassetpair import KAssetPair
+from aiokraken.model.assetpair import AssetPair
 
 
 @pytest.mark.asyncio
@@ -19,7 +18,7 @@ async def test_assetpairs_newstr():
         asset = response["XXBTZEUR"]  # PB : convert between representations of currency ? => job of the domain model layer
         print(f'response is \n{response}')
 
-        assert isinstance(asset, KAssetPair)
+        assert isinstance(asset, AssetPair)
 
 
 @pytest.mark.asyncio
@@ -32,9 +31,7 @@ async def test_assetpairs_oldstr():
         asset = response["XXBTZEUR"]  # PB : convert between representations of currency ? => job of the domain model layer
         print(f'response is \n{response}')
 
-        assert isinstance(asset, KAssetPair)
-
-
+        assert isinstance(asset, AssetPair)
 
 
 @pytest.mark.asyncio
@@ -46,7 +43,7 @@ async def test_assetpairs_all():
         response = await assetpairs_run()
         print(f'response is \n{response}')
         for name, asset in response.items():
-            assert isinstance(asset, KAssetPair)
+            assert isinstance(asset, AssetPair)
 
 
 

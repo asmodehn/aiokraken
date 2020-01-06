@@ -14,3 +14,6 @@ class TestAsset(unittest.TestCase):
         assert isinstance(model.aclass, str)
         assert isinstance(model.decimals, int)
         assert isinstance(model.display_decimals, int)
+
+if __name__ == "__main__":
+    unittest.main()

@@ -49,3 +49,6 @@ class TestAssetPair(unittest.TestCase):
         assert isinstance(model.margin_stop, int)
 
 
+
+if __name__ == "__main__":
+    unittest.main()
