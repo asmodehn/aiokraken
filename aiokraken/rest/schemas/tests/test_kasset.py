@@ -1,15 +1,7 @@
-import time
 import unittest
-from decimal import Decimal
 
-from parameterized import parameterized
-import json
-import marshmallow
-import decimal
-
-from aiokraken.rest.schemas.kasset import KAsset, KAssetStrategy, AssetSchema, KDictStrategy
-from ..kabtype import KABTypeModel, KABTypeField, KABTypeStrategy, KABTypeStringStrategy
-from ...exceptions import AIOKrakenException
+from aiokraken.model.tests.strats.st_asset import Asset, AssetStrategy
+from aiokraken.rest.schemas.kasset import AssetSchema, KDictStrategy
 from hypothesis import given, settings, Verbosity
 
 """
@@ -19,17 +11,6 @@ For simple usecase examples, we should rely on doctests.
 """
 
 
-class TestKAsset(unittest.TestCase):
-
-    #@settings(verbosity=Verbosity.verbose)
-    @given(KAssetStrategy())
-    def test_model(self, model):
-        assert isinstance(model.altname, str)
-        assert isinstance(model.aclass, str)
-        assert isinstance(model.decimals, int)
-        assert isinstance(model.display_decimals, int)
-
-
 class TestKAssetSchema(unittest.TestCase):
 
     def setUp(self) -> None:
@@ -37,13 +18,13 @@ class TestKAssetSchema(unittest.TestCase):
 
     #@settings(verbosity=Verbosity.verbose)
     @given(
-        KDictStrategy( KAssetStrategy()))
+        KDictStrategy(AssetStrategy()))
     def test_deserialize(self, modeldict):
         a = self.schema.load(modeldict)
-        assert isinstance(a, KAsset)
+        assert isinstance(a, Asset)
 
     #@settings(verbosity=Verbosity.verbose)
-    @given(KAssetStrategy())
+    @given(AssetStrategy())
     def test_serialize(self, model):
         a = self.schema.dump(model)
         assert 'altname' in a
