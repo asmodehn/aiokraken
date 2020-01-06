@@ -1,4 +1,6 @@
 import unittest
+from datetime import datetime, timezone
+
 from parameterized import parameterized
 import pandas as pd
 
@@ -29,10 +31,18 @@ class TestOHLC(unittest.TestCase):
         """ Verifying that expected data parses properly """
         ohlc = OHLC(data=df, last=last)
 
+        import pandas.api.types as ptypes
 
-        # TODO : assert stuff
+        num_cols = ["open", "high", "low", "close", "vwap", "volume", "count"]
+        assert all(ptypes.is_numeric_dtype(ohlc.dataframe[col]) for col in num_cols)
 
-        ohlc.macd(fast=1, slow=1, signal=1)
-        # TODO : assert more stuff
+        assert ptypes.is_datetime64_any_dtype(ohlc.dataframe["time"])
 
-        pass
+        # verifying date conversion to native (numpy precision not needed in our context)
+        assert ohlc.dataframe["time"].iloc[0].to_pydatetime() == datetime(year=2019, month=8, day=29, hour=0, minute=47, second=0, tzinfo=timezone.utc), ohlc.dataframe["time"].iloc[0]
+
+    # TODO : property test instead (move this example test to doc...)
+
+
+if __name__ == "__main__":
+    unittest.main()
