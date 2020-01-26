@@ -70,7 +70,7 @@ class RestClient:
         try:
             # TODO : pass protocol & host into the request url in order to have it displayed when erroring !
             async with getter(url=self.protocol + self.server.url + request.urlpath, headers=request.headers,
-                                         data=request.data) as response:
+                                         params=request.data) as response:  # NOTE : for GET, data has to be interpreted as params !
                 return await request(response)
                 # Note : response log should be done in caller (which can choose if it is appropriate to show or not.
         except (ssl.SSLError, aiohttp.ClientOSError) as err:  # for example : [Errno 104] Connection reset by peer / SSLError
