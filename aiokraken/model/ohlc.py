@@ -91,6 +91,9 @@ class OHLC:
         # check on len for optimization -> different length => different ohlc.
         return len(self) == len(other) and (self.dataframe == other.dataframe).all().all()  # we need exact match on 2 dimensions
 
+    def __iter__(self):
+        return self.dataframe.itertuples(name="IndexedOHLCValue")  # TODO some way of matching with actual OHLC values ?
+
     def __len__(self):
         return len(self.dataframe)
 
