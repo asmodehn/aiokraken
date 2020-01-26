@@ -1,42 +1,65 @@
+from __future__ import annotations
+
 # https://www.kraken.com/features/websocket-api#message-ohlc
+from collections import namedtuple
+
+import typing
 
 """ A common data structure for OHLC based on pandas """
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pandas as pd
-import pandas_ta as ta
+# import pandas_ta as ta
 import janitor
 
 from ..utils.signal import Signal
 
+
+OHLCValue = namedtuple("OHLCValue", ["datetime", "open", "high", "low", "close", "vwap", "volume", "count"])
+
+
 class OHLC:
 
-    def __init__(self, data: pd.DataFrame, last):
-        self.dataframe = data
-        self.last = last
+    def __init__(self, data: pd.DataFrame, last: typing.Union[datetime, int]):
+        # if no datetime column => create it from time
+        if 'time' in data and 'datetime' not in data:
+            # necessary modifications that are not yet done by marshmallow
+            data['datetime'] = pd.to_datetime(data.time, utc=True, unit='s')
+        elif 'datetime' in data and (data.index != 'time'):
+            data['time'] = data['datetime'].map(lambda dt: int(dt.timestamp()))
+
+        # In both cases we want to make sure time is the index
+        self.dataframe = data.set_index('time')
+
+        # reorder columns
+        self.dataframe = self.dataframe[["datetime", "open", "high", "low", "close", "vwap", "volume", "count"]]
+
+        if not isinstance(last, datetime):
+            # attempt conversion from timestamp
+            self.last = datetime.fromtimestamp(last, tz = timezone.utc)
+        else:
+            self.last = last
         # TODO : remove last (always changing, moving indicators...)
 
         # TODO : take in account we only get last 720 intervals
         #  Ref : https://support.kraken.com/hc/en-us/articles/218198197-How-to-retrieve-historical-time-and-sales-trading-history-using-the-REST-API-Trades-endpoint-
 
-        # necessary modifications that are not yet done by marshmallow
-        self.dataframe.time = pd.to_datetime(self.dataframe.time, utc=True, unit='s')
-
         self.dataframe.close = pd.to_numeric(self.dataframe.close)
         self.dataframe.open = pd.to_numeric(self.dataframe.open)
         self.dataframe.high = pd.to_numeric(self.dataframe.high)
         self.dataframe.low = pd.to_numeric(self.dataframe.low)
+        self.dataframe.vwap = pd.to_numeric(self.dataframe.vwap)
         self.dataframe.volume = pd.to_numeric(self.dataframe.volume)
 
     # TODO : we should probably provide "simple"/explicit interface to useful property of the dataframe ???
 
     @property
     def begin(self) -> datetime:
-        return self.dataframe['time'].iloc[0]
+        return self.dataframe['datetime'].iloc[0]
 
     @property
     def end(self):
-        return self.dataframe['time'].iloc[-1]
+        return self.dataframe['datetime'].iloc[-1]
 
     @property
     def open(self):
@@ -64,7 +87,42 @@ class OHLC:
 
     # TODO : str representation (HOW ? graph on unicode string ???)
 
+    def __eq__(self, other: OHLC):
+        # check on len for optimization -> different length => different ohlc.
+        return len(self) == len(other) and (self.dataframe == other.dataframe).all().all()  # we need exact match on 2 dimensions
+
+    def __len__(self):
+        return len(self.dataframe)
+
     # TODO : operator to split/merge and append/drop OHLC parts...  Ref https://pandas.pydata.org/pandas-docs/stable/user_guide/merging.html
+
+    def stitch(self, other: OHLC):
+        """ Stitching two OHLC together """
+
+        # copying first
+        old_df = self.dataframe.copy(deep=True)
+
+        # marking duplicated rows (in first ?)
+        for i, row in old_df.iterrows():
+            dupval = False
+            tup = OHLCValue(**row)
+
+            for j, r in other.dataframe.iterrows():
+                if OHLCValue(**r) == tup:
+                    dupval = True
+            old_df.at[i, 'dup'] = dupval
+
+        filtered = old_df[old_df.dup == False]  # only picksrows where dup is False
+
+        # concat order based on index (timestamps)
+        if filtered.index[0] > other.dataframe.index[0]:
+            newdf = pd.concat([other.dataframe, filtered], join='outer', sort=False)
+        else:
+            newdf = pd.concat([filtered, other.dataframe], join='outer', sort=False)
+
+        newdf.drop('dup', axis=1, inplace=True)
+
+        return OHLC(data=newdf, last=newdf.datetime.iloc[-1])
 
     def head(self):
         return self.dataframe.head()
@@ -85,3 +143,4 @@ class OHLC:
         return self
 
     # TODO: instance of OHLC will depend on chosen timeframe...
+
