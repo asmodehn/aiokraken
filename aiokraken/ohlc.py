@@ -39,6 +39,9 @@ class OHLC:
     def __getitem__(self, key):
         if self.impl:
             return self.impl[key]
+        else:
+            # Note : this should not be a keyerror
+            raise RuntimeError(f"{self.impl} has not been initialized")
 
     # TODO : maybe we should keep iter design for time dependent collections (OHLC, timeseries, etc.)
     #     And have key addressing only for time independent collections (index is obvious for humans - not a cryptic timestamp)...
@@ -47,21 +50,39 @@ class OHLC:
         return iter(self.impl)
 
     def __len__(self):
-        return len(self.impl)
+        if self.impl:
+            return len(self.impl)
+        else:
+            return 0
 
 
 if __name__ == '__main__':
+    import time
 
-    async def assets_retrieve_nosession():
-        rest = RestClient(server=Server())
-        ohlc = OHLC(pair='ETHEUR', timeframe=KTimeFrameModel.one_hour)
+    # Client can be global: there is only one.
+    rest = RestClient(server=Server())
+
+    # ohlc data can be global (one per market*timeframe only)
+    ohlc = OHLC(pair='ETHEUR', timeframe=KTimeFrameModel.one_minute)
+
+    async def ohlc_retrieve_nosession():
+        global rest, ohlc
         await ohlc(rest_client=rest)
         for k in ohlc:
             print(f" - {k}")
 
     loop = asyncio.get_event_loop()
 
-    loop.run_until_complete(assets_retrieve_nosession())
+    assert len(ohlc) == 0
+
+    loop.run_until_complete(ohlc_retrieve_nosession())
+    assert len(ohlc) == 720, f"from: {ohlc.impl.begin} to: {ohlc.impl.end} -> {len(ohlc)} values"
+
+    print("Waiting one more minute to attempt retrieving more ohlc data and stitch them...")
+    time.sleep(60)
+    loop.run_until_complete(ohlc_retrieve_nosession())
+
+    assert len(ohlc) == 721,  f"from: {ohlc.impl.begin} to: {ohlc.impl.end} -> {len(ohlc)} values"
 
     loop.close()
 

@@ -103,27 +103,33 @@ class OHLC:
         """ Stitching two OHLC together """
 
         # copying first
-        old_df = self.dataframe.copy(deep=True)
+        # old_df = self.dataframe.copy(deep=True)
 
         # marking duplicated rows (in first ?)
-        for i, row in old_df.iterrows():
-            dupval = False
-            tup = OHLCValue(**row)
 
-            for j, r in other.dataframe.iterrows():
-                if OHLCValue(**r) == tup:
-                    dupval = True
-            old_df.at[i, 'dup'] = dupval
+        # # TODO : OPTIMIZE THIS !!!! concat with join=inner ?
+        # for i, row in old_df.iterrows():
+        #     dupval = False
+        #     tup = OHLCValue(**row)
+        #
+        #     for j, r in other.dataframe.iterrows():
+        #         if OHLCValue(**r) == tup:
+        #             dupval = True
+        #     old_df.at[i, 'dup'] = dupval
+        # ATTEMPT 1
+        newdf = self.dataframe.merge(other.dataframe, how='outer', sort=True)
+        # TODO : chekc how this modifies original...
 
-        filtered = old_df[old_df.dup == False]  # only picksrows where dup is False
-
-        # concat order based on index (timestamps)
-        if filtered.index[0] > other.dataframe.index[0]:
-            newdf = pd.concat([other.dataframe, filtered], join='outer', sort=False)
-        else:
-            newdf = pd.concat([filtered, other.dataframe], join='outer', sort=False)
-
-        newdf.drop('dup', axis=1, inplace=True)
+        #
+        # filtered = old_df[old_df.dup == False]  # only picksrows where dup is False
+        #
+        # # concat order based on index (timestamps)
+        # if filtered.index[0] > other.dataframe.index[0]:
+        #     newdf = pd.concat([other.dataframe, filtered], join='outer', sort=True)
+        # else:
+        #     newdf = pd.concat([filtered, other.dataframe], join='outer', sort=True)
+        #
+        # newdf.drop('dup', axis=1, inplace=True)
 
         return OHLC(data=newdf, last=newdf.datetime.iloc[-1])
 
