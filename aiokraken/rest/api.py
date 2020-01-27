@@ -1,5 +1,7 @@
 import types
 
+from aiokraken.model.timeframe import KTimeFrameModel
+
 from aiokraken.rest.payloads import TickerPayloadSchema, AssetPayloadSchema, AssetPairPayloadSchema
 from aiokraken.rest.schemas.kclosedorder import ClosedOrdersResponseSchema
 
@@ -171,9 +173,9 @@ class Server:
                                                      schema=AssetPairPayloadSchema())
         )
 
-    def ohlc(self, pair):
+    def ohlc(self, pair, interval: KTimeFrameModel):
         return self.public.request('OHLC',
-                                   data={'pair': pair},
+                                   data={'pair': pair, 'interval': int(interval)},
                                    expected=Response(status=200,
                                                      schema=PayloadSchema(
                                                         result_schema=PairOHLCSchema(

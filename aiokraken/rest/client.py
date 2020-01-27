@@ -4,6 +4,8 @@ import datetime
 import functools
 import ssl
 import aiohttp
+from aiokraken.model.timeframe import KTimeFrameModel
+
 from aiokraken.utils import get_kraken_logger, get_nonce
 from aiokraken.rest.api import Server, API
 
@@ -148,7 +150,7 @@ class RestClient:
 
     @rest_command
     @public_limiter  # skippable because OHLC is not supposed to change very often, and changes should apper in later results.
-    async def ohlc(self, pair='XBTEUR'):  # TODO: make pair mandatory
+    async def ohlc(self, pair, interval: KTimeFrameModel = KTimeFrameModel.one_minute):  # TODO: make pair mandatory
         """ make ohlc request to kraken api"""
         #  We need the list of markets to validate pair passed in the request
         if not self._assetpairs:
@@ -163,7 +165,7 @@ class RestClient:
             else:
                 pair = altname_map[pair]  # switch the name to get proper parsing of result.
 
-        req = self.server.ohlc(pair=pair)   # returns the request to be made for this API.)
+        req = self.server.ohlc(pair=pair, interval=interval)   # returns the request to be made for this API.)
         resp = await self._get(request=req)
         # Note : marshmallow has already checked that the response pair matches what was requested.
         return resp

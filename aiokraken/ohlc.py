@@ -7,15 +7,16 @@ from aiokraken.rest import Server
 
 from aiokraken.config import load_account_persist
 from aiokraken.rest import RestClient, Server
+from aiokraken.model.timeframe import KTimeFrameModel
 from aiokraken.timeframe import TimeFrame
 from collections.abc import Mapping
 
 
 class OHLC:
 
-    def __init__(self, pair): # timeframe:TimeFrame ):
+    def __init__(self, pair, timeframe:KTimeFrameModel = KTimeFrameModel.one_minute):
         self.pair = pair
-        # self.timeframe = timeframe
+        self.timeframe = timeframe
         self.impl = None
         pass
 
@@ -23,7 +24,7 @@ class OHLC:
         """
         """
         rest_client = rest_client or RestClient()
-        ohlc_run = rest_client.ohlc(pair=self.pair)  # TODO : timeframe...
+        ohlc_run = rest_client.ohlc(pair=self.pair, interval=self.timeframe)  # TODO : timeframe...
         new_ohlc = (await ohlc_run())
 
         if new_ohlc:
@@ -53,7 +54,7 @@ if __name__ == '__main__':
 
     async def assets_retrieve_nosession():
         rest = RestClient(server=Server())
-        ohlc = OHLC(pair='ETHEUR')
+        ohlc = OHLC(pair='ETHEUR', timeframe=KTimeFrameModel.one_hour)
         await ohlc(rest_client=rest)
         for k in ohlc:
             print(f" - {k}")
