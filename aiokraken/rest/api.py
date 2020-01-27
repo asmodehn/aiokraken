@@ -20,6 +20,9 @@ from .schemas.krequestorder import (
 from .response import Response
 
 
+# TODO : simplify :
+#  Ref: https://support.kraken.com/hc/en-us/articles/360025174872-How-to-create-the-krakenapi-py-file
+
 class API:
 
     def __init__(self, URId):
@@ -128,7 +131,7 @@ class Server:
     def url(self):
         return self.API.url
 
-    ###SHORTCUTS FOR CLIENT
+    ### SHORTCUTS FOR CLIENT
     @property
     def public(self):
         return self.API['0']['public']
@@ -137,7 +140,7 @@ class Server:
     def private(self):
         return self.API['0']['private']
 
-    ### REquests
+    ### Requests
     def time(self):
         return self.public.request('Time', data=None, expected=Response(status=200, schema=PayloadSchema(TimeSchema)))
 
@@ -168,15 +171,13 @@ class Server:
                                                      schema=AssetPairPayloadSchema())
         )
 
-
-    def ohlc(self, pair='XBTEUR'):  # TODO : use a model to typecheck pair symbols
-        pair_alias ='XXBTZEUR' # TODO : fix this hardcoded stuff !!!!
+    def ohlc(self, pair):
         return self.public.request('OHLC',
                                    data={'pair': pair},
                                    expected=Response(status=200,
                                                      schema=PayloadSchema(
                                                         result_schema=PairOHLCSchema(
-                                                            pair=pair_alias)
+                                                            pair=pair)
                                                         )
                                                      )
                                    )

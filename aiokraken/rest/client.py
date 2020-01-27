@@ -3,11 +3,6 @@ import asyncio
 import datetime
 import functools
 import ssl
-import urllib
-import hashlib
-import hmac
-import base64
-import timeit
 import aiohttp
 from aiokraken.utils import get_kraken_logger, get_nonce
 from aiokraken.rest.api import Server, API
@@ -42,6 +37,10 @@ class RestClient:
         }
         self.session = None
 
+        # we store locally assets and pairs to help validate subsequent requests
+        self._assets = {}
+        self._assetpairs = {}
+
     async def __aenter__(self):
         """ Initializes a session.
         Although very useful for proper usage, this is not mandatory,
@@ -62,7 +61,7 @@ class RestClient:
         :return:
         """
         if self.session is None:
-            getter = functools.partial(aiohttp.request, method='GET') # TODO : useragent : common / anonymous.
+            getter = functools.partial(aiohttp.request, method='GET')  # TODO : useragent : common / anonymous.
         else:
             getter = self.session.get
 
@@ -130,26 +129,44 @@ class RestClient:
     @rest_command
     @public_limiter
     async def assets(self, assets=None):
-        """ make public requests to kraken api"""
+        """ make assets request to kraken api"""
 
         req = self.server.assets(assets=assets)   # returns the request to be made for this API.)
-        return await self._get(request=req)
+        # This request is special, because it will give us more informations about other possible requests.
+
+        self._assets = await self._get(request=req)
+        return self._assets
 
     @rest_command
     @public_limiter
     async def assetpairs(self, assets=None):
-        """ make public requests to kraken api"""
+        """ make assetpairs request to kraken api"""
 
         req = self.server.assetpair(assets=assets)   # returns the request to be made for this API.)
-        return await self._get(request=req)
+        self._assetpairs = await self._get(request=req)
+        return self._assetpairs
 
     @rest_command
     @public_limiter  # skippable because OHLC is not supposed to change very often, and changes should apper in later results.
-    async def ohlc(self, pair='XBTEUR'):
-        """ make public requests to kraken api"""
+    async def ohlc(self, pair='XBTEUR'):  # TODO: make pair mandatory
+        """ make ohlc request to kraken api"""
+        #  We need the list of markets to validate pair passed in the request
+        if not self._assetpairs:
+            req = self.assetpairs()
+            await req()
+        # TODO : maybe this belongs more into the API ??
+        if not pair in self._assetpairs.keys():
+            altname_map = {p.altname: n for n, p in self._assetpairs.items()}
+            if not pair in altname_map.keys():
+                # TODO : proper exception class
+                RuntimeError(f"{pair} not in {[k for k in self._assetpairs.keys()]} nor {altname_map.keys()}")
+            else:
+                pair = altname_map[pair]  # switch the name to get proper parsing of result.
 
         req = self.server.ohlc(pair=pair)   # returns the request to be made for this API.)
-        return await self._get(request=req)
+        resp = await self._get(request=req)
+        # Note : marshmallow has already checked that the response pair matches what was requested.
+        return resp
 
     @rest_command
     @private_limiter

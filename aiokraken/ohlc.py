@@ -13,7 +13,8 @@ from collections.abc import Mapping
 
 class OHLC:
 
-    def __init__(self,): # timeframe:TimeFrame ):
+    def __init__(self, pair): # timeframe:TimeFrame ):
+        self.pair = pair
         # self.timeframe = timeframe
         self.impl = None
         pass
@@ -22,7 +23,7 @@ class OHLC:
         """
         """
         rest_client = rest_client or RestClient()
-        ohlc_run = rest_client.ohlc()  # TODO : timeframe...
+        ohlc_run = rest_client.ohlc(pair=self.pair)  # TODO : timeframe...
         new_ohlc = (await ohlc_run())
 
         if new_ohlc:
@@ -52,7 +53,7 @@ if __name__ == '__main__':
 
     async def assets_retrieve_nosession():
         rest = RestClient(server=Server())
-        ohlc = OHLC()
+        ohlc = OHLC(pair='ETHEUR')
         await ohlc(rest_client=rest)
         for k in ohlc:
             print(f" - {k}")
