@@ -73,14 +73,14 @@ class TestOHLC(unittest.TestCase):
         pd.DataFrame(
             # TODO:   proper Time, proper currencies...
             [
-             [1567039680, 8745.7, 8747.3, 8745.7, 8747.3, 8747.3, 0.00929540, 1],
+             [1567039680, 8745.8, 8747.3, 8745.7, 8747.3, 8747.3, 0.00929540, 1],  # Not the value is a bit modified to trigger stitching...
              [1567039720, 8746.6, 8751.4, 8745.3, 8745.4, 8748.1, 0.09663297, 3]],
             # grab that from kraken documentation
             columns=["time", "open", "high", "low", "close", "vwap", "volume", "count"]
         ), 1567041780,
         ],
     ])
-    def test_ohlc_stitch(self, df1, last1, df2, last2):
+    def test_ohlc_stitch(self, df1, last1, df2, last2):  # TODO : there are MANY cases to test for stitch
         """ Verifying that expected data parses properly """
         ohlc1 = OHLC(data=df1, last=last1)
         ohlc2 = OHLC(data=df2, last=last2)

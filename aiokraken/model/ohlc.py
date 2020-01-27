@@ -9,6 +9,8 @@ import typing
 from datetime import datetime, timezone
 
 import pandas as pd
+# CAREFUL to what we are doing
+pd.set_option('mode.chained_assignment','raise')
 # import pandas_ta as ta
 import janitor
 
@@ -26,8 +28,10 @@ class OHLC:
             # necessary modifications that are not yet done by marshmallow
             data['datetime'] = pd.to_datetime(data.time, utc=True, unit='s')
         elif 'datetime' in data and (data.index != 'time'):
-            data['time'] = data['datetime'].map(lambda dt: int(dt.timestamp()))
+            data['time'] = data['datetime'].map(lambda dt: dt.timestamp())
 
+        # making sure times are integers.
+        data.time = pd.to_numeric(data.time, downcast='integer')
         # In both cases we want to make sure time is the index
         self.dataframe = data.set_index('time')
 
@@ -102,34 +106,76 @@ class OHLC:
     def stitch(self, other: OHLC):
         """ Stitching two OHLC together """
 
-        # copying first
-        # old_df = self.dataframe.copy(deep=True)
+        newdf_noidx = self.dataframe.reset_index().merge(other.dataframe.reset_index(), how='outer', sort=True)
 
-        # marking duplicated rows (in first ?)
+        # newdf = newdf_noidx.groupby('time') # This works on axis=0, not what we want...
 
-        # # TODO : OPTIMIZE THIS !!!! concat with join=inner ?
-        # for i, row in old_df.iterrows():
-        #     dupval = False
-        #     tup = OHLCValue(**row)
-        #
-        #     for j, r in other.dataframe.iterrows():
-        #         if OHLCValue(**r) == tup:
-        #             dupval = True
-        #     old_df.at[i, 'dup'] = dupval
-        # ATTEMPT 1
-        newdf = self.dataframe.merge(other.dataframe, how='outer', sort=True)
-        # TODO : chekc how this modifies original...
+        def stitcher(row: pd.Series):
+            nonlocal newdf_noidx
 
-        #
-        # filtered = old_df[old_df.dup == False]  # only picksrows where dup is False
-        #
-        # # concat order based on index (timestamps)
-        # if filtered.index[0] > other.dataframe.index[0]:
-        #     newdf = pd.concat([other.dataframe, filtered], join='outer', sort=True)
-        # else:
-        #     newdf = pd.concat([filtered, other.dataframe], join='outer', sort=True)
-        #
-        # newdf.drop('dup', axis=1, inplace=True)
+            #retrieving the index by matching time
+            rows = newdf_noidx.loc[newdf_noidx['time'] == row['time']]
+
+            if len(rows) > 1:
+                chosen = None
+                prev = newdf_noidx.loc[rows.index[0] - 1]
+                next = newdf_noidx.loc[rows.index[1] + 1]
+
+                # handling differences on count, open and close
+
+                if rows.iloc[0]['count'] > rows.iloc[1]['count']:
+                    chosen = rows.iloc[0].copy()
+                elif rows.iloc[0]['count'] < rows.iloc[1]['count']:
+                    chosen = rows.iloc[1].copy()
+
+                if rows.iloc[0]['open'] != rows.iloc[1]['open']:
+                    # open is different -> pick the value that is closets to the previous close
+                    delta = [None, None]
+                    delta[0] = abs(prev['close'] - rows.iloc[0]['open'])
+                    delta[1] = abs(prev['close'] - rows.iloc[1]['open'])
+                    if delta[1] < delta[0]:
+                        if chosen is not None and not (chosen == rows.iloc[1]).all():  # need to merge !
+                            chosen['open'] = rows.iloc[1]['close']
+                        else:
+                            chosen = rows.iloc[1].copy()
+                    else:
+                        if chosen is not None and not (chosen == rows.iloc[0]).all():  # need to merge !
+                            chosen['close'] = rows.iloc[0]['close']
+                        else:
+                            chosen = rows.iloc[0].copy()
+
+                if rows.iloc[0]['close'] != rows.iloc[1]['close']:
+                    # close is different-> pick the value that is closest to the previous close
+                    delta = [None, None]
+                    delta[0] = abs(next['open'] - rows.iloc[0]['close'])
+                    delta[1] = abs(next['open'] - rows.iloc[1]['close'])
+                    if delta[1] < delta[0]:
+                        if chosen is not None and not (chosen == rows.iloc[1]).all():  # need to merge !
+                                chosen['close'] = rows.iloc[1]['close']
+                        else:
+                            chosen = rows.iloc[1].copy()
+                    else:
+                        if chosen is not None and not (chosen == rows.iloc[0]).all():  # need to merge !
+                                chosen['close'] = rows.iloc[0]['close']
+                        else:
+                            chosen = rows.iloc[0].copy()
+
+                if chosen is None:
+                    print(rows)
+
+                # optionally change high and low
+                chosen['high'] = max(chosen['high'], chosen['open'], chosen['close'])
+                chosen['low'] = min(chosen['low'], chosen['open'], chosen['close'])
+
+                row = chosen
+
+            return row
+
+
+
+        # rolling axis=1 seems buggy on 0.25.3
+        #agged = newdf.rolling(3, axis=1).agg(stitcher, axis=1)
+        newdf = newdf_noidx.agg(stitcher, axis=1).drop_duplicates().set_index('time')
 
         return OHLC(data=newdf, last=newdf.datetime.iloc[-1])
 
