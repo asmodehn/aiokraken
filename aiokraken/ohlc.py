@@ -20,7 +20,7 @@ class OHLC:
         self.impl = None
         pass
 
-    async def __call__(self, rest_client):
+    async def __call__(self, rest_client = None):
         """
         """
         rest_client = rest_client or RestClient()
