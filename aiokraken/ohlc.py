@@ -1,4 +1,7 @@
 import asyncio
+from datetime import timedelta, datetime
+
+import typing
 
 from aiokraken import RestClient
 from aiokraken.model.ohlc import OHLC
@@ -8,24 +11,34 @@ from aiokraken.rest import Server
 from aiokraken.config import load_account_persist
 from aiokraken.rest import RestClient, Server
 from aiokraken.model.timeframe import KTimeFrameModel
+from aiokraken.model.ohlc import OHLC as OHLCModel
 from aiokraken.timeframe import TimeFrame
 from collections.abc import Mapping
+
+from aiokraken.utils.filter import Filter
 
 
 class OHLC:
 
-    def __init__(self, pair, timeframe:KTimeFrameModel = KTimeFrameModel.one_minute):
+    filter: Filter
+    request: typing.Coroutine
+    impl: typing.Optional[OHLCModel]
+    updated: datetime    # TODO : maybe use traitlets (see ipython) for a more implicit/interactive management of time here ??
+    validtime: timedelta
+
+    def __init__(self, pair, timeframe:KTimeFrameModel = KTimeFrameModel.one_minute, restclient: RestClient = None, valid_time: timedelta = None):
+        self.filter = Filter(blacklist=[])
+        self.restclient = restclient or RestClient()  # default restclient is possible here, but only usable for public requests...
+        self.validtime = valid_time   # None means always valid
         self.pair = pair
         self.timeframe = timeframe
+        self.request = self.restclient.ohlc(pair=self.pair, interval=self.timeframe)
         self.impl = None
-        pass
 
     async def __call__(self, rest_client = None):
         """
         """
-        rest_client = rest_client or RestClient()
-        ohlc_run = rest_client.ohlc(pair=self.pair, interval=self.timeframe)  # TODO : timeframe...
-        new_ohlc = (await ohlc_run())
+        new_ohlc = (await self.request())
 
         if new_ohlc:
             if self.impl:

@@ -29,34 +29,29 @@ class Assets(Mapping):
     updated: datetime    # TODO : maybe use traitlets (see ipython) for a more implicit/interactive management of time here ??
     validtime: timedelta
 
-    def __init__(self, f: Filter = None, restclient: RestClient = None, valid_time: timedelta = None):
-        self.filter = Filter(blacklist=[]) if f is None else f
+    def __init__(self, restclient: RestClient = None, valid_time: timedelta = None):
+        self.filter = Filter(blacklist=[])
         self.restclient = restclient or RestClient()  # default restclient is possible here, but only usable for public requests...
         self.validtime = valid_time   # None means always valid
         self.request = self.restclient.assets(assets=self.filter.whitelist) if self.filter.whitelist else self.restclient.assets()
 
-    async def __call__(self, f: Filter = None):  # TODO : add WSSClient to subscribe to get updated
+    def filter(self, f: Filter):
         """
-        This is supposed to be called by the Client.
-        Direct usage is possible, but wont benefit from client optimizations.
+        interactive filtering of the instance
         :return:
         """
-        if f:
-            # Creating a new instance (immutability semantics) but accumulating the filter
-            assets = Assets(f=self.filter + f, restclient=self.restclient)
+        self.filter = self.filter + f
 
-            # forwarding the call to the new instance.
-            return await assets()
-        else:
+    # Note : here we use imperative style, and calling will update contained data (ie mutating...)
+    async def __call__(self, force = False):  # TODO : add WSSClient to subscribe to get updated
+        if force or self.validtime is None or datetime.now() > self.updated + self.validtime:
+            # TODO : check compatibility between request underlimiter and validtime...
+            # result not valid any longer -> new request needed
+            self.impl = await self.request()
+            self.updated = datetime.now(tz=timezone.utc)
 
-            if self.validtime is None or datetime.now() > self.updated + self.validtime:
-                # TODO : check compatibility between request underlimiter and validtime...
-                # result not valid any longer -> new request needed
-                self.impl = await self.request()
-                self.updated = datetime.now(tz=timezone.utc)
-
-            # in any case
-            return self
+        # in any case
+        return self
 
     # TODO : howto make display to string / repr ??
 
@@ -71,24 +66,26 @@ class Assets(Mapping):
 
     def __len__(self):
         return len(self.impl)
-
-    @dpcontracts.require("Both Assets needs to use the same client", lambda args: args.self.restclient == args.other.restclient)
-    def __add__(self, other):
-        new = Assets(f=self.filter + other.filter, restclient=self.restclient)  # aggregating filters
-        new.impl = self.impl.update(other.impl)  # aggregating results
-        return new  # immutable behavior...
+    #
+    # @dpcontracts.require("Both Assets needs to use the same client", lambda args: args.self.restclient == args.other.restclient)
+    # def __add__(self, other):
+    #     new = Assets(f=self.filter + other.filter, restclient=self.restclient)  # aggregating filters
+    #     new.impl = self.impl.update(other.impl)  # aggregating results
+    #     return new  # immutable behavior...
 
     # TODO : maybe extract a partial map proxy pattern from similar classes... might be useful given REST API usual structures.
 
 
 if __name__ == '__main__':
+    import time
     # from timecontrol.control import Control
     # from timecontrol.overlimiter import OverLimiter
-    #
+
+    assets = Assets()
+
     # @Control()
     # @OverLimiter(period=10)
     async def assets_retrieve_nosession():
-        assets = Assets()
         await assets()  # Optional from the moment we have Local storage
         for k, p in assets.items():
             print(f" - {k}: {p}")
@@ -97,6 +94,10 @@ if __name__ == '__main__':
     loop = asyncio.get_event_loop()
 
     loop.run_until_complete(assets_retrieve_nosession())
+    time.sleep(1)
+
+    loop.run_until_complete(assets_retrieve_nosession())
+
 
     loop.close()
 

@@ -4,6 +4,10 @@ from collections.abc import Mapping
 
 
 import typing
+from datetime import datetime, timedelta
+from decimal import Decimal
+
+from aiokraken.model.assetpair import AssetPair
 
 from aiokraken.utils import get_kraken_logger, get_nonce
 from aiokraken.rest.api import Server, API
@@ -12,6 +16,7 @@ from aiokraken.rest.client import RestClient
 from aiokraken.rest.schemas.krequestorder import RequestOrder
 from aiokraken.rest.schemas.kopenorder import KOpenOrderModel
 from aiokraken.rest.schemas.korderdescr import KOrderDescrOnePrice, KOrderDescr
+from aiokraken.utils.filter import Filter
 
 LOGGER = get_kraken_logger(__name__)
 
@@ -22,52 +27,73 @@ LOGGER = get_kraken_logger(__name__)
 # TODO : favor immutability (see pyrsistent)
 class Markets(Mapping):
 
-    def __init__(self, markets = None):
-        """
-        :param markets: the list of markets to filter what we are interested in.
-        """
-        self._desired_markets = markets  # means all
+    filter: Filter
+    request: typing.Coroutine
+    impl: typing.Dict[str, AssetPair]
+    updated: datetime    # TODO : maybe use traitlets (see ipython) for a more implicit/interactive management of time here ??
+    validtime: timedelta
 
-    async def __call__(self, rest_client=None):
+    def __init__(self, restclient: RestClient = None, valid_time: timedelta = None):
+        self.filter = Filter(blacklist=[])
+        self.restclient = restclient  # default restclient is possible here, but only usable for public requests...
+        self.validtime = valid_time   # None means always valid
+        self.request = self.restclient.assetpairs(assets=self.filter.whitelist) if self.filter.whitelist else self.restclient.assetpairs()
+        # TODO : implement filter by filtering balance view
+
+    async def __call__(self):
         """
         Trigger the actual retrieval of the market details, through the rest client.
         :param rest_client: optional
         # TODO: refresh this periodically ?
         :return:
         """
-        rest_client = rest_client or RestClient()
-        # Note : we leave session creation to the context.
-        market_run = rest_client.assetpairs(assets=self._desired_markets)
-        self.markets = await market_run()
+        self.impl = await self.request()
+
         return self
 
     # TODO : howto make display to string / repr ??
 
     def __getitem__(self, key):
-        if self.markets is None:
-            raise KeyError
-        return self.markets[key]
+        if (key in self.filter.whitelist) or self.filter.default:
+            return self.impl[key]  # TODO : handled key not in impl case...
+        else:
+            raise KeyError(f"{key} is a blacklisted Asset and is not accessible.")
 
     def __iter__(self):
-        if self.markets is None:
-            raise StopIteration
-        return iter(self.markets)
+        return iter(self.impl.keys())
 
     def __len__(self):
-        if self.markets is None:
-            return 0
-        return len(self.markets)
+        return len(self.impl)
+    #
+    # def __getitem__(self, key):
+    #     if self.markets is None:
+    #         raise KeyError
+    #     return self.markets[key]
+    #
+    # def __iter__(self):
+    #     if self.markets is None:
+    #         raise StopIteration
+    #     return iter(self.markets)
+    #
+    # def __len__(self):
+    #     if self.markets is None:
+    #         return 0
+    #     return len(self.markets)
 
 
 if __name__ == '__main__':
 
+    mkts = Markets()
+
     async def assetpairs_retrieve_nosession():
-        mkts = Markets(["XBTEUR"])
         await mkts()
         for k, p in mkts.items():
             print(f" - {k}: {p}")
 
     loop = asyncio.get_event_loop()
+
+    loop.run_until_complete(assetpairs_retrieve_nosession())
+    time.sleep(1)
 
     loop.run_until_complete(assetpairs_retrieve_nosession())
 
