@@ -146,7 +146,7 @@ class TestTimeindexedDataframe(unittest.TestCase):
 
         assert ptypes.is_datetime64_any_dtype(tidf.dataframe["datetime"])
         assert tidf.dataframe.index.name == "time"
-        assert tidf.dataframe.index.dtype == "uint64"
+        assert tidf.dataframe.index.dtype == "int64"
 
         # verifying date conversion to native (numpy precision not needed in our context)
         assert tidf.dataframe["datetime"].iloc[0].to_pydatetime() == datetime(
@@ -259,6 +259,12 @@ class TestTimeindexedDataframe(unittest.TestCase):
 
         # Note : careful with default merging strategy, ORDER MATTERS !
         # To make it not matter, we need mode semantics...
+
+    def test_iter_ok(self):
+
+        raise NotImplementedError
+
+
 
 
 if __name__ == "__main__":
