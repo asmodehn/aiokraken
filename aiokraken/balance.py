@@ -18,30 +18,38 @@ class Balance(Mapping):
     #  (in a controlled way : always the same type) because of rest or ws communication, "under the hood",
     #  meaning the user is not aware of it, unless a signal is triggered...
 
-    filter: Filter
-    request: typing.Coroutine
+    _filter: Filter
     impl: typing.Dict[str, Decimal]
     updated: datetime    # TODO : maybe use traitlets (see ipython) for a more implicit/interactive management of time here ??
     validtime: timedelta
 
     def __init__(self, restclient: RestClient = None, valid_time: timedelta = None):
-        self.filter = Filter(blacklist=[])
+        self._filter = Filter(blacklist=[])
         self.restclient = restclient  # default restclient is possible here, but only usable for public requests...
         self.validtime = valid_time   # None means always valid
-        self.request = self.restclient.balance()
         # TODO : implement filter by filtering balance view
+
+    def filter(self,  whitelist=None, blacklist=None, default_allow = True):
+        """
+        interactive filtering of the instance
+        :return:
+        """
+        f = Filter(whitelist=whitelist, blacklist=blacklist, default_allow=default_allow)
+        self._filter = self._filter + f
 
     async def __call__(self):
         """
         """
-        self.impl = (await self.request()).accounts  # TODO : why the extra 'accounts' level ? can we get rid of it somehow ?
+        # TODO : meaning of filter here... not showing blacklisted assets ?
+        self.impl = (await self.restclient.balance()()).accounts
+         # TODO : why the extra 'accounts' level ? can we get rid of it somehow ?
 
         return self
 
     # TODO : howto make display to string / repr ??
 
     def __getitem__(self, key):
-        if (key in self.filter.whitelist) or self.filter.default:
+        if (key in self._filter.whitelist) or self._filter.default:
             return self.impl[key]  # TODO : handled key not in impl case...
         else:
             raise KeyError(f"{key} is a blacklisted Asset and is not accessible.")

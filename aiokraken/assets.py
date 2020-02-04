@@ -23,31 +23,34 @@ class Assets(Mapping):
     Both the one we want to query from the exchange (via filter)
     and the one that we already know about (via impl)
     """
-    filter: Filter
-    request: typing.Coroutine
+    _filter: Filter
     impl: typing.Dict[str, Asset]
     updated: datetime    # TODO : maybe use traitlets (see ipython) for a more implicit/interactive management of time here ??
     validtime: timedelta
 
     def __init__(self, restclient: RestClient = None, valid_time: timedelta = None):
-        self.filter = Filter(blacklist=[])
+        self._filter = Filter(blacklist=[])
         self.restclient = restclient or RestClient()  # default restclient is possible here, but only usable for public requests...
         self.validtime = valid_time   # None means always valid
-        self.request = self.restclient.assets(assets=self.filter.whitelist) if self.filter.whitelist else self.restclient.assets()
 
-    def filter(self, f: Filter):
+    def filter(self,  whitelist=None, blacklist=None, default_allow = True):
         """
         interactive filtering of the instance
         :return:
         """
-        self.filter = self.filter + f
+        f = Filter(whitelist=whitelist, blacklist=blacklist, default_allow=default_allow)
+        self._filter = self._filter + f
 
     # Note : here we use imperative style, and calling will update contained data (ie mutating...)
     async def __call__(self, force = False):  # TODO : add WSSClient to subscribe to get updated
         if force or self.validtime is None or datetime.now() > self.updated + self.validtime:
             # TODO : check compatibility between request underlimiter and validtime...
             # result not valid any longer -> new request needed
-            self.impl = await self.request()
+
+            if self._filter.whitelist:
+                self.impl = await self.restclient.assets(assets=self._filter.whitelist)()
+            else:
+                self.impl = await self.restclient.assets()()
             self.updated = datetime.now(tz=timezone.utc)
 
         # in any case
@@ -56,7 +59,7 @@ class Assets(Mapping):
     # TODO : howto make display to string / repr ??
 
     def __getitem__(self, key):
-        if (key in self.filter.whitelist) or self.filter.default:
+        if (key in self._filter.whitelist) or self._filter.default:
             return self.impl[key]  # TODO : handled key not in impl case...
         else:
             raise KeyError(f"{key} is a blacklisted Asset and is not accessible.")
