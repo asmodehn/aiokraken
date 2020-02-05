@@ -14,36 +14,31 @@ pd.set_option('mode.chained_assignment','raise')
 # import pandas_ta as ta
 import janitor
 
-from ..utils.signal import Signal
-
 
 OHLCValue = namedtuple("OHLCValue", ["datetime", "open", "high", "low", "close", "vwap", "volume", "count"])
 
+from aiokraken.utils.timeindexeddataframe import TimeindexedDataframe
 
-class OHLC:
+class OHLC(TimeindexedDataframe):
 
     def __init__(self, data: pd.DataFrame, last: typing.Union[datetime, int]):
         # if no datetime column => create it from time
         if 'time' in data and 'datetime' not in data:
             # necessary modifications that are not yet done by marshmallow
             data['datetime'] = pd.to_datetime(data.time, utc=True, unit='s')
-        elif 'datetime' in data and (data.index != 'time'):
-            data['time'] = data['datetime'].map(lambda dt: dt.timestamp())
+            data = data.set_index('datetime')
 
-        # making sure times are integers.
-        data.time = pd.to_numeric(data.time, downcast='integer')
-        # In both cases we want to make sure time is the index
-        self.dataframe = data.set_index('time')
+        # we want to make sure datetime is the index
+        super(OHLC, self).__init__(data=data)
 
-        # reorder columns
-        self.dataframe = self.dataframe[["datetime", "open", "high", "low", "close", "vwap", "volume", "count"]]
+        # reorder columns for readability
+        self.dataframe = self.dataframe[["open", "high", "low", "close", "vwap", "volume", "count"]]
 
         if not isinstance(last, datetime):
             # attempt conversion from timestamp
             self.last = datetime.fromtimestamp(last, tz = timezone.utc)
         else:
             self.last = last
-        # TODO : remove last (always changing, moving indicators...)
 
         # TODO : take in account we only get last 720 intervals
         #  Ref : https://support.kraken.com/hc/en-us/articles/218198197-How-to-retrieve-historical-time-and-sales-trading-history-using-the-REST-API-Trades-endpoint-
@@ -59,19 +54,19 @@ class OHLC:
 
     @property
     def begin(self) -> datetime:
-        return self.dataframe['datetime'].iloc[0]
+        return self.dataframe.index[0]
 
     @property
     def end(self):
-        return self.dataframe['datetime'].iloc[-1]
+        return self.dataframe.index[-1]
 
     @property
     def open(self):
-        return self.dataframe['open'].iloc[0]
+        return self.dataframe.iloc[0]['open']
 
     @property
     def close(self):
-        return self.dataframe['close'].iloc[-1]
+        return self.dataframe.iloc[-1]['close']
 
     @property
     def high(self):
@@ -103,6 +98,9 @@ class OHLC:
 
     # TODO : operator to split/merge and append/drop OHLC parts...  Ref https://pandas.pydata.org/pandas-docs/stable/user_guide/merging.html
 
+    def __call__(self, tidf: OHLC):
+        return self.stitch(tidf)
+
     def stitch(self, other: OHLC):
         """ Stitching two OHLC together """
 
@@ -114,7 +112,8 @@ class OHLC:
             nonlocal newdf_noidx
 
             #retrieving the index by matching time
-            rows = newdf_noidx.loc[newdf_noidx['time'] == row['time']]
+            rows = newdf_noidx.loc[newdf_noidx['datetime'] == row['datetime']]
+            # TODO : compare with timeindexed dataframe, and find a proper way to retrieve row in origin
 
             if len(rows) > 1:
                 chosen = None
@@ -171,31 +170,15 @@ class OHLC:
 
             return row
 
-
-
         # rolling axis=1 seems buggy on 0.25.3
         #agged = newdf.rolling(3, axis=1).agg(stitcher, axis=1)
-        newdf = newdf_noidx.agg(stitcher, axis=1).drop_duplicates().set_index('time')
+        newdf = newdf_noidx.agg(stitcher, axis=1).drop_duplicates().set_index('datetime')
 
-        return OHLC(data=newdf, last=newdf.datetime.iloc[-1])
+        return OHLC(data=newdf, last=newdf.index[-1])
 
     def head(self):
         return self.dataframe.head()
 
-    def macd(self, fast=None, slow=None, signal=None, offset=None, ):
-        self.dataframe.ta.macd(fast=fast, slow=slow, signal=signal, offset=offset, append=True)
-
-        return self
-
-    def rsi(self, close=None, length=None, drift=None, offset=None ):
-        self.dataframe.ta.rsi(close=close, length=length, drift=drift, offset=offset, append = True)
-
-        return self
-
-    def ema(self, close=None, length=None, offset=None, adjust=None, ):
-        self.dataframe.ta.ema(close=close, length=length,  offset=offset,  adjust=adjust, append = True)
-
-        return self
 
     # TODO: instance of OHLC will depend on chosen timeframe...
 

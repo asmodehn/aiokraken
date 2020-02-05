@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-import datetime
+from datetime import datetime, date, time, timezone
 import functools
-import time
 
 import pandas as pd
 import numpy as np
@@ -11,22 +10,45 @@ import typing
 from pandas.api.types import is_numeric_dtype, is_datetime64_dtype
 
 
+class IntLocator:
+    def __init__(self, tidf: TimeindexedDataframe):
+        self.dataframe = tidf.dataframe
+
+    def __getitem__(self, item: int):
+        # TODO : slice case
+        return self.dataframe.iloc[item]
+
+
+class TimeLocator:
+    def __init__(self, tidf: TimeindexedDataframe):
+        self.dataframe = tidf.dataframe
+
+    def __getitem__(self, item: int):
+        # TODO : slice case
+        dt = datetime.fromtimestamp(item, tz=timezone.utc)
+        return self.dataframe[dt]
+
+
 class TimeindexedDataframe:
 
     """
     A (local) time indexed dataframe.
-    This behaves as a directed container (see Danel Ahman papers) for "timeindexed" dataframes.
+    This (should) behave as a directed container (see Danel Ahman papers) for "timeindexed" dataframes.
+    For more insight on how to see dataframe as categories, see Spivak's book: Category Theory for Scientists
     It is a central concept in aiokraken.
     """
 
+    # : A Dataframe, indexed on datetime.
     dataframe: pd.DataFrame
+    timer: typing.Callable
+    sleeper: typing.Callable
+    index_name: str
 
     def __init__(
         self,
-        data: dataframe,
-        time_colname: typing.Optional[str] = "time",  # TODO: in metaclass or decorator
-        datetime_colname: typing.Optional[str] = "datetime",  # TODO: in metaclass or decorator...
-        timer: typing.Callable = functools.partial(datetime.datetime.now, tz=datetime.timezone.utc),  # Maybe more part of hte contect than the dataframe ?
+        data: dataframe = pd.DataFrame(columns=["datetime"]),
+        index: typing.Optional[str] = "datetime",
+        timer: typing.Callable = functools.partial(datetime.now, tz=timezone.utc),  # Maybe more part of hte contect than the dataframe ?
         sleeper: typing.Callable = asyncio.sleep,  # Maybe more part of the context than dataframe ?
     ):
         """
@@ -36,55 +58,28 @@ class TimeindexedDataframe:
         :param time_colname:
         :param datetime_colname:
         """
-        if time_colname is not None:
-            if not time_colname in data.columns:
-                if datetime_colname is not None:
-                    # TODO : log
-                    # convert datetime series into time
-                    # Note :priority is given to date time (more structured) !
-                    data[time_colname] = data[datetime_colname].map(
-                        lambda dt: dt.timestamp()
-                    )
-            try:
-                # attempt conversion in any case to keep dtypes consistent...
-                # NOT WORKING: why ?
-                # data[time_colname] = pd.to_numeric(
-                #     data[time_colname], downcast="unsigned"
-                # )
-                # TMP: quickfix
-                data[time_colname] = data[time_colname].apply(lambda v: int(v))
-            except Exception as e:
-                raise
-
-        if datetime_colname is not None:
-            if not datetime_colname in data.columns:
-                if time_colname is not None:
-                    # TODO: log
-                    # convert time series into datetime, assuming seconds as unit and UTC as timezone (usual unambiguous Unix server setup)
-                    data[datetime_colname] = pd.to_datetime(
-                        data[time_colname], utc=True, unit="s"
-                    )
-            try:
-                # attempt conversion in any case to keep dtypes consistent...
-                data[datetime_colname] = pd.to_datetime(
-                    data[datetime_colname], utc=True, unit="s"
-                )
-            except Exception as e:
-                raise
-
-        self.time_colname = time_colname
-        self.datetime_colname = datetime_colname
-
         self.timer = timer
         self.sleeper = sleeper
 
-        # we index on time (simpler dtype)
-        self.dataframe = data.set_index(time_colname)
+        self.dataframe = data.copy(deep=True)  # copy to not modify origin (immutable semantics for generic dataframes)
+        # TODO : maybe manage that with contracts instead ?
+        if not isinstance(self.dataframe.index, pd.DatetimeIndex):
+            if index in self.dataframe.columns:
+                self.dataframe.set_index(index, inplace=True)
+            else:
+                raise RuntimeError("The index specified is not a column of data !")
+
+            self.dataframe.index = pd.to_datetime(self.dataframe.index)
+        # else the index is already a datetime, everything is fine.
+
+        # TODO : maybe we dont really need this one ? already stored in dataframe at df.index.name...
+        #  only useful for stitcher, for now
+        self.index_name = self.dataframe.index.name
 
     def _row_stitcher(self, row: pd.Series, origin_df):
 
         # retrieving the index by matching time
-        rows = origin_df.loc[origin_df[self.time_colname] == row[self.time_colname]]
+        rows = origin_df.loc[origin_df[self.index_name] == row[self.index_name]]
 
         if len(rows) > 1:
             # default merge strategy : last one wins
@@ -103,9 +98,9 @@ class TimeindexedDataframe:
                 functools.partial(self._row_stitcher, origin_df=newdf_noidx), axis=1
             )
             .drop_duplicates()
-            .set_index("time")
+            .set_index(self.index_name)
         )
-
+        # REMEMBER : immutable functional semantics here...
         return TimeindexedDataframe(data=newdf)
 
     # def collapse(self, timeframe):
@@ -117,29 +112,50 @@ class TimeindexedDataframe:
     #     # LATER : need data distribution & probabilities for stretching, etc.
     #     raise NotImplementedError
 
-    # def __getitem__(self, item):
-    #     # Here we have to try guessing the user intent...
-    #     # Note : this is always dependent on the precision of the dataframe
-    #     if isinstance(
-    #         item, int
-    #     ):  # assuming time() semantics # TODO : use pint and units to avoid ambiguity...
-    #         return self.dataframe[self.dataframe.loc[self.time_colname] == item]
-    #     elif isinstance(
-    #         item, datetime.time
-    #     ):
-    #         return self.dataframe[self.dataframe.loc[self.datetime_colname].time() == item]
-    #     elif isinstance(
-    #         item, datetime.date
-    #     ):
-    #         return self.dataframe[self.dataframe.loc[self.datetime_colname].date() == item]
-    #     elif isinstance(
-    #         item, datetime.datetime
-    #     ):
-    #         return self.dataframe[self.dataframe.loc[self.datetime_colname] == item]
+
+    @property
+    def iloc(self):
+        """
+        Intent : mimic pandas integer locator. useful for known offset access (first, last, etc.)
+        :return:
+        """
+        return IntLocator(self)
+
+    @property
+    def tloc(self):
+        """
+        Intent: (unix) time based accessor. works also on slices.
+        LATER: If time as a pint unit, same behavior as man datetime index locator
+        :return:
+        """
+        return TimeLocator(self)
+
+    # ref : https://stackoverflow.com/questions/16033017/how-to-override-the-slice-functionality-of-list-in-its-derived-class
+    def __getitem__(self, item: typing.Union[datetime, date, time, str]):  # TODO : deal with slices as well !!
+        # TODO : note  this can be used as a filter... on time or other...
+        # Here we have to try guessing the user intent...
+        # Note : this is always dependent on the precision of the dataframe
+        # TODO: probably we want to match the semantics of pandas for this
+        if isinstance(item, datetime):
+            subdata = self.dataframe[self.dataframe[self.index_name] == item]
+        elif isinstance(item, date):
+            subdata = self.dataframe[self.dataframe[self.index_name].date() == item]
+        elif isinstance(item, time):  # CAREFUL This gives a daily dataframe
+            subdata = self.dataframe[self.dataframe[self.index_name].time() == item]
+        else:  # we dont know just try something (the general pandas case)
+            subdata = self.dataframe[item]
+
+        return TimeindexedDataframe(
+            data=subdata,
+            timer=self.timer,
+            sleeper=self.sleeper
+        )
 
     async def __aiter__(self):
         """
         An iterator on the dataframe, bound in (realworld) time.
+        Note : This is linear :
+          Calling iter multiple time will duplicate the data source, and start again from the beginning.
         :return:
         """
         # new iter call always start at the beginning
@@ -164,7 +180,9 @@ class TimeindexedDataframe:
 
 
 if __name__ == "__main__":
-    now = time.time()
+
+    from time import time as unixtime
+    now = unixtime()
     tidf = TimeindexedDataframe(data=pd.DataFrame(
                     [
                         [
@@ -191,7 +209,7 @@ if __name__ == "__main__":
     async def consume():
         global tidf
         async for d in tidf:
-            print(f"{time.time()} : {d}")
+            print(f"{unixtime()} : {d}")
 
     asyncio.run(consume())
     # second time will be speedy (time passed already)

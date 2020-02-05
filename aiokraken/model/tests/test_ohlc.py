@@ -32,16 +32,7 @@ class TestOHLC(unittest.TestCase):
              [datetime.fromtimestamp(1567039680, tz=timezone.utc), 8745.7, 8747.3, 8745.7, 8747.3, 8747.3, 0.00929540, 1]],
             # grab that from kraken documentation
             columns=["datetime", "open", "high", "low", "close", "vwap", "volume", "count"]
-        ), 1567041780],
-        [pd.DataFrame(  # One with "datetime" AND "time" column (like internal model)
-            # TODO:   proper Time, proper currencies...
-            [[1567039620, datetime.fromtimestamp(1567039620, tz=timezone.utc), 8746.4, 8751.5, 8745.7, 8745.7, 8749.3, 0.09663298,
-              8],
-             [1567039680, datetime.fromtimestamp(1567039680, tz=timezone.utc), 8745.7, 8747.3, 8745.7, 8747.3, 8747.3, 0.00929540,
-              1]],
-            # grab that from kraken documentation
-            columns=["time", "datetime", "open", "high", "low", "close", "vwap", "volume", "count"]
-        ), 1567041780],
+        ).set_index("datetime"), 1567041780],
     ])
     def test_load_ok(self, df, last):
         """ Verifying that expected data parses properly """
@@ -52,12 +43,13 @@ class TestOHLC(unittest.TestCase):
         num_cols = ["open", "high", "low", "close", "vwap", "volume", "count"]
         assert all(ptypes.is_numeric_dtype(ohlc.dataframe[col]) for col in num_cols)
 
-        assert ptypes.is_datetime64_any_dtype(ohlc.dataframe["datetime"])
-        assert ohlc.dataframe.index.name == 'time'
-        assert ohlc.dataframe.index.dtype == 'int64'
+        assert ohlc.dataframe.index.name == "datetime"
+        # Verify we have a timezone aware, ns precision datetime.
+        assert ptypes.is_datetime64tz_dtype(ohlc.dataframe.index.dtype)
+        assert ptypes.is_datetime64_ns_dtype(ohlc.dataframe.index.dtype)
 
         # verifying date conversion to native (numpy precision not needed in our context)
-        assert ohlc.dataframe["datetime"].iloc[0].to_pydatetime() == datetime(year=2019, month=8, day=29, hour=0, minute=47, second=0, tzinfo=timezone.utc), ohlc.dataframe["datetime"].iloc[0]
+        assert ohlc.dataframe.index[0].to_pydatetime() == datetime(year=2019, month=8, day=29, hour=0, minute=47, second=0, tzinfo=timezone.utc), ohlc.dataframe.index[0]
 
     # TODO : property test instead (move this example test to doc...)
 
@@ -92,7 +84,10 @@ class TestOHLC(unittest.TestCase):
         num_cols = ["open", "high", "low", "close", "vwap", "volume", "count"]
         assert all(ptypes.is_numeric_dtype(stitched1.dataframe[col]) for col in num_cols)
 
-        assert ptypes.is_datetime64_any_dtype(stitched1.dataframe["datetime"])
+        assert stitched1.dataframe.index.name == "datetime"
+        # Verify we have a timezone aware, ns precision datetime.
+        assert ptypes.is_datetime64tz_dtype(stitched1.dataframe.index.dtype)
+        assert ptypes.is_datetime64_ns_dtype(stitched1.dataframe.index.dtype)
 
         # verifying stitches
         assert (stitched1.dataframe.iloc[0] == ohlc1.dataframe.iloc[0]).all()
