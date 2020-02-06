@@ -4,6 +4,7 @@ from collections.abc import Mapping
 
 
 import typing
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
 
@@ -28,13 +29,13 @@ LOGGER = get_kraken_logger(__name__)
 class Markets(Mapping):
 
     _filter: Filter
-    impl: typing.Dict[str, AssetPair]
+    impl: typing.Dict[str, AssetPair]  # TOdo : store market data instead
     updated: datetime    # TODO : maybe use traitlets (see ipython) for a more implicit/interactive management of time here ??
     validtime: timedelta
 
     def __init__(self, restclient: RestClient = None, valid_time: timedelta = None):
         self._filter = Filter(blacklist=[])
-        self.restclient = restclient  # default restclient is possible here, but only usable for public requests...
+        self.restclient = RestClient() if restclient is None else restclient  # default restclient is possible here, but only usable for public requests...
         self.validtime = valid_time   # None means always valid
         # TODO : implement filter by filtering balance view
 
@@ -64,7 +65,15 @@ class Markets(Mapping):
 
     def __getitem__(self, key):
         if (key in self._filter.whitelist) or self._filter.default:
-            return self.impl[key]  # TODO : handled key not in impl case...
+            try:
+                return self.impl[key]  # TODO : handled key not in impl case...
+            except KeyError as ke:
+                # we need to be able to query by altname as well
+                revdict = {p.altname: n for n, p in self.impl.items()}
+                if key in revdict:
+                    return self.impl[revdict[key]]
+                else:
+                    raise KeyError(f"{key} is not a pair name nor an altname")
         else:
             raise KeyError(f"{key} is a blacklisted Asset and is not accessible.")
 
