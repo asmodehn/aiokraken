@@ -28,6 +28,9 @@ class TimeLocator:
         dt = datetime.fromtimestamp(item, tz=timezone.utc)
         return self.dataframe[dt]
 
+# Note : stupid name idea if this ever makes it into his own package : Ailuridae
+# It s probably doomed anyway. Just a matter of time.
+
 
 class TimeindexedDataframe:
 
@@ -66,8 +69,9 @@ class TimeindexedDataframe:
         if not isinstance(self.dataframe.index, pd.DatetimeIndex):
             if index in self.dataframe.columns:
                 self.dataframe.set_index(index, inplace=True)
-            else:
-                raise RuntimeError("The index specified is not a column of data !")
+            else:  # create it and timestamp it
+                self.dataframe[index] = datetime.now()
+                self.dataframe.set_index(index, inplace=True)
 
             self.dataframe.index = pd.to_datetime(self.dataframe.index)
         # else the index is already a datetime, everything is fine.
