@@ -2,9 +2,12 @@ import asyncio
 from datetime import timedelta, datetime
 
 import typing
+import pandas as pd
+
+from aiokraken.utils.timeindexeddataframe import TimeindexedDataframe
 
 from aiokraken import RestClient
-from aiokraken.model.indicator import Indicator
+from aiokraken.model.indicator import Indicator, EMA_params
 from aiokraken.rest import Server
 
 
@@ -12,6 +15,7 @@ from aiokraken.config import load_account_persist
 from aiokraken.rest import RestClient, Server
 from aiokraken.model.timeframe import KTimeFrameModel
 from aiokraken.model.ohlc import OHLC as OHLCModel
+from aiokraken.model.indicator import EMA as EMAModel
 from aiokraken.timeframe import TimeFrame
 from collections.abc import Mapping
 
@@ -110,34 +114,61 @@ class OHLC:
         else:
             return 0
 
+    def ema(self, name: str, length: int, offset: int = 0, adjust: bool = False):
+        p = EMA_params(length=length, offset=offset, adjust=adjust)
+        # prepare timedataframe, but empty by default
+        # TODO : FIX TMP hardcoded timeframe
+        ema = EMAModel(df=TimeindexedDataframe(data=pd.DataFrame(columns=[name])), **{name: p})
+        if self.impl.get(KTimeFrameModel.one_minute):
+            return ema(self.impl[KTimeFrameModel.one_minute])  # Immediately calling on ohlc => TODO : improve design ?
+        else:
+            return ema  # call will be done later.
 
 if __name__ == '__main__':
     import time
+    import asyncio
+    from aiokraken.rest.client import RestClient
+    from aiokraken.rest.api import Server
 
     # Client can be global: there is only one.
     rest = RestClient(server=Server())
 
     # ohlc data can be global (one per market*timeframe only)
     ohlc = OHLC(pair='ETHEUR', restclient=rest)
+    # TODO : better manage pair and timeframe in marketdata itself ??
+    emas = ohlc.ema(name="EMA_12", length=12)
+
 
     async def ohlc_retrieve_nosession():
-        global rest, ohlc
+        global rest, ohlc, emas
         await ohlc(timeframe=KTimeFrameModel.one_minute)
         for k in ohlc[KTimeFrameModel.one_minute]:
             print(f" - {k}")
+
+        emas = emas(ohlc[KTimeFrameModel.one_minute])  # explicit update of indicator for this timeframe
+        # TODO ohlc.ema(name="EMA_12", length=12) maybe ??
+
 
     loop = asyncio.get_event_loop()
 
     assert len(ohlc) == 0
 
     loop.run_until_complete(ohlc_retrieve_nosession())
-    assert len(ohlc[KTimeFrameModel.one_minute]) == 720, f"from: {ohlc[KTimeFrameModel.one_minute].begin} to: {ohlc[KTimeFrameModel.one_minute].end} -> {len(ohlc[KTimeFrameModel.one_minute])} values"
+    assert len(ohlc[
+                   KTimeFrameModel.one_minute]) == 720, f"from: {ohlc[KTimeFrameModel.one_minute].begin} to: {ohlc[KTimeFrameModel.one_minute].end} -> {len(ohlc[KTimeFrameModel.one_minute])} values"
+    # ema has been updated
+    assert len(emas) == 720, f"EMA: {len(emas)} values"
 
     print("Waiting one more minute to attempt retrieving more ohlc data and stitch them...")
     time.sleep(60)
     loop.run_until_complete(ohlc_retrieve_nosession())
 
-    assert len(ohlc[KTimeFrameModel.one_minute]) == 721,  f"from: {ohlc[KTimeFrameModel.one_minute].begin} to: {ohlc[KTimeFrameModel.one_minute].end} -> {len(ohlc[KTimeFrameModel.one_minute])} values"
+    assert len(ohlc[
+                   KTimeFrameModel.one_minute]) == 721, f"from: {ohlc[KTimeFrameModel.one_minute].begin} to: {ohlc[KTimeFrameModel.one_minute].end} -> {len(ohlc[KTimeFrameModel.one_minute])} values"
+    # ema has been updated
+    assert len(emas) == 721, f"EMA: {len(emas)} values"
 
     loop.close()
+
+
 
