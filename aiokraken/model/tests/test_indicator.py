@@ -73,6 +73,12 @@ class TestEMA(unittest.TestCase):
     def test_ema_mul(self):
         raise NotImplementedError  # TODO
 
+    def test_ema_getitem(self):
+        raise NotImplementedError  # TODO
+
+    def test_ema_len(self):
+        raise NotImplementedError  # TODO
+
 
 if __name__ == "__main__":
     unittest.main()

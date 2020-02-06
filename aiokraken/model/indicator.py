@@ -1,6 +1,7 @@
 from __future__ import annotations
 import typing
 from collections import namedtuple
+from datetime import datetime
 from decimal import Decimal
 from dataclasses import dataclass, field
 
@@ -21,6 +22,9 @@ class Indicator:
         # TODO : compute all values with OHLC. no stitching, only ohlc takes care of that
 
         return self
+
+    # Note: we delegate to timeframe for greater flexibility in usage.
+
 
 #     """ Simple interface to be able to trigger signal from an indicator"""
 #
@@ -79,8 +83,22 @@ class EMA(Indicator):
         # TODO : semantics ? copy or ref ?
         return EMA(df=merged_df, **self.params, **other.params)
 
+    def __getitem__(self, item):
+        if isinstance(item, str) and item in self.timedataframe.column:
+            # return part of the dataframe as a dataframe
+            return self.timedataframe[item].to_frame()
+        elif isinstance(item, datetime):
+            # return the element
+            return self.timedataframe[item]
+        elif isinstance(item, slice):
+            # return the interval as a dataframe
+            return self.timedataframe[item]
 
-def ema(name: str, length: int, offset:int, adjust: bool):
+    def __len__(self):
+        return len(self.timedataframe)
+
+
+def ema(name: str, length: int, offset:int = 0, adjust: bool = False):
 
     p = EMA_params(length=length, offset=offset, adjust=adjust)
     # prepare timedataframe, but empty by default
