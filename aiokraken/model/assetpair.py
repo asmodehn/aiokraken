@@ -1,5 +1,7 @@
 import decimal
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+import typing
 
 from aiokraken.model.asset import AssetClass
 from hypothesis import strategies as st
@@ -12,7 +14,6 @@ class VolumeFee:
 
 @dataclass
 class AssetPair:
-
     altname: str  # alternate pair name
     wsname: str   # WebSocket pair name (if available)
     aclass_base: AssetClass  # asset class of base component
@@ -30,3 +31,4 @@ class AssetPair:
     fee_volume_currency: str  # volume discount currency
     margin_call: int  # margin call level
     margin_stop: int  # stop-out/liquidation margin level
+    restname: typing.Optional[str] = field(default=None)  # this will be set a bit after initialization

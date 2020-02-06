@@ -34,6 +34,12 @@ class AssetPairPayloadSchema(PayloadBaseSchema):
 
     result= fields.Dict(keys = fields.String(), values = fields.Nested(KAssetPairSchema))
 
+    @post_load()
+    def register_name(self, data, many, partial):
+        for n in data.keys():
+            data[n].restname = n
+        return data
+
 
 # Ref : https://stevenloria.com/dynamic-schemas-in-marshmallow/
 # BUGGY ! TODO : Fix it ! It should help to simplify our code...
