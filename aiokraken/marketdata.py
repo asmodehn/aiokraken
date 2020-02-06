@@ -7,9 +7,9 @@ from aiokraken.model.timeframe import KTimeFrameModel
 
 from aiokraken.model.assetpair import AssetPair
 
-from aiokraken import RestClient, OHLC
-from aiokraken.model.indicator import EMA
 from aiokraken.model.ohlc import OHLC as OHLCModel
+from aiokraken.ohlc import OHLC
+from aiokraken.rest import RestClient
 
 
 class MarketData:

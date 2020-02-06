@@ -11,9 +11,8 @@ from aiokraken.utils import get_kraken_logger, get_nonce
 from aiokraken.rest.api import Server, API
 from aiokraken.rest.client import RestClient
 
-from aiokraken.rest.schemas.krequestorder import RequestOrder
-from aiokraken.rest.schemas.kopenorder import KOpenOrderModel
-from aiokraken.rest.schemas.korderdescr import KOrderDescrOnePrice, KOrderDescr
+from aiokraken.model.timeframe import KTimeFrameModel
+
 
 LOGGER = get_kraken_logger(__name__)
 
@@ -54,7 +53,7 @@ def ask_exit(sig_name):
 #     return boxes
 
 
-async def basicbot(loop):
+async def basicbot(assets_allowed, assets_forbidden, markets_allowed, markets_forbidden, loop):
 
     from aiokraken.config import load_api_keyfile
     keystruct = load_api_keyfile()
@@ -68,16 +67,10 @@ async def basicbot(loop):
     ))
 
     markets = Markets(restclient = pub_client)
-    # TODO : configure this...
+    markets.filter(whitelist=markets_allowed, blacklist=markets_forbidden)
 
-    # TODO : configure this...
     balance = Balance(restclient = priv_client)
-
-    await markets()
-    # Preparing OHLC instance for all markets
-    ohlc = dict()
-    for m in markets:
-        ohlc[m] = OHLC(pair=m, restclient= pub_client)
+    balance.filter(whitelist=assets_allowed, blacklist=assets_forbidden)
 
     try:
         # update the different markets to find suitable ones
@@ -90,71 +83,103 @@ async def basicbot(loop):
 
             print(balance)
 
-            tradables = {t: m for t, m in markets.items() if m.base in balance}
+            # get tradable markets without leverage
+            tradables = {t: m for t, m in markets.details.items() if m.base in balance}
 
             print(tradables)
 
-            # TODO : maybe preorder of currencies to decide which way to trade...
-            for m in tradables:
-                await ohlc[m]()  # force update for markets that we are interested in trading
+            for m, data in {m: d for m, d in markets.items() if m in tradables}.items():
 
-                # TODO Simple Analysis
-                print(ohlc[m])
+                mdata = await data(KTimeFrameModel.one_minute)  # update at specific timeframe to find interesting markets
+                # TODO : maybe lazy update of data only when required ?
+                ema = mdata.tf_ohlc[KTimeFrameModel.one_minute].ema(name="EMA_12", length=12)
 
-                #bullboxes = square_bull(ohlc, start=Signal('EMA_12', 'crossover', 'EMA_24'))
+                # TODO : simplify accessor...
+                print(f"EMA for {m}: {ema.model.timedataframe.iloc[-1]}")  # get last EMA value for all tradables
 
-                # Get EMA / MACD cross points
-
-                # Get percent differences in these interval.
-
-                # Keep markets that are over 0.26 * 2 for simple market order strategy
-
-                    # Then Get average underprice before reaching satisfying percentage to setup stoploss
+                # TODO: enable periodic check of indicators.
+                #   signals later...
 
 
+                # STRATEGIES
+                # Daytrade ->  FIRST FOCUS : restart every night. no point in keeping data for long. TODO : adjust timeframe.
+                # Position ->  NEXT
+                # swing -> later
+                # scalping -> later
 
-                # TODO: Then markets that are over 0.26 + 0.14 for market enter, limit exit
+                # Day trading strats :
+                # - pivot / support / resistance FIRST FOCUS
+                # - trend  TODO
+                # - fibonnacci levels TODo
+                # - breakout  https://tradingsim.com/blog/day-trading-breakouts/
+                # - reversal  https://www.investopedia.com/terms/r/reversal.asp
+                # - momentum
 
-                # TODO: Then markets that are over 0.14 +0.14 for limit enter, limit exit
+                # TODO : add this to OHLC ( basis of many plans in addition of other indicators... )
+                # Ref : https://www.easycalculation.com/finance/pivot-points-trading.php
+                # Ref : https://www.investopedia.com/terms/p/pivotpoint.asp
+                # Pivot Point = (H + C + L) / 3
+                #  R3 = H + 2 x ( Pivot - L )
+                #  R2 = Pivot + ( R1 - S1 )
+                #  R1 = 2 x Pivot - L
+                #  S1 = 2 x Pivot - H
+                #  S2 = Pivot - ( R1 - S1 )
+                #  S3 = L - 2 x ( H - Pivot )
+                #
+                # Where,
+                # H - Previous Days High
+                # L - Previous Days Low
+                # C - Previous Days Close
+                # R - Resistances Levels
+                # S - Supports Levels
 
+                # TODO : Automated trading plan https://www.investopedia.com/terms/t/trading-plan.asp
+                # Setup Tradesignals
 
+                #TODO
 
+                # if ohlc[m]
+                #
+                #
+                # def obv_crossover():
+                #     raise NotImplementedError
+                #
+                # def r1_crossover():
+                #     raise NotImplementedError
+                #
+                # ohlc[m].obv.crossover(obv_crossover)
+                # ohlc[m].R1.crossover(r1_crossover)
 
-            #
-            # # : For now we pick a pair manually...
-            # assets = (await rest_kraken.assets(assets=["XBT", "EUR"]))
-            #
-            # assetpairs = (await rest_kraken.assetpairs(assets=["XBTEUR"]))
-            #
-            # # Here we have a logic based on a position (enter and exit, in this sequence).
-            # # This is good for learning automation at a basic level, but can be limiting for human traders...
-            # # TODO : maybe simpler strategy :
-            # #   - Define a capital that can be engaged per market / per strategy (configuration for market - absolute or relative -, in code for strategy ?)
-            # #   - Define buy signal and sell signal ( Note : we could add some basic learning control system there...)
-            # #   - run in a loop...
-            # #   Note : This doesnt involve any concept of Position tracking.
-            # #   => Better for humans and when higher level understanding is required (arbitrage, etc.) and/or available (external profit verification, etc.)
-            #
-            # bullbot_run = await bullbot(loop=asyncio.get_event_loop(),
-            #                   rest_client=rest_kraken,
-            #                   pair="XBTEUR", pairinfo=assetpairs["XXBTZEUR"])
-            # if bullbot_run:
-            #     # TODO : here we should evaluate performance on various pairs, and remove the unperforming ones...
-            #     # Note : Running on multiple pairs in parallel seems overkill without proper design to manage the complexity.
-            #     # TODO aioecs / pyrlang / smthg... in boken.
-            #     await asyncio.wait([bullbot_run], loop=loop, return_when=asyncio.ALL_COMPLETED)
+                # Ref : https://tradingstrategyguides.com/best-bitcoin-trading-strategy/
+                # Ref : https://tradingstrategyguides.com/support-and-resistance-strategy/
+                # TODO: On combination of signal : setup orders + setup signals on order filled.
 
     except Exception as e:
         LOGGER.error(f"Exception caught : {e}. Terminating...", exc_info=True)
         raise
 
+    # TODO : backtest on previous day before implementing on current day... => need candles from Day -2
+    #  Goal : choose markets that are likely to be profitable (given fee calculations).
 
-loop = asyncio.get_event_loop()
 
-for signame in ('SIGINT', 'SIGTERM'):
-    loop.add_signal_handler(
-        getattr(signal, signame),
-        lambda: asyncio.ensure_future(ask_exit(signame))
-    )
+if __name__ == '__main__':
 
-loop.run_until_complete(basicbot(loop))
+    from configparser import ConfigParser
+    config = ConfigParser()
+    config.read("example.ini")
+
+    loop = asyncio.get_event_loop()
+
+    for signame in ('SIGINT', 'SIGTERM'):
+        loop.add_signal_handler(
+            getattr(signal, signame),
+            lambda: asyncio.ensure_future(ask_exit(signame))
+        )
+
+    loop.run_until_complete(basicbot(
+        assets_allowed=config["assets"]['whitelist'],
+        assets_forbidden=config["assets"]["blacklist"],
+        markets_allowed=config["markets"]["whitelist"],
+        markets_forbidden=config["markets"]["blacklist"],
+        loop=loop
+    ))

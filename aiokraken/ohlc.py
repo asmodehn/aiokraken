@@ -5,19 +5,13 @@ import typing
 import pandas as pd
 from aiokraken.model.assetpair import AssetPair
 
-from aiokraken.utils.timeindexeddataframe import TimeindexedDataframe
-
-from aiokraken import RestClient
 from aiokraken.model.indicator import Indicator, EMA_params
-from aiokraken.rest import Server
-
 
 from aiokraken.config import load_account_persist
 from aiokraken.rest import RestClient, Server
 from aiokraken.model.timeframe import KTimeFrameModel
 from aiokraken.model.ohlc import OHLC as OHLCModel
 from aiokraken.model.indicator import ema, EMA as EMAModel
-from aiokraken.timeframe import TimeFrame
 from collections.abc import Mapping
 
 from aiokraken.utils.filter import Filter

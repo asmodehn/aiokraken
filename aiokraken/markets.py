@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from decimal import Decimal
 
+from aiokraken.marketdata import MarketData
 from aiokraken.model.assetpair import AssetPair
 
 from aiokraken.utils import get_kraken_logger, get_nonce
@@ -29,15 +30,19 @@ LOGGER = get_kraken_logger(__name__)
 class Markets(Mapping):
 
     _filter: Filter
-    impl: typing.Dict[str, AssetPair]  # TOdo : store market data instead
+    details: typing.Dict[str, AssetPair]  # These are interesting for the developer,
+    # but most should be implicit for user of aiokraken -> no need to make it easy to use.
     updated: datetime    # TODO : maybe use traitlets (see ipython) for a more implicit/interactive management of time here ??
     validtime: timedelta
+
+    impl: typing.Dict[str, MarketData]  # These are supposed to be used regularly
 
     def __init__(self, restclient: RestClient = None, valid_time: timedelta = None):
         self._filter = Filter(blacklist=[])
         self.restclient = RestClient() if restclient is None else restclient  # default restclient is possible here, but only usable for public requests...
         self.validtime = valid_time   # None means always valid
-        # TODO : implement filter by filtering balance view
+
+        self.impl = dict()
 
     def filter(self,  whitelist=None, blacklist=None, default_allow = True):
         """
@@ -55,33 +60,37 @@ class Markets(Mapping):
         :return:
         """
         if self._filter.whitelist:
-            self.impl = await self.restclient.assetpairs(assets=self._filter.whitelist)()
+            self.details = await self.restclient.assetpairs(assets=self._filter.whitelist)()
         else:
-            self.impl = await self.restclient.assetpairs()()
+            self.details = await self.restclient.assetpairs()()
 
         return self
 
     # TODO : howto make display to string / repr ??
 
     def __getitem__(self, key):
+        def initdata(key):
+            self.impl.setdefault(key, MarketData(pair=self.details[key], restclient=self.restclient))  # instantiate if needed
+            return self.impl[key]
+
         if (key in self._filter.whitelist) or self._filter.default:
-            try:
-                return self.impl[key]  # TODO : handled key not in impl case...
-            except KeyError as ke:
+            if key in self.details:
+                return initdata(key)
+            else:
                 # we need to be able to query by altname as well
-                revdict = {p.altname: n for n, p in self.impl.items()}
+                revdict = {p.altname: n for n, p in self.details.items()}
                 if key in revdict:
-                    return self.impl[revdict[key]]
+                    return initdata(revdict[key])
                 else:
                     raise KeyError(f"{key} is not a pair name nor an altname")
         else:
             raise KeyError(f"{key} is a blacklisted Asset and is not accessible.")
 
     def __iter__(self):
-        return iter(self.impl.keys())
+        return iter(self.details.keys())
 
     def __len__(self):
-        return len(self.impl)
+        return len(self.details)
     #
     # def __getitem__(self, key):
     #     if self.markets is None:
