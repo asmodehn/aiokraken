@@ -3,6 +3,7 @@ from datetime import timedelta, datetime
 
 import typing
 import pandas as pd
+from aiokraken.model.assetpair import AssetPair
 
 from aiokraken.utils.timeindexeddataframe import TimeindexedDataframe
 
@@ -15,12 +16,31 @@ from aiokraken.config import load_account_persist
 from aiokraken.rest import RestClient, Server
 from aiokraken.model.timeframe import KTimeFrameModel
 from aiokraken.model.ohlc import OHLC as OHLCModel
-from aiokraken.model.indicator import EMA as EMAModel
+from aiokraken.model.indicator import ema, EMA as EMAModel
 from aiokraken.timeframe import TimeFrame
 from collections.abc import Mapping
 
 from aiokraken.utils.filter import Filter
 # from aiokraken.tradesignal import TradeSignal
+
+class EMA:
+    """ OHLC driven updating EMA"""
+
+    model: EMAModel
+
+    def __init__(self, name:str, length: int, offset: int = 0, adjust: bool = False):
+        self.model = ema(name=name, length=length, offset=offset, adjust=adjust)
+
+    def __call__(self, ohlc):
+        # updating our encapsulated model
+        self.model = self.model(ohlc)
+        return self
+
+    def __getitem__(self, item):
+        return self.model[item]
+
+    def __len__(self):
+        return len(self.model)
 
 
 class OHLC:
@@ -29,73 +49,71 @@ class OHLC:
         It is also encapsulating the timeframe concept, and therefore should behave like a directed container
         on the time *interval* axis (nagivating between timeframes), probably via mapping protocol...
     """
-
-    impl: typing.Dict[KTimeFrameModel, OHLCModel]
+    pair: AssetPair
+    model: OHLCModel
     updated: datetime    # TODO : maybe use traitlets (see ipython) for a more implicit/interactive management of time here ??
     validtime: timedelta
 
-    def __init__(self, pair,  restclient: RestClient = None, valid_time: timedelta = None):
+    indicators: typing.Dict[str, Indicator]
+
+    def __init__(self, pair, timeframe: KTimeFrameModel = KTimeFrameModel.one_minute, restclient: RestClient = None, valid_time: timedelta = None):
         self.restclient = restclient or RestClient()  # default restclient is possible here, but only usable for public requests...
         self.validtime = valid_time   # None means always valid
         self.pair = pair
-        self.impl = dict()
+        self.timeframe = timeframe
+        self.model = None  # Or RAII since we plan to mutate, maybe imperative style is better ??
+        self.indicators = dict()
 
     @property
     def begin(self) -> datetime:
-        return min(m.begin for tf, m in self.impl.items())
+        return self.model.begin
 
     @property
     def end(self) -> datetime:
-        return max(m.end for tf, m in self.impl.items())
+        return self.model.end
 
     @property
     def open(self):
-        return {tf: m.open for tf, m in self.impl.items()}
+        return self.model.open
 
     @property
     def close(self):
-        return {tf: m.close for tf, m in self.impl.items()}
+        return self.model.close
 
     @property
     def high(self):
-        return max(m.high for tf, m in self.impl.items())
+        return self.model.high
 
     @property
     def low(self):
-        return min(m.low for tf, m in self.impl.items())
+        return self.model.low
 
     @property
     def volume(self):
-        return {tf: m.volume for tf, m in self.impl.items()}
+        return self.model.volume
 
-    async def __call__(self, timeframe: KTimeFrameModel = KTimeFrameModel.one_minute, ):
+    async def __call__(self):
         """
+        This is a call mutating this object. GOAL : updating OHLC out of the view of the user
+        (contained datastructures change by themselves, from REST calls of websockets callback...)
         """
-        new_ohlc = (await self.restclient.ohlc(pair=self.pair, interval=timeframe)())
+        new_ohlc = (await self.restclient.ohlc(pair=self.pair, interval=self.timeframe)())
 
         if new_ohlc:
-            if self.impl.get(timeframe):
-                self.impl[timeframe] = self.impl[timeframe].stitch(new_ohlc)
+            if self.model:
+                self.model = self.model.stitch(new_ohlc)
             else:
-                self.impl[timeframe] = new_ohlc
+                self.model = new_ohlc
+
+        for n, i in self.indicators.items():
+            i(self.model)  # updating all indicators from new ohlc data
 
         return self
-    #
-    # # TODO : maybe tradesignals should be attribute of market and not OHLC...
-    # def signal(self, **kwargs):
-    #     self.signals.setdefault('ohlc', TradeSignal(self.impl))
-    #     return self.signals.get('ohlc')
-    #
-    # def ema(self, **kwargs):
-    #     self.signals.setdefault('ema', TradeSignal(self.impl.ema(**kwargs)))
-    #     return self.signals.get('ema')
 
     # TODO : howto make display to string / repr ??
 
-    # Getitem should be used for multi-precision time introspection into the OHLC dataframe...
-    def __getitem__(self, key: KTimeFrameModel):  # Maybe we can allow differents types here and provide multiple implementations ?
-        return self.impl[key]  #TODO : some nicer user syntax for watchnig an interval at a specific resolution...
-
+    def __getitem__(self, key):  # Maybe we can allow differents types here and provide multiple implementations ?
+        return self.model[key]
 
     # TODO: Iterator should be kept for the comonadic interface to the directed container
     #  ie have a "consumption" semantics of timesteps that we have already looked at
@@ -104,25 +122,32 @@ class OHLC:
     # OTOH signal provide an asynchronous/callbacky way to react to changes.
     def __iter__(self):  # cf PEP 525 for async iterators
         # Ref : https://thispointer.com/pandas-6-different-ways-to-iterate-over-rows-in-a-dataframe-update-while-iterating-row-by-row/
-        return iter(self.impl)
+        return iter(self.model)
 
     # Length semantics... TODO
     # Problem: we store with precision semantics at the high level, but human think with duration semantics at first...
     def __len__(self):
-        if self.impl:
-            return len(self.impl)
+        if self.model:
+            return len(self.model)
         else:
             return 0
+    #
+    # @property
+    # def ema(self):
+    #     return EMA()
 
-    def ema(self, name: str, length: int, offset: int = 0, adjust: bool = False):
-        p = EMA_params(length=length, offset=offset, adjust=adjust)
-        # prepare timedataframe, but empty by default
-        # TODO : FIX TMP hardcoded timeframe
-        ema = EMAModel(df=TimeindexedDataframe(data=pd.DataFrame(columns=[name])), **{name: p})
-        if self.impl.get(KTimeFrameModel.one_minute):
-            return ema(self.impl[KTimeFrameModel.one_minute])  # Immediately calling on ohlc => TODO : improve design ?
+    def ema(self, name: str, length: int, offset: int = 0, adjust: bool = False) -> EMA:
+        # the self updating object
+        ema = EMA(name=name, length=length, offset=offset, adjust=adjust)
+        self.indicators['ema'] = ema  # TODO : merge EMA with multiple params in same dataframe.
+        if self.model:
+            self.indicators['ema'] = ema(self.model)  # Immediately calling on ohlc => TODO : improve design ?
         else:
-            return ema  # call will be done later.
+            self.indicators['ema'] = ema  # call will be done later.\
+        return self.indicators['ema']
+
+    # TODO : Since we have indicators here (totally dependent on ohlc), we probably also want signals...
+
 
 if __name__ == '__main__':
     import time
@@ -134,39 +159,38 @@ if __name__ == '__main__':
     rest = RestClient(server=Server())
 
     # ohlc data can be global (one per market*timeframe only)
-    ohlc = OHLC(pair='ETHEUR', restclient=rest)
-    # TODO : better manage pair and timeframe in marketdata itself ??
-    emas = ohlc.ema(name="EMA_12", length=12)
+    ohlc_1m = OHLC(pair='ETHEUR', timeframe=KTimeFrameModel.one_minute, restclient=rest)
 
+    # Here we register and retrieve an indicator on ohlc data.
+    # It will be automagically updated when we update ohlc.
+    emas_1m = ohlc_1m.ema(name="EMA_12", length=12)
 
     async def ohlc_retrieve_nosession():
-        global rest, ohlc, emas
-        await ohlc(timeframe=KTimeFrameModel.one_minute)
-        for k in ohlc[KTimeFrameModel.one_minute]:
+        global rest, ohlc_1m, emas_1m
+        await ohlc_1m()
+        for k in ohlc_1m:
             print(f" - {k}")
 
-        emas = emas(ohlc[KTimeFrameModel.one_minute])  # explicit update of indicator for this timeframe
+        # TODO : this should probably be done out of sight...
+        #emas_1m = emas_1m(ohlc_1m.model)  # explicit update of indicator for this timeframe
         # TODO ohlc.ema(name="EMA_12", length=12) maybe ??
-
 
     loop = asyncio.get_event_loop()
 
-    assert len(ohlc) == 0
+    assert len(ohlc_1m) == 0
 
     loop.run_until_complete(ohlc_retrieve_nosession())
-    assert len(ohlc[
-                   KTimeFrameModel.one_minute]) == 720, f"from: {ohlc[KTimeFrameModel.one_minute].begin} to: {ohlc[KTimeFrameModel.one_minute].end} -> {len(ohlc[KTimeFrameModel.one_minute])} values"
+    assert len(ohlc_1m) == 720, f"from: {ohlc_1m.begin} to: {ohlc_1m.end} -> {len(ohlc_1m)} values"
     # ema has been updated
-    assert len(emas) == 720, f"EMA: {len(emas)} values"
+    assert len(emas_1m) == 720, f"EMA: {len(emas_1m)} values"
 
     print("Waiting one more minute to attempt retrieving more ohlc data and stitch them...")
     time.sleep(60)
     loop.run_until_complete(ohlc_retrieve_nosession())
 
-    assert len(ohlc[
-                   KTimeFrameModel.one_minute]) == 721, f"from: {ohlc[KTimeFrameModel.one_minute].begin} to: {ohlc[KTimeFrameModel.one_minute].end} -> {len(ohlc[KTimeFrameModel.one_minute])} values"
+    assert len(ohlc_1m) == 721, f"from: {ohlc_1m.begin} to: {ohlc_1m.end} -> {len(ohlc_1m)} values"
     # ema has been updated
-    assert len(emas) == 721, f"EMA: {len(emas)} values"
+    assert len(emas_1m) == 721, f"EMA: {len(emas_1m)} values"
 
     loop.close()
 
