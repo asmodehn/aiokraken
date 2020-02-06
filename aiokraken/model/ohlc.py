@@ -163,9 +163,12 @@ class OHLC(TimeindexedDataframe):
                     print(rows)
 
                 # optionally change high and low
-                chosen['high'] = max(chosen['high'], chosen['open'], chosen['close'])
-                chosen['low'] = min(chosen['low'], chosen['open'], chosen['close'])
-
+                try:
+                    chosen['high'] = max(chosen['high'], chosen['open'], chosen['close'])
+                    chosen['low'] = min(chosen['low'], chosen['open'], chosen['close'])
+                except Exception as exc:  # because this broke one time... TypeError: ("'NoneType' object is not subscriptable", 'occurred at index 595')
+                    # TODO : FIXIT
+                    raise
                 row = chosen
 
             return row
