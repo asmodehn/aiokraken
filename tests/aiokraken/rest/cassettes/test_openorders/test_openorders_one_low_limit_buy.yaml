@@ -1,13 +1,12 @@
 interactions:
 - request:
-    body:
-      pair: XBTEUR
+    body: null
     headers:
       User-Agent:
       - Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML,
         like Gecko) Chrome/74.0.3729.131 Safari/537.36
     method: GET
-    uri: https://api.kraken.com/0/public/Ticker
+    uri: https://api.kraken.com/0/public/Ticker?pair=XXBTZEUR
   response:
     body:
       string: '{"error":[],"result":{"XXBTZEUR":{"a":["7553.40000","1","1.000"],"b":["7553.30000","4","4.000"],"c":["7553.40000","0.02358459"],"v":["1534.88007426","2770.31846284"],"p":["7555.50698","7554.11741"],"t":[7413,14611],"l":["7506.80000","7470.00000"],"h":["7647.90000","7647.90000"],"o":"7576.10000"}}}'

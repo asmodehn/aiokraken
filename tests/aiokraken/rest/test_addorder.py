@@ -50,7 +50,7 @@ async def test_add_buy_limit_order_validate(keyfile):
 @pytest.mark.vcr(filter_headers=['API-Key', 'API-Sign'])
 async def test_add_buy_limit_order_execute_low(keyfile):
     async with RestClient(server=Server(**keyfile)) as rest_kraken:
-        ticker_run = rest_kraken.ticker(pairs=['XBTEUR'])
+        ticker_run = rest_kraken.ticker(pairs=['XXBTZEUR'])
         tickerresponse =(await ticker_run()).get("XXBTZEUR")  # TODO : handle conversion problem...
         assert tickerresponse
         print(tickerresponse)
@@ -93,7 +93,7 @@ async def test_add_sell_limit_order_validate(keyfile):
 @pytest.mark.vcr(filter_headers=['API-Key', 'API-Sign'])
 async def test_add_sell_limit_order_execute_high(keyfile):
     async with RestClient(server=Server(**keyfile)) as rest_kraken:
-        ticker_run = rest_kraken.ticker(pairs=['XBTEUR'])
+        ticker_run = rest_kraken.ticker(pairs=['XXBTZEUR'])
         tickerresponse = (await ticker_run()).get("XXBTZEUR")
         assert tickerresponse
         print(tickerresponse)

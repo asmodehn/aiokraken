@@ -18,7 +18,7 @@ from aiokraken.rest.schemas.krequestorder import RequestOrder
 @pytest.mark.vcr(filter_headers=['API-Key', 'API-Sign'])
 async def test_cancel_limit_order_id_execute(keyfile):
     async with RestClient(server=Server()) as rest_kraken:
-        ticker_run = rest_kraken.ticker(pairs=['XBTEUR'])
+        ticker_run = rest_kraken.ticker(pairs=['XXBTZEUR'])
         tickerresponse = (await ticker_run()).get("XXBTZEUR")
         assert tickerresponse
         print(tickerresponse)
@@ -60,7 +60,7 @@ async def test_cancel_limit_order_id_execute(keyfile):
 @pytest.mark.vcr(filter_headers=['API-Key', 'API-Sign'])
 async def test_cancel_limit_order_userref_execute(keyfile):
     async with RestClient(server=Server()) as rest_kraken:
-        ticker_run =  rest_kraken.ticker(pairs=['XBTEUR'])
+        ticker_run =  rest_kraken.ticker(pairs=['XXBTZEUR'])
         tickerresponse = (await ticker_run()).get("XXBTZEUR")
         assert tickerresponse
         print(tickerresponse)
