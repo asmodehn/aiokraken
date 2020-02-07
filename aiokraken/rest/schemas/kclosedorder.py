@@ -27,9 +27,12 @@ from .kopenorder import KOpenOrderModel, KOpenOrderSchema
 
 @dataclass(frozen=True)
 class KClosedOrderModel(KOpenOrderModel):
-
+    # Note :
+    # refid likely None
+    # userref likely None
     closetm: TMModel = None  # this must have a default because base class has defaults...
-    reason: str = ""  # TODO : fix this defaults thing somehow...
+    reason: typing.Optional[str] = None  # Note : might be None # TODO : fix this defaults thing somehow...
+
 
 @st.composite
 def ClosedOrderStrategy(draw,
@@ -57,13 +60,13 @@ def ClosedOrderStrategy(draw,
                       misc= st.text(max_size=5),  # TODO
                       oflags= st.text(max_size=5),  # TODO
 
-                      refid=st.integers(),  # TODO
-                      userref= st.integers(),  # TODO
+                      refid=st.one_of(st.none(),st.integers()),  # TODO
+                      userref= st.one_of(st.none(),st.integers()),  # TODO
 
                         trades=st.lists(st.text(max_size=5), max_size=5),
 
                         closetm=TMStrategy(),
-                        reason=st.text(max_size=5)
+                        reason=st.one_of(st.none(), st.text(max_size=5))
 
 ):
 
@@ -97,11 +100,10 @@ def ClosedOrderStrategy(draw,
     )
 
 
-
 class KClosedOrderSchema(KOpenOrderSchema):
 
     closetm = TimerField()  # unix timestamp of when order was closed
-    reason = fields.Str()  # additional info on status (if any)
+    reason = fields.Str(allow_none=True, required=False)  # additional info on status (if any)
 
     @post_load
     def build_model(self, data, **kwargs):
@@ -140,7 +142,7 @@ def ClosedOrderDictStrategy(draw,
                             trades=st.lists(st.text(max_size=5), max_size=5),
 
                             closetm= TMStrategy(),
-                            reason=st.text(max_size=5)
+                            reason=st.one_of(st.none(), st.text(max_size=5))
                           ):
     model = draw(ClosedOrderStrategy(descr= descr,
                       status= status,
