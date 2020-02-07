@@ -21,9 +21,15 @@ from .schemas.krequestorder import (
 )
 from .response import Response
 
+from ..model.assetpair import AssetPair
 
 # TODO : simplify :
 #  Ref: https://support.kraken.com/hc/en-us/articles/360025174872-How-to-create-the-krakenapi-py-file
+
+
+"""
+Intent : strictness of the API (types and all...)
+"""
 
 class API:
 
@@ -113,7 +119,6 @@ def private(api: API, key, secret):
     return api
 
 
-
 class Server:
     # TODO : LOG actual requests. Important for usage and for testing...
 
@@ -173,13 +178,14 @@ class Server:
                                                      schema=AssetPairPayloadSchema())
         )
 
-    def ohlc(self, pair, interval: KTimeFrameModel):
+    def ohlc(self, pair: AssetPair, interval: KTimeFrameModel):
+        pairstr = pair.restname
         return self.public.request('OHLC',
-                                   data={'pair': pair, 'interval': int(interval)},
+                                   data={'pair': pairstr, 'interval': int(interval)},
                                    expected=Response(status=200,
                                                      schema=PayloadSchema(
                                                         result_schema=PairOHLCSchema(
-                                                            pair=pair)
+                                                            pair=pairstr)
                                                         )
                                                      )
                                    )
@@ -248,11 +254,10 @@ class Server:
                                    data=data,
                                    expected=Response(status=200,
                                                      schema=PayloadSchema(
-                                                        result_schema=ClosedOrdersResponseSchema
+                                                        result_schema=ClosedOrdersResponseSchema()
                                                         )
                                                      )
                                    )
-
 
     def addorder(self, order: RequestOrderFinalized):
         data = RequestOrderSchema().dump(order)

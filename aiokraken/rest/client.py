@@ -4,6 +4,10 @@ import datetime
 import functools
 import ssl
 import aiohttp
+import typing
+
+from aiokraken.model.assetpair import AssetPair
+
 from aiokraken.model.timeframe import KTimeFrameModel
 
 from aiokraken.utils import get_kraken_logger, get_nonce
@@ -19,6 +23,11 @@ LOGGER = get_kraken_logger(__name__)
 
 # MINIMAL CLIENT (only control flow & IO)
 # Also Time control...
+
+
+"""
+Intent : usability of the API...
+"""
 
 # Because we need one limiter for multiple decorators
 public_limiter = UnderLimiter(period=3)
@@ -150,21 +159,25 @@ class RestClient:
 
     @rest_command
     @public_limiter  # skippable because OHLC is not supposed to change very often, and changes should apper in later results.
-    async def ohlc(self, pair, interval: KTimeFrameModel = KTimeFrameModel.one_minute):  # TODO: make pair mandatory
+    async def ohlc(self, pair: typing.Union[AssetPair, str], interval: KTimeFrameModel = KTimeFrameModel.one_minute):  # TODO: make pair mandatory
         """ make ohlc request to kraken api"""
-        #  We need the list of markets to validate pair passed in the request
-        if not self._assetpairs:
-            req = self.assetpairs()
-            await req()
-        # TODO : maybe this belongs more into the API ??
-        if not pair in self._assetpairs.keys():
-            altname_map = {p.altname: n for n, p in self._assetpairs.items()}
-            if not pair in altname_map.keys():
-                # TODO : proper exception class
-                RuntimeError(f"{pair} not in {[k for k in self._assetpairs.keys()]} nor {altname_map.keys()}")
+        if isinstance(pair, str):  # Just to be user friendly...
+            #  We need the list of markets to validate pair string passed in the request
+            if not self._assetpairs:
+                req = self.assetpairs()
+                await req()
+            if not pair in self._assetpairs.keys():
+                altname_map = {p.altname: p for n, p in self._assetpairs.items()}
+                if not pair in altname_map.keys():
+                    # TODO : proper exception class
+                    RuntimeError(f"{pair} not in {[k for k in self._assetpairs.keys()]} nor {altname_map.keys()}")
+                else:
+                    pair = altname_map[pair]  # get the proper type.
             else:
-                pair = altname_map[pair]  # switch the name to get proper parsing of result.
-
+                pair = self._assetpairs[pair]
+        elif not isinstance(pair, AssetPair):
+            RuntimeError(f"{pair} not of the proper type...")
+        # TODO : or maybe we should pass the assetpair from model, and let the api deal with it ??
         req = self.server.ohlc(pair=pair, interval=interval)   # returns the request to be made for this API.)
         resp = await self._get(request=req)
         # Note : marshmallow has already checked that the response pair matches what was requested.

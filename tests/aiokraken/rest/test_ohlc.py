@@ -31,8 +31,20 @@ async def test_ohlc_pair_oldstr():
         assert isinstance(response, OHLC)
 
 
+@pytest.mark.asyncio
+@pytest.mark.vcr()
+async def test_ohlc_pair_propertype():
+    """ get kraken ohlc"""
+    async with RestClient(server=Server()) as rest_kraken:
+        assetpairs = await rest_kraken.assetpairs()()
+        ohlc_run = rest_kraken.ohlc(pair=assetpairs["XXBTZEUR"])
+        response = await ohlc_run()
+        print(f'response is \n{response.head()}')
+
+        assert isinstance(response, OHLC)
+
 
 if __name__ == '__main__':
-    pytest.main(['-s', __file__, '--block-network'])
+    #pytest.main(['-s', __file__, '--block-network'])
     # record run
-    #pytest.main(['-s', __file__, '--with-keyfile', '--record-mode=new_episodes'])
+    pytest.main(['-s', __file__, '--with-keyfile', '--record-mode=new_episodes'])
