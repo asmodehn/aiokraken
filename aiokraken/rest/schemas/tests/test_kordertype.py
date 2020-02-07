@@ -28,6 +28,7 @@ class TestOrderTypeModel(unittest.TestCase):
     def test_enum(self, model):
         assert model.value in [
             'market',
+            'stop market',
             'limit',
             'stop-loss',
             'take-profit',
