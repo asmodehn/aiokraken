@@ -1,0 +1,34 @@
+interactions:
+- request:
+    body: null
+    headers:
+      User-Agent:
+      - Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML,
+        like Gecko) Chrome/74.0.3729.131 Safari/537.36
+    method: GET
+    uri: https://api.kraken.com/0/public/Ticker?pair=XXBTZEUR
+  response:
+    body:
+      string: '{"error":[],"result":{"XXBTZEUR":{"a":["8943.90000","5","5.000"],"b":["8943.80000","4","4.000"],"c":["8943.80000","0.09852325"],"v":["941.43031327","4922.48052255"],"p":["8917.23313","8881.57018"],"t":[6235,26443],"l":["8860.00000","8740.00000"],"h":["8956.00000","8956.00000"],"o":"8882.20000"}}}'
+    headers:
+      Age: '1'
+      CF-Cache-Status: HIT
+      CF-RAY: 56147d66be44ee07-CDG
+      Cache-Control: public,max-age=2,smaxage=2
+      Connection: keep-alive
+      Content-Encoding: gzip
+      Content-Type: application/json; charset=utf-8
+      Date: Fri, 07 Feb 2020 09:55:43 GMT
+      Expect-CT: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      Server: cloudflare
+      Set-Cookie: __cf_bm=6563729451cfabe164591a0734fc3351694e2b58-1581069343-1800-ATP4cSYb/XalkG5+inEP30BwJFPNJMgWCg+WesYaYc1BHnnkgpKrXHl61O58V54AFmBmgQ0RvqOY+Cq8ebCCtdU=;
+        path=/; expires=Fri, 07-Feb-20 10:25:43 GMT; domain=.kraken.com; HttpOnly;
+        Secure; SameSite=None
+      Transfer-Encoding: chunked
+      Vary: Accept-Encoding
+      strict-transport-security: max-age=15768000
+    status:
+      code: 200
+      message: OK
+    url: https://api.kraken.com/0/public/Ticker?pair=XXBTZEUR
+version: 1

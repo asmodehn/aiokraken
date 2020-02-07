@@ -7,19 +7,32 @@ from aiokraken.model.ticker import Ticker
 
 @pytest.mark.asyncio
 @pytest.mark.vcr()
-async def test_ticker_one():
+async def test_ticker_one_str():
     """ get kraken ticker"""
     async with RestClient(server=Server()) as rest_kraken:
-        ticker_run = rest_kraken.ticker(pairs=['XBTEUR'])
+        ticker_run = rest_kraken.ticker(pairs=['XXBTZEUR'])
         response = await ticker_run()
         print(f'response is \n{response}')
         assert len(response) == 1
-        pm = "XXBTZEUR"  # TODO : handle conversion problem...
-        assert pm in response
-        assert isinstance(response.get(pm), Ticker)
+        assert "XXBTZEUR" in response
+        assert isinstance(response.get("XXBTZEUR"), Ticker)
 
+
+@pytest.mark.asyncio
+@pytest.mark.vcr()
+async def test_ticker_one_pair():
+    """ get kraken ticker"""
+    async with RestClient(server=Server()) as rest_kraken:
+        assetpairs = await rest_kraken.assetpairs()()
+        ticker_run = rest_kraken.ticker(pairs=[assetpairs["XXBTZEUR"]])
+        response = await ticker_run()
+        print(f'response is \n{response}')
+        assert len(response) == 1
+        assert "XXBTZEUR" in response
+        assert isinstance(response.get("XXBTZEUR"), Ticker)
 
 # TODO : multiple ticker request test...
+
 
 if __name__ == '__main__':
     pytest.main(['-s', __file__, '--block-network'])

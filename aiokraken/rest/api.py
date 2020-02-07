@@ -224,10 +224,10 @@ class Server:
                                                       ))
                                     )
 
-    def ticker(self, pairs=['XBTEUR']):  # TODO : use a model to typecheck pair symbols
-        pair_alias = 'XXBTZEUR'  # TODO : fix this hardcoded stuff !!!!
+    def ticker(self, pairs: typing.Optional[typing.List[typing.Union[AssetPair, str]]]):
+        pairlist = [a.restname if isinstance(a, AssetPair) else str(a) for a in pairs]
         return self.public.request('Ticker',
-                                   data={'pair': ",".join(pairs)},
+                                   data={'pair': ",".join(pairlist)},
                                    expected=Response(status=200,
                                                      schema=TickerPayloadSchema()
                                                      )
