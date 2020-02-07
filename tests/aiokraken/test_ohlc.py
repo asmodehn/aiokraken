@@ -17,7 +17,7 @@ async def test_ohlc():
 
     await ohlc()
 
-    print(f"from: {ohlc.impl.begin} to: {ohlc.impl.end} -> {len(ohlc)} values")
+    print(f"from: {ohlc.model.begin} to: {ohlc.model.end} -> {len(ohlc)} values")
     assert len(ohlc) == 720
 
     M = 1
@@ -27,7 +27,7 @@ async def test_ohlc():
 
     await ohlc()
 
-    print( f"from: {ohlc.impl.begin} to: {ohlc.impl.end} -> {len(ohlc)} values")
+    print( f"from: {ohlc.model.begin} to: {ohlc.model.end} -> {len(ohlc)} values")
     assert len(ohlc) == 720 + M
 
     # TODO : more tests
