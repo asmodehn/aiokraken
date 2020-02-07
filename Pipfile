@@ -34,6 +34,10 @@ timecontrol = "==0.2.2"
 tinydb = "*"
 ipython = "*"
 click = "*"
+dpcontracts = "*"
+result = "*"
+typeclasses = "*"
+aioresponses = "*"
 
 [requires]
 python_version = "3.7"
