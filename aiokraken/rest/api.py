@@ -2,6 +2,8 @@ import types
 
 import typing
 
+from aiokraken.rest.schemas.ktrade import TradeResponseSchema
+
 from aiokraken.model.timeframe import KTimeFrameModel
 
 from aiokraken.rest.payloads import TickerPayloadSchema, AssetPayloadSchema, AssetPairPayloadSchema
@@ -296,8 +298,26 @@ class Server:
     #     pass
     #
     #
-    # def trades_history(self):
-    #     pass
+    def trades_history(self, offset, type = None, trades: bool = False, start: typing.Optional[int] = None, end: typing.Optional[int] = None):
+        # type = type of trade (optional)
+        #     all = all types (default)
+        #     any position = any position (open or closed)
+        #     closed position = positions that have been closed
+        #     closing position = any trade closing all or part of a position
+        #     no position = non-positional trades
+        # trades = whether or not to include trades related to position in output (optional.  default = false)
+        # start = starting unix timestamp or trade tx id of results (optional.  exclusive)
+        # end = ending unix timestamp or trade tx id of results (optional.  inclusive)
+        # ofs = result offset
+        # TODO : integration tests !!!
+        return self.private.request('TradesHistory',
+                                    data={'ofs': offset},
+                                    expected=Response(status=200,
+                                                      schema=PayloadSchema(
+                                                          result_schema=TradeResponseSchema()
+                                                      ))
+                                    )
+
     #
     # def query_trades(self):
     #     pass

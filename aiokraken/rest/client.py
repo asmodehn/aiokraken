@@ -239,3 +239,10 @@ class RestClient:
         req = self.server.cancel(txid_userref = txid_userref)
         return await self._post(request=req)
 
+    @rest_command
+    @private_limiter
+    async def trades(self, offset):
+        """ make public requests to kraken api"""
+        # TODO : accept order, (but only use its userref or id)
+        req = self.server.trades_history(offset = offset)
+        return await self._post(request=req)
