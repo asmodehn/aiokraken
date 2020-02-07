@@ -45,6 +45,6 @@ async def test_ohlc_pair_propertype():
 
 
 if __name__ == '__main__':
-    #pytest.main(['-s', __file__, '--block-network'])
+    pytest.main(['-s', __file__, '--block-network'])
     # record run
-    pytest.main(['-s', __file__, '--with-keyfile', '--record-mode=new_episodes'])
+    #pytest.main(['-s', __file__, '--with-keyfile', '--record-mode=new_episodes'])

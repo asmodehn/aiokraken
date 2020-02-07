@@ -1,5 +1,7 @@
 import types
 
+import typing
+
 from aiokraken.model.timeframe import KTimeFrameModel
 
 from aiokraken.rest.payloads import TickerPayloadSchema, AssetPayloadSchema, AssetPairPayloadSchema
@@ -22,6 +24,7 @@ from .schemas.krequestorder import (
 from .response import Response
 
 from ..model.assetpair import AssetPair
+from ..model.asset import Asset
 
 # TODO : simplify :
 #  Ref: https://support.kraken.com/hc/en-us/articles/360025174872-How-to-create-the-krakenapi-py-file
@@ -151,20 +154,28 @@ class Server:
     def time(self):
         return self.public.request('Time', data=None, expected=Response(status=200, schema=PayloadSchema(TimeSchema)))
 
-    def assets(self, assets=None): # TODO : use a model to typecheck pair symbols
+    def assets(self, assets: typing.Optional[typing.List[typing.Union[Asset, str]]]=None):
+        # Here we allow asset type to update existing partial/old knowledge.
+        # But also str type, to request info on something we have no knowledge of
+        if assets:
+            assetlist = [a.restname if isinstance(a, Asset) else str(a) for a in assets]
         return self.public.request('Assets',
                                    data={
                                        # info = info to retrieve (optional):
                                        #     info = all info (default)
                                        # aclass = asset class (optional):
                                        #     currency (default)
-                                       'asset': ",".join([str(a) for a in assets])
+                                       'asset': ",".join(assetlist)
                                     } if assets else {},
                                    expected=Response(status=200,
                                                      schema=AssetPayloadSchema())
         )
 
-    def assetpair(self, assets=None): # TODO : use a model to typecheck pair symbols
+    def assetpair(self, pairs: typing.Optional[typing.List[typing.Union[AssetPair, str]]]=None):  # TODO : info param: info / leverage/ fee/ margin
+        # Here we allow assetpair type to update existing partial/old knowledge.
+        # But also str type, to request info on something we have no knowledge of
+        if pairs:
+            pairlist = [a.restname if isinstance(a, AssetPair) else str(a) for a in pairs]
         return self.public.request('AssetPairs',
                                    data={
                                        # info = info to retrieve (optional):
@@ -172,8 +183,8 @@ class Server:
                                        #     leverage = leverage info
                                        #     fees = fees schedule
                                        #     margin = margin info
-                                       'pair':   ",".join([str(a) for a in assets])  # comma delimited list of asset pairs to get info on (optional.  default = all)
-                                   } if assets else {},
+                                       'pair':   ",".join(pairlist)  # comma delimited list of asset pairs to get info on (optional.  default = all)
+                                   } if pairs else {},
                                    expected=Response(status=200,
                                                      schema=AssetPairPayloadSchema())
         )

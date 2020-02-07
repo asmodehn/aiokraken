@@ -7,7 +7,7 @@ import aiohttp
 import typing
 
 from aiokraken.model.assetpair import AssetPair
-
+from aiokraken.model.asset import Asset
 from aiokraken.model.timeframe import KTimeFrameModel
 
 from aiokraken.utils import get_kraken_logger, get_nonce
@@ -139,7 +139,7 @@ class RestClient:
 
     @rest_command
     @public_limiter
-    async def assets(self, assets=None):
+    async def assets(self, assets: typing.Optional[typing.List[typing.Union[Asset, str]]]=None):
         """ make assets request to kraken api"""
 
         req = self.server.assets(assets=assets)   # returns the request to be made for this API.)
@@ -150,10 +150,10 @@ class RestClient:
 
     @rest_command
     @public_limiter
-    async def assetpairs(self, assets=None):
+    async def assetpairs(self, pairs: typing.Optional[typing.List[typing.Union[AssetPair, str]]]=None):
         """ make assetpairs request to kraken api"""
 
-        req = self.server.assetpair(assets=assets)   # returns the request to be made for this API.)
+        req = self.server.assetpair(pairs=pairs)   # returns the request to be made for this API.)
         self._assetpairs = await self._get(request=req)
         return self._assetpairs
 

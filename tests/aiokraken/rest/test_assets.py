@@ -33,7 +33,7 @@ async def test_asset_oldstr():
 
         assert isinstance(asset, Asset)
 
-
+# TODO : test updating partial/old asset
 
 @pytest.mark.asyncio
 @pytest.mark.vcr()
