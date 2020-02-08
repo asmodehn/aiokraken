@@ -5,8 +5,7 @@ from datetime import timedelta, datetime
 import typing
 from decimal import Decimal
 
-from aiokraken.config import load_account_persist
-from aiokraken.rest import RestClient, Server
+from aiokraken.rest import RestClient
 
 from collections.abc import Mapping
 
@@ -23,9 +22,9 @@ class Balance(Mapping):
     updated: datetime    # TODO : maybe use traitlets (see ipython) for a more implicit/interactive management of time here ??
     validtime: timedelta
 
-    def __init__(self, restclient: RestClient = None, valid_time: timedelta = None):
+    def __init__(self, restclient: RestClient, valid_time: timedelta = None):
         self._filter = Filter(blacklist=[])
-        self.restclient = restclient  # default restclient is possible here, but only usable for public requests...
+        self.restclient = restclient  # we require a restclient here, since all requests are private
         self.validtime = valid_time   # None means always valid
         # TODO : implement filter by filtering balance view
 
@@ -41,8 +40,11 @@ class Balance(Mapping):
         """
         """
         # TODO : meaning of filter here... not showing blacklisted assets ?
-        self.impl = (await self.restclient.balance()()).accounts
+        self.impl = (await self.restclient.balance()())
          # TODO : why the extra 'accounts' level ? can we get rid of it somehow ?
+
+        # get a partial view of assets locally
+        self.assets = {n: a for n, a in self.restclient._assets.items()}
 
         return self
 
@@ -64,7 +66,10 @@ class Balance(Mapping):
 
 
 if __name__ == '__main__':
-
+    import time
+    import asyncio
+    from aiokraken.rest.client import RestClient
+    from aiokraken.rest.api import Server
     from aiokraken.config import load_api_keyfile
 
     keystruct = load_api_keyfile()
@@ -82,7 +87,24 @@ if __name__ == '__main__':
     loop.run_until_complete(balance_retrieve_nosession())
     time.sleep(1)
 
-    loop.run_until_complete(balance_retrieve_nosession())
+    # If we have access to past trades, we can recover the cost of each asset amount.
+    from aiokraken.trades import Trades
+
+    from aiokraken import Markets
+
+    mkts = Markets(restclient=rest)
+
+    async def markets_retrieve_nosession():
+        global rest, mkts
+        await mkts()
+
+    loop.run_until_complete(markets_retrieve_nosession())
+
+    for n, v in balance.items():
+        c = mkts.tradecost(asset=balance.assets.get(n), amount=v)
+        print(f"{n}: {v} cost from trades is {c}")
+    # REMINDER : This must remain safe for the user : do not create any orders.
+    # Rely on integration tests to validate merging of data.
 
     loop.close()
 

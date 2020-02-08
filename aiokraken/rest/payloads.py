@@ -29,6 +29,12 @@ class AssetPayloadSchema(PayloadBaseSchema):
 
     result= fields.Dict(keys = fields.String(), values = fields.Nested(AssetSchema))
 
+    @post_load()
+    def register_name(self, data, many, partial):
+        for n in data.keys():
+            data[n].restname = n
+        return data
+
 
 class AssetPairPayloadSchema(PayloadBaseSchema):
 

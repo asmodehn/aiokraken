@@ -187,9 +187,13 @@ class RestClient:
     @private_limiter
     async def balance(self):
         """ make balance requests to kraken api"""
-
+        #  We need the list of assets to return proper types in balance
+        if not self._assets:
+            req = self.assets()
+            await req()
         req = self.server.balance()
-        return await self._post(request=req)  # Private request must use POST !
+        resp = await self._post(request=req)  # Private request must use POST !
+        return resp.accounts  # Note : this depends on the schema.
 
     @rest_command
     @private_limiter
@@ -241,7 +245,7 @@ class RestClient:
 
     @rest_command
     @private_limiter
-    async def trades(self, offset):
+    async def trades(self, offset = 0):  # offset 0 or None ??
         """ make public requests to kraken api"""
         # TODO : accept order, (but only use its userref or id)
         req = self.server.trades_history(offset = offset)

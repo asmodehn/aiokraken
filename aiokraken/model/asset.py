@@ -1,5 +1,7 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
+
+import typing
 
 
 class AssetClass(Enum):
@@ -20,9 +22,9 @@ class AssetClass(Enum):
 
 @dataclass
 class Asset:
-    #name: str  # name
     altname: str  # alternate name
     aclass: str  # asset class
     decimals: int  # scaling decimal places for record keeping
     display_decimals: int  # scaling decimal places for output display
+    restname: typing.Optional[str] = field(default=None)  # this will be set a bit after initialization
 

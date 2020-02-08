@@ -12,8 +12,8 @@ class Trades:
     """
     impl: typing.Dict[str, KTradeModel]  # (filtered/market related) trade history. TODO : find out when to retrieve new. how do we know about orders ??
 
-    def __init__(self, restclient: RestClient = None, valid_time: timedelta = None):
-        self.restclient = restclient or RestClient()  # default restclient is possible here, but only usable for public requests...
+    def __init__(self, restclient: RestClient, valid_time: timedelta = None):
+        self.restclient = restclient
         self.validtime = valid_time   # None means always valid
         self.impl = dict()  # Need async call : raii is not doable here... unless we have a separate async constructor ?
 
@@ -42,7 +42,7 @@ class Trades:
         return self.impl[item]
 
     def __iter__(self):
-        return iter(self.impl)
+        return iter(self.impl)  # TODO : trigger request for more if iterator ends...
 
     def __len__(self):
         return len(self.impl)
@@ -73,10 +73,6 @@ if __name__ == '__main__':
         await trades()
         for txid, t in trades.items():
             print(f" - {txid}: {t}")
-
-        # TODO : this should probably be done out of sight...
-        #emas_1m = emas_1m(ohlc_1m.model)  # explicit update of indicator for this timeframe
-        # TODO ohlc.ema(name="EMA_12", length=12) maybe ??
 
     loop = asyncio.get_event_loop()
 
