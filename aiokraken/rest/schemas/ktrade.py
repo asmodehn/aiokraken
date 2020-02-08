@@ -16,9 +16,7 @@ from .kordertype import KOrderTypeModel, KOrderTypeField, KOrderTypeStrategy
 
 @dataclass
 class KTradeModel:
-
     ordertxid: str  # order responsible for execution of trade
-    postxid: str
     pair: str  # asset pair
     time: int  # unix timestamp of trade
     type: KABTypeModel  # type of order (buy/sell)
@@ -32,6 +30,7 @@ class KTradeModel:
         #closing = trade closes all or part of a position
 
     # iff the trade opened a position :
+    postxid: typing.Optional[str] = None
     posstatus: typing.Optional[str] = None  # position status (open/closed)
     #     cprice = average price of closed portion of position (quote currency)
     #     ccost = total cost of closed portion of position (quote currency)
@@ -44,7 +43,6 @@ class KTradeModel:
 @composite
 def KTradeStrategy(draw,
                       ordertxid= st.text(max_size=20),  # TODO : type for ordertxid ?
-                      postxid= st.text(max_size=20),  # TODO : type for postxid ?
                       pair=st.text(max_size=8),
                       time=st.integers(min_value=int(datetime(year=1970, month=1, day=1).timestamp()),
                                        max_value=int(datetime(year=MAXYEAR, month=12, day=31).timestamp())),
@@ -57,12 +55,12 @@ def KTradeStrategy(draw,
                         margin = st.decimals(allow_nan=False, allow_infinity=False),
                         misc= st.text(max_size=5),
 
-                    posstatus=st.text(max_size=5)
+                      postxid= st.one_of(st.none(),st.text(max_size=20)),  # TODO : type for postxid ?
+                    posstatus=st.one_of(st.none(),st.text(max_size=5)),
 ):
 
     return KTradeModel(
         ordertxid = draw(ordertxid),
-        postxid = draw(postxid),
         pair = draw(pair),
         time= draw(time),
         type  =draw(type),
@@ -76,6 +74,7 @@ def KTradeStrategy(draw,
         margin=draw(margin),
 
         misc=draw(misc),
+        postxid = draw(postxid),
         posstatus=draw(posstatus)
     )
 
@@ -84,9 +83,7 @@ def KTradeStrategy(draw,
 
 class KTradeSchema(BaseSchema):
 
-
     ordertxid= fields.Str() # order responsible for execution of trade
-    postxid = fields.Str()  # position txid... ?? (not in docs : https://www.kraken.com/features/api)
     pair = fields.Str()  # asset pair
     time = fields.Integer(allow_none=True)  # unix timestamp of trade
     type = KABTypeField()  # type of order (buy/sell)
@@ -100,7 +97,8 @@ class KTradeSchema(BaseSchema):
         #closing = trade closes all or part of a position
 
     # if the trade opened a position :
-    posstatus = fields.Str()  # position status (open/closed)
+    postxid = fields.Str(allow_none=True, required=False)  # position txid... ?? (not in docs : https://www.kraken.com/features/api)
+    posstatus = fields.Str(allow_none=True, required=False)  # position status (open/closed)
     #     cprice = average price of closed portion of position (quote currency)
     #     ccost = total cost of closed portion of position (quote currency)
     #     cfee = total fee of closed portion of position (quote currency)
@@ -118,7 +116,6 @@ class KTradeSchema(BaseSchema):
 def TradeDictStrategy(draw,
                           # Here we mirror arguments for the model strategy
                       ordertxid=st.text(max_size=20),
-                        postxid=st.text(max_size=20),
                       pair=st.text(max_size=8),
                       time=st.integers(min_value=int(datetime(year=1970, month=1, day=1).timestamp()),
                                        max_value=int(datetime(year=MAXYEAR, month=12, day=31).timestamp())),
@@ -131,7 +128,8 @@ def TradeDictStrategy(draw,
                       margin=st.decimals(allow_nan=False, allow_infinity=False),
                       misc=st.text(max_size=5),
 
-                      posstatus=st.text(max_size=5)
+                      postxid=st.one_of(st.none(),st.text(max_size=20)),
+                      posstatus=st.one_of(st.none(),st.text(max_size=5)),
                           ):
     model = draw(KTradeStrategy(
         ordertxid = ordertxid,
@@ -162,7 +160,10 @@ class TradeResponseSchema(BaseSchema):
 
     @post_load
     def build_model(self, data, **kwargs):
-        return data['trades']
+        # we need to return the trades AND the total count (the trade response might be partial...)
+        return data['trades'], data['count']  # Note we wont use any special type here for now TODO: maybe PartialPayload ?
+
+        # TODO : dataframe for trades ? We have the time... we can have another (reversed) timeindexed dataframe...
 
 
 if __name__ == "__main__":

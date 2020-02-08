@@ -249,4 +249,5 @@ class RestClient:
         """ make public requests to kraken api"""
         # TODO : accept order, (but only use its userref or id)
         req = self.server.trades_history(offset = offset)
-        return await self._post(request=req)
+        trades_list, count = await self._post(request=req)
+        return trades_list, count  # making multiple return explicit in interface
