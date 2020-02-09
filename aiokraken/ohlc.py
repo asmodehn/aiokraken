@@ -4,6 +4,8 @@ from collections import namedtuple
 from datetime import timedelta, datetime, timezone
 
 import typing
+from decimal import Decimal
+
 import pandas as pd
 from aiokraken.model.assetpair import AssetPair
 
@@ -76,23 +78,23 @@ class OHLC:
         return self.model.end
 
     @property
-    def open(self):
+    def open(self) -> Decimal:
         return self.model.open
 
     @property
-    def close(self):
+    def close(self) -> Decimal:
         return self.model.close
 
     @property
-    def high(self):
+    def high(self)-> Decimal:
         return self.model.high
 
     @property
-    def low(self):
+    def low(self)-> Decimal:
         return self.model.low
 
     @property
-    def volume(self):
+    def volume(self)-> Decimal:
         return self.model.volume
 
     async def __call__(self):

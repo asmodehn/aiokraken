@@ -4,6 +4,7 @@ from __future__ import annotations
 from collections import namedtuple
 
 import typing
+from decimal import Decimal
 
 """ A common data structure for OHLC based on pandas """
 from datetime import datetime, timezone
@@ -56,30 +57,30 @@ class OHLC(TimeindexedDataframe):
 
     @property
     def begin(self) -> datetime:
-        return self.dataframe.index[0]
+        return self.dataframe.index[0].to_pydatetime()
 
     @property
-    def end(self):
-        return self.dataframe.index[-1]
+    def end(self) -> datetime:
+        return self.dataframe.index[-1].to_pydatetime()
 
     @property
-    def open(self):
+    def open(self) -> Decimal:
         return self.dataframe.iloc[0]['open']
 
     @property
-    def close(self):
+    def close(self) -> Decimal:
         return self.dataframe.iloc[-1]['close']
 
     @property
-    def high(self):
+    def high(self) -> Decimal:
         return self.dataframe['high'].max()
 
     @property
-    def low(self):
+    def low(self) -> Decimal:
         return self.dataframe['low'].min()
 
     @property
-    def volume(self):
+    def volume(self) -> Decimal:
         return self.dataframe['volume'].sum()
 
     def __repr__(self):
