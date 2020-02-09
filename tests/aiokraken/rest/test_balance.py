@@ -13,7 +13,7 @@ async def test_balance(keyfile):
     async with RestClient(server=server) as rest_kraken:
         balance_run= rest_kraken.balance()
         response = await balance_run()
-        assert isinstance(response, Balance)
+        assert isinstance(response, dict)  # TODO : proper type here
         print(response)
 
 
