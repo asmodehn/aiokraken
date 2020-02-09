@@ -135,7 +135,7 @@ class TimeindexedDataframe:
         return TimeLocator(self)
 
     # ref : https://stackoverflow.com/questions/16033017/how-to-override-the-slice-functionality-of-list-in-its-derived-class
-    def __getitem__(self, item: typing.Union[datetime, date, time, str]):  # TODO : deal with slices as well !!
+    def __getitem__(self, item: typing.Union[slice, datetime, date, time, str]):  # TODO : deal with slices as well !!
         # TODO : note  this can be used as a filter... on time or other...
         # Here we have to try guessing the user intent...
         # Note : this is always dependent on the precision of the dataframe
@@ -181,6 +181,15 @@ class TimeindexedDataframe:
 
     def __len__(self):
         return len(self.dataframe)
+
+    def __mul__(self, other: TimeindexedDataframe):  # categorical product : merging columns
+
+        # we merge on index (datetime)
+        # TODO : think about merging different timeframes... ok or not ?
+        merged_df = pd.merge(self.dataframe, other.dataframe, right_index=True, left_index=True)
+
+        # TODO : semantics ? copy or ref ?
+        return TimeindexedDataframe(data=merged_df, timer=self.timer, sleeper=self.sleeper)
 
 
 if __name__ == "__main__":

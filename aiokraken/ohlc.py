@@ -37,6 +37,10 @@ class EMA:
     def __len__(self):
         return len(self.model)
 
+    def __mul__(self, other):
+        self.model = self.model * other.model  # TODO : better : without modifying self...
+        return self
+
 
 Pivot = namedtuple("Pivot", ["pivot", "R1", "R2", "R3", "S1", "S2", "S3"])
 
@@ -95,6 +99,12 @@ class OHLC:
         This is a call mutating this object. GOAL : updating OHLC out of the view of the user
         (contained datastructures change by themselves, from REST calls of websockets callback...)
         """
+
+        if self.model and self.model.last > datetime.now(tz=timezone.utc) - self.timeframe.to_timedelta():
+            # no need to update just yet, lets wait a bit
+            wait_time = self.timeframe.to_timedelta() - (datetime.now(tz=timezone.utc) - self.model.last)
+            await asyncio.sleep(wait_time.total_seconds())
+
         new_ohlc = (await self.restclient.ohlc(pair=self.pair, interval=self.timeframe)())
 
         if new_ohlc:
@@ -166,11 +176,14 @@ class OHLC:
     def ema(self, name: str, length: int, offset: int = 0, adjust: bool = False) -> EMA:
         # the self updating object
         ema = EMA(name=name, length=length, offset=offset, adjust=adjust)
-        self.indicators['ema'] = ema  # TODO : merge EMA with multiple params in same dataframe.
-        if self.model:
-            self.indicators['ema'] = ema(self.model)  # Immediately calling on ohlc => TODO : improve design ?
+        if 'ema' in self.indicators:
+            self.indicators['ema'] = self.indicators['ema'] * ema  # merging EMAs in one dataframe !
         else:
-            self.indicators['ema'] = ema  # call will be done later.\
+            self.indicators['ema'] = ema
+
+        if self.model:  # Immediately calling on ohlc if possible => TODO : improve design ?
+            self.indicators['ema'] = ema(self.model)
+
         return self.indicators['ema']
 
     # TODO : Since we have indicators here (totally dependent on ohlc), we probably also want signals...
@@ -200,6 +213,8 @@ if __name__ == '__main__':
     # Here we register and retrieve an indicator on ohlc data.
     # It will be automagically updated when we update ohlc.
     emas_1m = ohlc_1m.ema(name="EMA_12", length=12)
+    # Note these two should merge...
+    ohlc_1m.ema(name="EMA_26", length=26)
 
     async def ohlc_retrieve_nosession():
         global rest, ohlc_1m, emas_1m
@@ -208,8 +223,6 @@ if __name__ == '__main__':
             print(f" - {k}")
 
         # TODO : this should probably be done out of sight...
-        #emas_1m = emas_1m(ohlc_1m.model)  # explicit update of indicator for this timeframe
-        # TODO ohlc.ema(name="EMA_12", length=12) maybe ??
 
     loop = asyncio.get_event_loop()
 

@@ -3,6 +3,7 @@
 
 # in Minutes : 1 (default), 5, 15, 30, 60, 240, 1440, 10080, 21600
 import functools
+from datetime import timedelta
 from enum import Enum
 
 import typing
@@ -43,6 +44,9 @@ class KTimeFrameModel(Enum):
 
     def secs(self):
         return self.value * 60
+
+    def to_timedelta(self):
+        return timedelta(minutes=self.value)
 
     def __str__(self):
         return self.name

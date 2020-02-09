@@ -78,7 +78,7 @@ class EMA(Indicator):
         This is a categorical product, hence the use of *
         """
         # we merge on index (datetime)
-        merged_df = pd.merge(self.timedataframe, other.timedataframe, right_index=True, left_index=True)
+        merged_df = self.timedataframe * other.timedataframe
 
         # TODO : semantics ? copy or ref ?
         return EMA(df=merged_df, **self.params, **other.params)

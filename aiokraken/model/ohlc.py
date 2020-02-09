@@ -132,9 +132,12 @@ class OHLC(TimeindexedDataframe):
 
             if len(rows) > 1:
                 chosen = None
-                prev = newdf_noidx.loc[rows.index[0] - 1]
-                next = newdf_noidx.loc[rows.index[1] + 1]
-
+                try:
+                    prev = newdf_noidx.loc[rows.index[0] - 1]  # Bug here :  KeyError: (-1, 'occurred at index 0')
+                    next = newdf_noidx.loc[rows.index[1] + 1]  # NOTE: bug here : KeyError: (853, 'occurred at index 851')
+                except KeyError as ke:
+                    print(ke)  # TODO display dataframe around this spot...
+                    raise
                 # handling differences on count, open and close
 
                 if rows.iloc[0]['count'] > rows.iloc[1]['count']:
