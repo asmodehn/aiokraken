@@ -1,0 +1,48 @@
+interactions:
+- request:
+    body:
+      nonce: 1581090177755
+      ofs: 0
+    headers:
+      User-Agent:
+      - Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML,
+        like Gecko) Chrome/74.0.3729.131 Safari/537.36
+    method: POST
+    uri: https://api.kraken.com/0/private/TradesHistory
+  response:
+    body:
+      string: '{"error":[],"result":{
+      "trades":{
+        "TWSFUZ-YBBCM-XFU2FG":{"ordertxid":"OSJLKN-U4KLK-RVLQI4","postxid":"TKH3SE-M7IF5-CFI7LT","pair":"XTZEUR","time":1576170084.3365,"type":"buy","ordertype":"market","price":"1.551184","cost":"774.189467","fee":"2.012893","vol":"499.09588111","margin":"0.000000","misc":""},
+        "TJFV3P-TGSJ4-TCAEUD":{"ordertxid":"OCBACC-QGXKJ-LFI6F6","postxid":"TKH3SE-M7IF5-CFI7LT","pair":"XETHZEUR","time":1574698056.6779,"type":"buy","ordertype":"limit","price":"137.61856","cost":"68.80928","fee":"0.17890","vol":"0.50000000","margin":"0.00000","misc":""},
+        "T7IONT-NOOLP-5X3PGX":{"ordertxid":"OF3JXC-2ROSS-QDQJYU","postxid":"TKH3SE-M7IF5-CFI7LT","pair":"XXBTZEUR","time":1574180828.8433,"type":"sell","ordertype":"stop market","price":"7326.80000","cost":"146.53600","fee":"0.38099","vol":"0.02000000","margin":"0.00000","misc":""},
+        "T2SXUI-QWKSI-HFJIT6":{"ordertxid":"OQG2HL-PJ3NS-4AMRNH","postxid":"TKH3SE-M7IF5-CFI7LT","pair":"XXBTZEUR","time":1574179427.5785,"type":"buy","ordertype":"market","price":"7338.50000","cost":"146.77000","fee":"0.38160","vol":"0.02000000","margin":"0.00000","misc":""},
+        "TYMPWS-43QSS-5YWAGD":{"ordertxid":"OWL2F5-IRLRZ-S4NTRX","postxid":"TKH3SE-M7IF5-CFI7LT","pair":"XXBTZEUR","time":1571147543.2402,"type":"buy","ordertype":"market","price":"7560.70000","cost":"75.60700","fee":"0.19658","vol":"0.01000000","margin":"0.00000","misc":""},
+        "T5UIUL-2SZBI-VIOGIG":{"ordertxid":"OJG3BV-EHFR2-XC5MEK","postxid":"T2WW7B-CAW77-BDXKIR","pair":"XXBTZEUR","time":1567107924.8357,"type":"sell","ordertype":"market","price":"8583.10000","cost":"514.98600","fee":"1.33896","vol":"0.06000000","margin":"102.99720","misc":"closing"},
+        "T2WW7B-CAW77-BDXKIR":{"ordertxid":"OY4JEU-G2ROM-TTYK77","postxid":"TKH3SE-M7IF5-CFI7LT","posstatus":"closed","pair":"XXBTZEUR","time":1567080998.9001,"type":"buy","ordertype":"market","price":"8530.50000","cost":"511.83000","fee":"1.38194","vol":"0.06000000","margin":"255.91500","misc":""},
+        "TNDNSP-4H6HR-GL5NWP":{"ordertxid":"O5BSN6-QGSQ6-UMVD2T","postxid":"TXIRKD-TWZVQ-ZYPQRH","pair":"XXBTZEUR","time":1565089981.2594,"type":"buy","ordertype":"market","price":"10527.00000","cost":"210.54000","fee":"0.54740","vol":"0.02000000","margin":"42.10800","misc":"closing"},
+        "TXIRKD-TWZVQ-ZYPQRH":{"ordertxid":"O25MUC-NZFK7-2TQS2C","postxid":"TKH3SE-M7IF5-CFI7LT","posstatus":"closed","pair":"XXBTZEUR","time":1565076479.4947,"type":"sell","ordertype":"market","price":"10910.00000","cost":"218.20000","fee":"0.58914","vol":"0.02000000","margin":"109.10000","misc":""},
+        "TQIWNZ-GOXOH-VLRDCE":{"ordertxid":"OK6G57-XENLJ-WF3PXN","postxid":"TKH3SE-M7IF5-CFI7LT","pair":"XXBTZEUR","time":1562770954.716,"type":"sell","ordertype":"market","price":"11034.20000","cost":"55.17100","fee":"0.14344","vol":"0.00500000","margin":"0.00000","misc":""},
+        "TZT4H6-MKFDM-DAVW4C":{"ordertxid":"OT73EJ-2ZLFY-5SWVOE","postxid":"TKH3SE-M7IF5-CFI7LT","pair":"XXBTZEUR","time":1562255326.2139,"type":"buy","ordertype":"limit","price":"10536.40000","cost":"52.68200","fee":"0.08429","vol":"0.00500000","margin":"0.00000","misc":""},
+        "THNILV-B4KOW-NCBBTN":{"ordertxid":"OKVGKW-XSDRX-7O6JAX","postxid":"TKH3SE-M7IF5-CFI7LT","pair":"XXRPZEUR","time":1557820790.1219,"type":"sell","ordertype":"market","price":"0.34800082","cost":"1043.30646911","fee":"2.71259682","vol":"2998.00000000","margin":"0.00000000","misc":""}
+      },"count":12}}'
+    headers:
+      CF-Cache-Status: DYNAMIC
+      CF-RAY: 56167a0bcf00a8a9-CDG
+      Connection: keep-alive
+      Content-Encoding: gzip
+      Content-Type: application/json; charset=utf-8
+      Date: Fri, 07 Feb 2020 15:42:58 GMT
+      Expect-CT: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      Server: cloudflare
+      Set-Cookie: __cf_bm=76602a66c7e881e5a1b48c3b996969013e095d55-1581090178-1800-AYOb8biaXJP153tWzuQR0cG2EvNz1PvO7R2Wo5g2e9YeFhX4xvInVb/WEfqm04lEy1pM4rKGvLD2r5U0NovE3Wg=;
+        path=/; expires=Fri, 07-Feb-20 16:12:58 GMT; domain=.kraken.com; HttpOnly;
+        Secure; SameSite=None
+      Transfer-Encoding: chunked
+      Vary: Accept-Encoding
+      strict-transport-security: max-age=15768000
+    status:
+      code: 200
+      message: OK
+    url: https://api.kraken.com/0/private/TradesHistory
+version: 1

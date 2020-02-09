@@ -9,9 +9,10 @@ uses integrated python tools only.
 # import your test modules
 if __package__ is not None:
     from . import test_time, test_ticker, test_payload, test_ohlc, test_kabtype, test_ktm, test_krequestorder, \
-        test_kordertype, test_korderdescr, test_kopenorder, test_balance, test_kasset, test_kassetpair
+        test_kordertype, test_korderdescr, test_kopenorder, test_balance, test_kasset, test_kassetpair, test_ktrade
 else:
-    import test_time, test_ticker, test_payload, test_ohlc, test_kabtype, test_ktm, test_krequestorder, test_kordertype, test_korderdescr, test_kopenorder, test_balance, test_kasset, test_kassetpair
+    import test_time, test_ticker, test_payload, test_ohlc, test_kabtype, test_ktm, test_krequestorder, \
+        test_kordertype, test_korderdescr, test_kopenorder, test_balance, test_kasset, test_kassetpair, test_ktrade
 
 # initialize the test suite
 loader = unittest.TestLoader()
@@ -31,6 +32,7 @@ suite.addTests(loader.loadTestsFromModule(test_krequestorder))
 suite.addTests(loader.loadTestsFromModule(test_kordertype))
 suite.addTests(loader.loadTestsFromModule(test_korderdescr))
 suite.addTests(loader.loadTestsFromModule(test_kopenorder))
+suite.addTests(loader.loadTestsFromModule(test_ktrade))
 
 # initialize a runner, pass it your suite and run it
 runner = unittest.TextTestRunner(verbosity=3)

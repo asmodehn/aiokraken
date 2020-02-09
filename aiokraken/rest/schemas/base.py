@@ -1,4 +1,8 @@
-import marshmallow
+import types
+
+import marshmallow.types
+import typing
+
 from ..exceptions import AIOKrakenSchemaValidationException
 
 
@@ -19,17 +23,24 @@ class BaseSchema(marshmallow.Schema):
 
     # TODO : attempt to wrap marshmallow exceptions in aiokraken exceptions...
 
-    def load(self, *args, **kwargs):
+    def load(
+        self,
+        data: typing.Mapping,
+        *,
+        many: bool = None,
+        partial: typing.Union[bool, marshmallow.types.StrSequenceOrSet] = None,
+        unknown: str = None):
         try:
-            return super(BaseSchema, self).load(*args, **kwargs)
+            return super(BaseSchema, self).load(data=data, many=many, partial=partial, unknown=unknown)
         except marshmallow.exceptions.ValidationError as ve:
+            print(data)
             raise AIOKrakenSchemaValidationException(ve)
         except Exception as e:
             raise
 
-    def dump(self, *args, **kwargs):
+    def dump(self, obj: typing.Any, *, many: bool = None):
         try:
-            return super(BaseSchema, self).dump(*args, **kwargs)
+            return super(BaseSchema, self).dump(obj=obj, many=many)
         except Exception:
             raise
 

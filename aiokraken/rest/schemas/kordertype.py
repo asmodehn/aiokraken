@@ -32,6 +32,8 @@ class KOrderTypeModel(StringEnum):
     """
 
     market = "market"
+    stop_market = "stop market"  # undocumented ordertype we can get from trades...
+    touched_market = "touched market"  # undocumented ordertype we can get from trades...
     limit = "limit"
     stop_loss = "stop-loss"
     take_profit = "take-profit"
