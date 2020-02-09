@@ -83,6 +83,7 @@ class Markets(Mapping):
 
         # CAREFUL : this requires private client
         # TODO : making it obvious in design somehow ???
+        #   maybe split this into another class ("Exchange" ??)
         await self.trades()
         await self.orders()
 
@@ -135,7 +136,7 @@ class Markets(Mapping):
         return cost
 
     def __getitem__(self, key):
-        def initdata(key):
+        def initdata(key):  # TODO : maybe some filtering based on pairs and data : market that are not volatile enough to cover fees should probably be skipped...
             self.impl.setdefault(key, MarketData(pair=self.details[key], restclient=self.restclient))  # instantiate if needed
             return self.impl[key]
 
@@ -157,21 +158,6 @@ class Markets(Mapping):
 
     def __len__(self):
         return len(self.details)
-    #
-    # def __getitem__(self, key):
-    #     if self.markets is None:
-    #         raise KeyError
-    #     return self.markets[key]
-    #
-    # def __iter__(self):
-    #     if self.markets is None:
-    #         raise StopIteration
-    #     return iter(self.markets)
-    #
-    # def __len__(self):
-    #     if self.markets is None:
-    #         return 0
-    #     return len(self.markets)
 
 
 if __name__ == '__main__':

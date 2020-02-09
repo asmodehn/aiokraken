@@ -70,7 +70,7 @@ class TimeindexedDataframe:
             if index in self.dataframe.columns:
                 self.dataframe.set_index(index, inplace=True)
             else:  # create it and timestamp it
-                self.dataframe[index] = datetime.now()
+                self.dataframe[index] = datetime.now(tz=timezone.utc)
                 self.dataframe.set_index(index, inplace=True)
 
             self.dataframe.index = pd.to_datetime(self.dataframe.index)
@@ -181,6 +181,9 @@ class TimeindexedDataframe:
 
     def __len__(self):
         return len(self.dataframe)
+
+    def __copy__(self):
+        return TimeindexedDataframe(data=self.dataframe.copy(), timer=self.timer, sleeper=self.sleeper, index=self.index_name)
 
     def __mul__(self, other: TimeindexedDataframe):  # categorical product : merging columns
 

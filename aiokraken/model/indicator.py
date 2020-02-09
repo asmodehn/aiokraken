@@ -1,6 +1,7 @@
 from __future__ import annotations
 import typing
 from collections import namedtuple
+from copy import copy
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from dataclasses import dataclass, field
@@ -77,11 +78,19 @@ class EMA(Indicator):
         """ We can compose with other ema, this just adds a column.
         This is a categorical product, hence the use of *
         """
-        # we merge on index (datetime)
-        merged_df = self.timedataframe * other.timedataframe
+
+        # merging while avoiding duplicates...
+        merging_params = self.params
+        merged_df = copy(self.timedataframe)
+
+        for n, p in other.params.items():
+            if p not in self.params.values():  # dropping identical params
+                merging_params.update({n: p})
+                merged_df = merged_df * other.timedataframe[n]  # join with one column only
 
         # TODO : semantics ? copy or ref ?
-        return EMA(df=merged_df, **self.params, **other.params)
+        # CAREFUL with optimizations here, equality not trivial if we have nans...
+        return EMA(df=merged_df, **merging_params)
 
     def __getitem__(self, item):
         if isinstance(item, str) and item in self.timedataframe.column:

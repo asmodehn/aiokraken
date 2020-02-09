@@ -1,3 +1,4 @@
+from __future__ import annotations
 import asyncio
 from collections import namedtuple
 from datetime import timedelta, datetime, timezone
@@ -173,7 +174,7 @@ class OHLC:
 
         return Pivot(pivot=pivot, R1=R1, R2=R2, R3=R3, S1=S1, S2=S2, S3=S3)
 
-    def ema(self, name: str, length: int, offset: int = 0, adjust: bool = False) -> EMA:
+    def ema(self, name: str, length: int, offset: int = 0, adjust: bool = False) -> OHLC:
         # the self updating object
         ema = EMA(name=name, length=length, offset=offset, adjust=adjust)
         if 'ema' in self.indicators:
@@ -182,9 +183,9 @@ class OHLC:
             self.indicators['ema'] = ema
 
         if self.model:  # Immediately calling on ohlc if possible => TODO : improve design ?
-            self.indicators['ema'] = ema(self.model)
+            self.indicators['ema'] = self.indicators['ema'](self.model)
 
-        return self.indicators['ema']
+        return self # return self, to allow chaining methods. (no point returning the ema created, it is stored already)
 
     # TODO : Since we have indicators here (totally dependent on ohlc), we probably also want signals...
 

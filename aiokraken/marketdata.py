@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 import typing
-from datetime import timedelta, datetime
+from datetime import timedelta, datetime, timezone
 
 from aiokraken.rest.schemas.krequestorder import RequestOrder
 from aiokraken.model.timeframe import KTimeFrameModel
@@ -43,7 +43,11 @@ class MarketData:
         if timeframe not in self.tf_ohlc:  # creation on purpose... for now
             self.tf_ohlc[timeframe] = await ohlc(self.pair, timeframe=timeframe)
 
+        else:  # just attempt an update (might await !)
+            await self.tf_ohlc[timeframe]()
+
         # TODO : this should probably reschedule itself at a proper time...
+        #   instead of expecting another call and awaiting
 
         return self  # returning mutated self for chaining api calls
 

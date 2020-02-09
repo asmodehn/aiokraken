@@ -107,6 +107,8 @@ async def basicbot(assets_allowed, assets_forbidden, markets_allowed, markets_fo
                     # TODO : maybe each strategy has its preconditions to validate before even attempting it...
                     pivot = mdata.tf_ohlc[KTimeFrameModel.one_minute].pivot(before=timedelta(days=1))
 
+                    # TODO : maybe figure out best timeframe to compute resistance/ supports based on ohlc ???
+
                     print(f"Resistances / Supports for {m}: {pivot}")
 
                     # select markets based on pivot data:
@@ -119,11 +121,11 @@ async def basicbot(assets_allowed, assets_forbidden, markets_allowed, markets_fo
                         #  Think multiple agents, one per strategy... ( can access one or more markets... )
                         #  NB:  they might use the (immutable or time-updated only -> deterministic) data,
                         #    even if requested by another...
-                        ema = mdata.tf_ohlc[KTimeFrameModel.one_minute].ema(name="EMA_12", length=12)
+                        ohlc = mdata.tf_ohlc[KTimeFrameModel.one_minute].ema(name="EMA_12", length=12).ema(name="EMA_26", length=26)
 
                         # TODO : simplify accessor...
                         # get last EMA value
-                        print(f" Last EMA_12 for {m}: {ema.model.timedataframe.iloc[-1]}")
+                        print(f" Last EMAs for {m}: {ohlc.indicators['ema'].model.timedataframe.iloc[-1]}")
 
                     # STRATEGIES
                     # Daytrade ->  FIRST FOCUS : restart every night. no point in keeping data for long.
@@ -179,6 +181,10 @@ if __name__ == '__main__':
     from configparser import ConfigParser
     config = ConfigParser()
     config.read("example.ini")
+
+    # TODO : simplified version that can be run anytime :
+    #   check balance compared to config. propose buy/sell actions to user
+    #   based on analysis since last time it was used.
 
     loop = asyncio.get_event_loop()
 

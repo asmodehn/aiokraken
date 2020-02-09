@@ -37,8 +37,10 @@ class OHLC(TimeindexedDataframe):
         if not isinstance(last, datetime):
             # attempt conversion from timestamp
             self.last = datetime.fromtimestamp(last, tz = timezone.utc)
+        elif isinstance(last, pd.Timestamp):
+            self.last = last.to_pydatetime()
         else:
-            self.last = last
+            raise RuntimeError("OHLC.last it not a datetime and could not be converted")
 
         # TODO : take in account we only get last 720 intervals
         #  Ref : https://support.kraken.com/hc/en-us/articles/218198197-How-to-retrieve-historical-time-and-sales-trading-history-using-the-REST-API-Trades-endpoint-
@@ -132,50 +134,58 @@ class OHLC(TimeindexedDataframe):
 
             if len(rows) > 1:
                 chosen = None
-                try:
-                    prev = newdf_noidx.loc[rows.index[0] - 1]  # Bug here :  KeyError: (-1, 'occurred at index 0')
-                    next = newdf_noidx.loc[rows.index[1] + 1]  # NOTE: bug here : KeyError: (853, 'occurred at index 851')
-                except KeyError as ke:
-                    print(ke)  # TODO display dataframe around this spot...
-                    raise
-                # handling differences on count, open and close
 
-                if rows.iloc[0]['count'] > rows.iloc[1]['count']:
+                # handling differences on count, volume, open and close
+
+                # we consider count as priority, otherwise volume
+                if rows.iloc[0]['count'] > rows.iloc[1]['count'] or rows.iloc[0]['volume'] > rows.iloc[1]['volume']:
                     chosen = rows.iloc[0].copy()
-                elif rows.iloc[0]['count'] < rows.iloc[1]['count']:
+                elif rows.iloc[0]['count'] < rows.iloc[1]['count'] or rows.iloc[0]['volume'] < rows.iloc[1]['volume']:
                     chosen = rows.iloc[1].copy()
 
                 if rows.iloc[0]['open'] != rows.iloc[1]['open']:
-                    # open is different -> pick the value that is closets to the previous close
-                    delta = [None, None]
-                    delta[0] = abs(prev['close'] - rows.iloc[0]['open'])
-                    delta[1] = abs(prev['close'] - rows.iloc[1]['open'])
-                    if delta[1] < delta[0]:
-                        if chosen is not None and not (chosen == rows.iloc[1]).all():  # need to merge !
-                            chosen['open'] = rows.iloc[1]['close']
+                    if rows.index[0] > 0:
+                        prev = newdf_noidx.loc[rows.index[0] - 1]
+
+                        # open is different -> pick the value that is closets to the previous close
+                        delta = [None, None]
+                        delta[0] = abs(prev['close'] - rows.iloc[0]['open'])
+                        delta[1] = abs(prev['close'] - rows.iloc[1]['open'])
+                        if delta[1] < delta[0]:
+                            if chosen is not None and not (chosen == rows.iloc[1]).all():  # need to merge !
+                                chosen['open'] = rows.iloc[1]['close']
+                            else:
+                                chosen = rows.iloc[1].copy()
                         else:
-                            chosen = rows.iloc[1].copy()
+                            if chosen is not None and not (chosen == rows.iloc[0]).all():  # need to merge !
+                                chosen['close'] = rows.iloc[0]['close']
+                            else:
+                                chosen = rows.iloc[0].copy()
                     else:
-                        if chosen is not None and not (chosen == rows.iloc[0]).all():  # need to merge !
-                            chosen['close'] = rows.iloc[0]['close']
-                        else:
-                            chosen = rows.iloc[0].copy()
+                        # first row ! just pick it...
+                        chosen = rows.iloc[0].copy()
 
                 if rows.iloc[0]['close'] != rows.iloc[1]['close']:
-                    # close is different-> pick the value that is closest to the previous close
-                    delta = [None, None]
-                    delta[0] = abs(next['open'] - rows.iloc[0]['close'])
-                    delta[1] = abs(next['open'] - rows.iloc[1]['close'])
-                    if delta[1] < delta[0]:
-                        if chosen is not None and not (chosen == rows.iloc[1]).all():  # need to merge !
-                                chosen['close'] = rows.iloc[1]['close']
+                    if rows.index[1] +1 < len(newdf_noidx):
+                        next = newdf_noidx.loc[rows.index[1] + 1]
+
+                        # close is different-> pick the value that is closest to the previous close
+                        delta = [None, None]
+                        delta[0] = abs(next['open'] - rows.iloc[0]['close'])
+                        delta[1] = abs(next['open'] - rows.iloc[1]['close'])
+                        if delta[1] < delta[0]:
+                            if chosen is not None and not (chosen == rows.iloc[1]).all():  # need to merge !
+                                    chosen['close'] = rows.iloc[1]['close']
+                            else:
+                                chosen = rows.iloc[1].copy()
                         else:
-                            chosen = rows.iloc[1].copy()
+                            if chosen is not None and not (chosen == rows.iloc[0]).all():  # need to merge !
+                                    chosen['close'] = rows.iloc[0]['close']
+                            else:
+                                chosen = rows.iloc[0].copy()
                     else:
-                        if chosen is not None and not (chosen == rows.iloc[0]).all():  # need to merge !
-                                chosen['close'] = rows.iloc[0]['close']
-                        else:
-                            chosen = rows.iloc[0].copy()
+                        # last row, just pick it
+                        chosen = rows.iloc[1].copy()
 
                 if chosen is None:
                     print(rows)
