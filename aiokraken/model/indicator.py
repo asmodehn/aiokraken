@@ -1,7 +1,7 @@
 from __future__ import annotations
 import typing
 from collections import namedtuple
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from dataclasses import dataclass, field
 
@@ -136,6 +136,21 @@ def ema(name: str, length: int, offset:int = 0, adjust: bool = False):
 #         ohlc.dataframe.ta.rsi(close=self.close, length=self.length, drift=self.drift, offset=self.offset, append = True)
 #
 #         return ohlc
+
+
+class Pivot:  # Note : this indicator is not a timeindexed dataframe...
+
+    timeframe: timedelta
+    R1: Decimal
+    R2: Decimal
+    R3: Decimal
+    P: Decimal
+    S1: Decimal
+    S2: Decimal
+    S3: Decimal
+
+    def __init__(self, timeframe):
+        self.timeframe = timeframe
 
 
 if __name__ == '__main__':

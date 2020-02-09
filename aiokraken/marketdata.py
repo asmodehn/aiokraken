@@ -3,13 +3,15 @@ from dataclasses import dataclass
 import typing
 from datetime import timedelta, datetime
 
+from aiokraken.rest.schemas.krequestorder import RequestOrder
 from aiokraken.model.timeframe import KTimeFrameModel
 
 from aiokraken.model.assetpair import AssetPair
 
 from aiokraken.model.ohlc import OHLC as OHLCModel
-from aiokraken.ohlc import OHLC
+from aiokraken.ohlc import ohlc
 from aiokraken.rest import RestClient
+from aiokraken.trades import Trades
 
 
 class MarketData:
@@ -39,9 +41,7 @@ class MarketData:
     async def __call__(self, timeframe: KTimeFrameModel = KTimeFrameModel.one_minute):
         """ Do the updates for this pair, at teh required timeframe """
         if timeframe not in self.tf_ohlc:  # creation on purpose... for now
-            self.tf_ohlc[timeframe] = OHLC(self.pair, timeframe=timeframe)
-
-        await self.tf_ohlc[timeframe]()  # simple mutating update
+            self.tf_ohlc[timeframe] = await ohlc(self.pair, timeframe=timeframe)
 
         # TODO : this should probably reschedule itself at a proper time...
 
@@ -60,10 +60,19 @@ if __name__ == '__main__':
     import asyncio
     from aiokraken.rest.api import Server
     from aiokraken.markets import Markets
-    # Client can be global: there is only one.
-    rest = RestClient(server=Server())
+    from aiokraken.config import load_api_keyfile
 
-    mkts = Markets(restclient=rest)
+    keystruct = load_api_keyfile()
+
+    # Client can be global: there is only one.
+    priv_client = RestClient(server=Server(
+        key=keystruct.get('key'),
+        secret=keystruct.get('secret')
+    ))
+    # priv client is needed since we get orders and trades...
+    # TODO : maybe split into another class ??
+
+    mkts = Markets(restclient=priv_client)
 
     async def assetpairs_retrieve_nosession():
         await mkts()
@@ -76,7 +85,8 @@ if __name__ == '__main__':
     time.sleep(1)
 
     # market data can be global (one per market only)
-    md = MarketData(pair=mkts.get('ETHEUR'), restclient=rest)
+    # TODO : type for market to avoid identifier mistakes (altname, etc.)
+    md = MarketData(pair=mkts.details.get('XETHZEUR'), restclient=priv_client)
 
     async def ohlc_retrieve_nosession():
         await md()

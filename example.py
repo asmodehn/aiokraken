@@ -1,4 +1,5 @@
 import time
+from datetime import timedelta
 from decimal import Decimal, localcontext, DefaultContext
 
 import aiohttp
@@ -66,7 +67,8 @@ async def basicbot(assets_allowed, assets_forbidden, markets_allowed, markets_fo
         secret=keystruct.get('secret')
     ))
 
-    markets = Markets(restclient = pub_client)
+    markets = Markets(restclient = priv_client)
+    # Note : now that self.restclient has markets has trades and orders, we need to use private client...
     markets.filter(whitelist=markets_allowed, blacklist=markets_forbidden)
 
     balance = Balance(restclient = priv_client)
@@ -88,71 +90,81 @@ async def basicbot(assets_allowed, assets_forbidden, markets_allowed, markets_fo
 
             print(tradables)
 
+            flat_markets = list()  # not interesting ones
+
             for m, data in {m: d for m, d in markets.items() if m in tradables}.items():
+                # TODO : context manager for timeframe ?
 
                 mdata = await data(KTimeFrameModel.one_minute)  # update at specific timeframe to find interesting markets
-                # TODO : maybe lazy update of data only when required ?
-                ema = mdata.tf_ohlc[KTimeFrameModel.one_minute].ema(name="EMA_12", length=12)
 
-                # TODO : simplify accessor...
-                print(f"EMA for {m}: {ema.model.timedataframe.iloc[-1]}")  # get last EMA value for all tradables
+                if (mdata.tf_ohlc[KTimeFrameModel.one_minute].high == mdata.tf_ohlc[KTimeFrameModel.one_minute].low):
+                    # nothing happened there, drop it
+                    print(f"{m} looks flat. Dropping it.")
+                    flat_markets.append(m)
+                else:
+                    # TODO : maybe check trend via open/close onf the whole ohlc ?
 
-                # TODO: enable periodic check of indicators.
-                #   signals later...
+                    # TODO : maybe each strategy has its preconditions to validate before even attempting it...
+                    pivot = mdata.tf_ohlc[KTimeFrameModel.one_minute].pivot(before=timedelta(days=1))
+
+                    print(f"Resistances / Supports for {m}: {pivot}")
+
+                    # select markets based on pivot data:
+                    if pivot.R1 - pivot.S1 < pivot.pivot * 0.0025:  # check if the interval is bigger than fees
+                        flat_markets.append(m)
+                        print(f"{m} Support Resistance interval data too flat to cover fees. Dropping it.")
+                        # TODO : put signals in place to re-add it to the list of interesting markets if interval increase...
+                    else:
+                        # TODO : maybe lazy update of data only when required ? how to keep managing async control ?
+                        #  Think multiple agents, one per strategy... ( can access one or more markets... )
+                        #  NB:  they might use the (immutable or time-updated only -> deterministic) data,
+                        #    even if requested by another...
+                        ema = mdata.tf_ohlc[KTimeFrameModel.one_minute].ema(name="EMA_12", length=12)
+
+                        # TODO : simplify accessor...
+                        # get last EMA value
+                        print(f" Last EMA_12 for {m}: {ema.model.timedataframe.iloc[-1]}")
+
+                    # STRATEGIES
+                    # Daytrade ->  FIRST FOCUS : restart every night. no point in keeping data for long.
+                    # TODO : adjust timeframe.
+                    # Position ->  NEXT
+                    # swing -> later
+                    # scalping -> later
+
+                    # Day trading strats :
+                    # - pivot / support / resistance DONE !
+                    # - trend  TODO
+                    # - fibonnacci levels TODo
+                    # - breakout  https://tradingsim.com/blog/day-trading-breakouts/
+                    # - reversal  https://www.investopedia.com/terms/r/reversal.asp
+                    # - momentum
 
 
-                # STRATEGIES
-                # Daytrade ->  FIRST FOCUS : restart every night. no point in keeping data for long. TODO : adjust timeframe.
-                # Position ->  NEXT
-                # swing -> later
-                # scalping -> later
 
-                # Day trading strats :
-                # - pivot / support / resistance FIRST FOCUS
-                # - trend  TODO
-                # - fibonnacci levels TODo
-                # - breakout  https://tradingsim.com/blog/day-trading-breakouts/
-                # - reversal  https://www.investopedia.com/terms/r/reversal.asp
-                # - momentum
+                    # TODO : Automated trading plan https://www.investopedia.com/terms/t/trading-plan.asp
+                    # Setup Tradesignals
 
-                # TODO : add this to OHLC ( basis of many plans in addition of other indicators... )
-                # Ref : https://www.easycalculation.com/finance/pivot-points-trading.php
-                # Ref : https://www.investopedia.com/terms/p/pivotpoint.asp
-                # Pivot Point = (H + C + L) / 3
-                #  R3 = H + 2 x ( Pivot - L )
-                #  R2 = Pivot + ( R1 - S1 )
-                #  R1 = 2 x Pivot - L
-                #  S1 = 2 x Pivot - H
-                #  S2 = Pivot - ( R1 - S1 )
-                #  S3 = L - 2 x ( H - Pivot )
-                #
-                # Where,
-                # H - Previous Days High
-                # L - Previous Days Low
-                # C - Previous Days Close
-                # R - Resistances Levels
-                # S - Supports Levels
+                    #TODO
 
-                # TODO : Automated trading plan https://www.investopedia.com/terms/t/trading-plan.asp
-                # Setup Tradesignals
+                    # if ohlc[m]
+                    #
+                    #
+                    # def obv_crossover():
+                    #     raise NotImplementedError
+                    #
+                    # def r1_crossover():
+                    #     raise NotImplementedError
+                    #
+                    # ohlc[m].obv.crossover(obv_crossover)
+                    # ohlc[m].R1.crossover(r1_crossover)
 
-                #TODO
+                    # Ref : https://tradingstrategyguides.com/best-bitcoin-trading-strategy/
+                    # Ref : https://tradingstrategyguides.com/support-and-resistance-strategy/
+                    # TODO: On combination of signal : setup orders + setup signals on order filled.
 
-                # if ohlc[m]
-                #
-                #
-                # def obv_crossover():
-                #     raise NotImplementedError
-                #
-                # def r1_crossover():
-                #     raise NotImplementedError
-                #
-                # ohlc[m].obv.crossover(obv_crossover)
-                # ohlc[m].R1.crossover(r1_crossover)
-
-                # Ref : https://tradingstrategyguides.com/best-bitcoin-trading-strategy/
-                # Ref : https://tradingstrategyguides.com/support-and-resistance-strategy/
-                # TODO: On combination of signal : setup orders + setup signals on order filled.
+            if flat_markets:
+                markets.filter(blacklist=flat_markets)  # adding flat markets to blacklist for next loop
 
     except Exception as e:
         LOGGER.error(f"Exception caught : {e}. Terminating...", exc_info=True)
@@ -177,9 +189,9 @@ if __name__ == '__main__':
         )
 
     loop.run_until_complete(basicbot(
-        assets_allowed=config["assets"]['whitelist'],
-        assets_forbidden=config["assets"]["blacklist"],
-        markets_allowed=config["markets"]["whitelist"],
-        markets_forbidden=config["markets"]["blacklist"],
+        assets_allowed=config["assets"]['whitelist'].split(),
+        assets_forbidden=config["assets"]["blacklist"].split(),
+        markets_allowed=config["markets"]["whitelist"].split(),
+        markets_forbidden=config["markets"]["blacklist"].split(),
         loop=loop
     ))

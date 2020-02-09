@@ -74,13 +74,15 @@ class Markets(Mapping):
         :return:
         """
         if self._filter.whitelist:
-            self.details = await self.restclient.assetpairs(assets=self._filter.whitelist)()
+            self.details = await self.restclient.assetpairs(pairs=self._filter.whitelist)()
         else:
             self.details = await self.restclient.assetpairs()()
 
         # also initializes trades and orders
         # TODO : each should work as "call by need" would do : requests only when needed...
 
+        # CAREFUL : this requires private client
+        # TODO : making it obvious in design somehow ???
         await self.trades()
         await self.orders()
 

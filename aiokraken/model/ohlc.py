@@ -90,6 +90,21 @@ class OHLC(TimeindexedDataframe):
         # check on len for optimization -> different length => different ohlc.
         return len(self) == len(other) and (self.dataframe == other.dataframe).all().all()  # we need exact match on 2 dimensions
 
+    def __getitem__(self, item):  # TODO : deal with slices as well !!
+        # TODO : note  this can be used as a filter... on time or other...
+        # Here we have to try guessing the user intent...
+        # Note : this is always dependent on the precision of the dataframe
+        # TODO: probably we want to match the semantics of pandas for this
+
+        # we dont know just try something (the general pandas case)
+        subdata = self.dataframe[item]
+
+        # but we need to wrap it into an OHLC (directed container semantics !)
+        return OHLC(
+            data=subdata,
+            last=subdata.index[-1]
+        )
+
     def __iter__(self):
         return self.dataframe.itertuples(name="IndexedOHLCValue")  # TODO some way of matching with actual OHLC values ?
 

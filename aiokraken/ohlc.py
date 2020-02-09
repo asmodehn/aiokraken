@@ -1,5 +1,6 @@
 import asyncio
-from datetime import timedelta, datetime
+from collections import namedtuple
+from datetime import timedelta, datetime, timezone
 
 import typing
 import pandas as pd
@@ -37,6 +38,9 @@ class EMA:
         return len(self.model)
 
 
+Pivot = namedtuple("Pivot", ["pivot", "R1", "R2", "R3", "S1", "S2", "S3"])
+
+
 class OHLC:
     """ Note : This is the monad / mutable state, providing an "imperative" interface to immutable data.
         There fore it should act as a container, on the time axis... probably via the callable / iterator protocols
@@ -55,7 +59,7 @@ class OHLC:
         self.validtime = valid_time   # None means always valid
         self.pair = pair
         self.timeframe = timeframe
-        self.model = None  # Or RAII since we plan to mutate, maybe imperative style is better ??
+        self.model = None  # Need async call : raii is not doable here...
         self.indicators = dict()
 
     @property
@@ -106,6 +110,9 @@ class OHLC:
 
     # TODO : howto make display to string / repr ??
 
+    # TODO : maybe we need something to express the value of the asset relative to the fees
+    #  => nothing change while < fees, and then it s step by step *2, *3, etc.
+
     def __getitem__(self, key):  # Maybe we can allow differents types here and provide multiple implementations ?
         return self.model[key]
 
@@ -125,10 +132,36 @@ class OHLC:
             return len(self.model)
         else:
             return 0
-    #
-    # @property
-    # def ema(self):
-    #     return EMA()
+
+    def pivot(self, before: typing.Union[datetime,timedelta], now: datetime= datetime.now(tz=timezone.utc)) -> Pivot:
+        if isinstance(before, timedelta):
+            before = now - before
+
+        # extract previous timeframe
+        previous_tf = self[before: now]
+        assert isinstance(previous_tf, OHLCModel)
+
+        # Ref : https://www.easycalculation.com/finance/pivot-points-trading.php
+        # Ref : https://www.investopedia.com/terms/p/pivotpoint.asp
+        # Pivot Point = (H + C + L) / 3
+        pivot = (previous_tf.high + previous_tf.close + previous_tf.low) / 3
+
+        #  R1 = 2 x Pivot - L
+        R1 = 2 * pivot - previous_tf.low
+        #  S1 = 2 x Pivot - H
+        S1 = 2 * pivot - previous_tf.high
+
+        #  R2 = Pivot + ( R1 - S1 )
+        R2 = pivot + (R1 - S1)
+        #  S2 = Pivot - ( R1 - S1 )
+        S2 = pivot - (R1 - S1)
+
+        #  R3 = H + 2 x ( Pivot - L )
+        R3 = previous_tf.high + 2 * (pivot - previous_tf.low)
+        #  S3 = L - 2 x ( H - Pivot )
+        S3 = previous_tf.low - 2 * (previous_tf.high - pivot)
+
+        return Pivot(pivot=pivot, R1=R1, R2=R2, R3=R3, S1=S1, S2=S2, S3=S3)
 
     def ema(self, name: str, length: int, offset: int = 0, adjust: bool = False) -> EMA:
         # the self updating object
@@ -141,6 +174,15 @@ class OHLC:
         return self.indicators['ema']
 
     # TODO : Since we have indicators here (totally dependent on ohlc), we probably also want signals...
+
+
+# async constructor, to enable RAII for this class
+# think directed container in time, extracting more data from the now...
+
+async def ohlc(pair, timeframe: KTimeFrameModel = KTimeFrameModel.one_minute, restclient: RestClient = None,):
+    ohlc = OHLC(pair=pair, timeframe=timeframe, restclient=restclient)
+    return await ohlc()  # RAII()
+    # TODO : return a proxy instead...
 
 
 if __name__ == '__main__':
