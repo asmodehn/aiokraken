@@ -6,7 +6,7 @@ branches:
     - gh-pages
 
 python:
-  - '3.7.2'
+  - '3.7'  # on bionic we are already > 3.7.2 no need to specify
   #- '3.8'
 
 
