@@ -29,6 +29,7 @@ class TestOrderTypeModel(unittest.TestCase):
         assert model.value in [
             'market',
             'stop market',
+            'touched market',
             'limit',
             'stop-loss',
             'take-profit',

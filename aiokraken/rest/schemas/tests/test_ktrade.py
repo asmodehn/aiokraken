@@ -33,7 +33,6 @@ class TestTradeModel(unittest.TestCase):
     @given(KTradeStrategy())
     def test_init(self, trade):
         assert isinstance(trade.ordertxid, str)  # order responsible for execution of trade
-        assert isinstance(trade.postxid, str)  # order responsible for execution of trade
         assert isinstance(trade.pair, str)  # asset pair
         assert isinstance(trade.time, int)  # unix timestamp of trade
         assert isinstance(trade.type, KABTypeModel)  # type of order (buy/sell)
@@ -44,6 +43,9 @@ class TestTradeModel(unittest.TestCase):
         assert isinstance(trade.vol, decimal.Decimal)  # volume (base currency)
         assert isinstance(trade.margin, decimal.Decimal)  # initial margin (quote currency)
         assert isinstance(trade.misc,  str)  # comma delimited list of miscellaneous info
+        #optionals
+
+        assert trade.postxid is None or isinstance(trade.postxid, str)  # order responsible for execution of trade
         # TODO : improve
 
 
