@@ -123,15 +123,30 @@ class OHLC:
 
     # TODO : howto make display to string / repr ??
 
-    def show(self):
+    def show(self, block=True):
         import matplotlib
-        matplotlib.use('TkAgg')  # Note : Thinter needs to be installed !
+        from matplotlib import pyplot as plt
+        matplotlib.use('TkAgg')  # Note : Tkinter needs to be installed ! "sudo apt install python3-tk"
         import mplfinance as mpf
+        print(f" Showing OHLCV for {self.pair}")
+        if block:
+            plt.ioff()
+        else:
+            plt.ion()  # by default with TkAgg
         mpf.plot(self.model.dataframe.rename(columns={'open': 'Open',
                                  'high': 'High',
                                  'low': 'Low',
                                  'close': 'Close',
-                                  'volume': 'Volume'}), type='candle', volume=True)
+                                  'volume': 'Volume'}), type='ohlc', volume=True)
+        if block:
+            plt.ion()  # reset
+        return plt
+
+    # something in the background, not blocking, but closing properly...
+    async def ashow(self):
+        plt = self.show(block=False)
+        await asyncio.sleep(10)
+        plt.close("all")
 
     # TODO : maybe we need something to express the value of the asset relative to the fees
     #  => nothing change while < fees, and then it s step by step *2, *3, etc.
@@ -234,6 +249,7 @@ if __name__ == '__main__':
         await ohlc_1m()
         for k in ohlc_1m:
             print(f" - {k}")
+        await ohlc_1m.ashow()  # interactive test
 
         # TODO : this should probably be done out of sight...
 
@@ -242,7 +258,7 @@ if __name__ == '__main__':
     assert len(ohlc_1m) == 0
 
     loop.run_until_complete(ohlc_retrieve_nosession())
-    ohlc_1m.show()
+    # ohlc_1m.show()  # blocking test
     assert len(ohlc_1m) == 720, f"from: {ohlc_1m.begin} to: {ohlc_1m.end} -> {len(ohlc_1m)} values"
     # ema has been updated
     assert len(emas_1m) == 720, f"EMA: {len(emas_1m)} values"
@@ -250,7 +266,7 @@ if __name__ == '__main__':
     print("Waiting one more minute to attempt retrieving more ohlc data and stitch them...")
     time.sleep(60)
     loop.run_until_complete(ohlc_retrieve_nosession())
-    ohlc_1m.show()
+    # ohlc_1m.show()  # blocking test
 
     assert len(ohlc_1m) == 721, f"from: {ohlc_1m.begin} to: {ohlc_1m.end} -> {len(ohlc_1m)} values"
     # ema has been updated
