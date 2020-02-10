@@ -123,6 +123,16 @@ class OHLC:
 
     # TODO : howto make display to string / repr ??
 
+    def show(self):
+        import matplotlib
+        matplotlib.use('TkAgg')  # Note : Thinter needs to be installed !
+        import mplfinance as mpf
+        mpf.plot(self.model.dataframe.rename(columns={'open': 'Open',
+                                 'high': 'High',
+                                 'low': 'Low',
+                                 'close': 'Close',
+                                  'volume': 'Volume'}), type='candle', volume=True)
+
     # TODO : maybe we need something to express the value of the asset relative to the fees
     #  => nothing change while < fees, and then it s step by step *2, *3, etc.
 
@@ -232,6 +242,7 @@ if __name__ == '__main__':
     assert len(ohlc_1m) == 0
 
     loop.run_until_complete(ohlc_retrieve_nosession())
+    ohlc_1m.show()
     assert len(ohlc_1m) == 720, f"from: {ohlc_1m.begin} to: {ohlc_1m.end} -> {len(ohlc_1m)} values"
     # ema has been updated
     assert len(emas_1m) == 720, f"EMA: {len(emas_1m)} values"
@@ -239,6 +250,7 @@ if __name__ == '__main__':
     print("Waiting one more minute to attempt retrieving more ohlc data and stitch them...")
     time.sleep(60)
     loop.run_until_complete(ohlc_retrieve_nosession())
+    ohlc_1m.show()
 
     assert len(ohlc_1m) == 721, f"from: {ohlc_1m.begin} to: {ohlc_1m.end} -> {len(ohlc_1m)} values"
     # ema has been updated
