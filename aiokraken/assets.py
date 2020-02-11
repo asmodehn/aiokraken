@@ -41,6 +41,9 @@ class Assets(Mapping):
         f = Filter(whitelist=whitelist, blacklist=blacklist, default_allow=default_allow)
         self._filter = self._filter + f
 
+        # immediately apply blacklist to content
+        self.impl = {k: v for k, v in self.impl.items() if k not in blacklist}
+
     # Note : here we use imperative style, and calling will update contained data (ie mutating...)
     async def __call__(self, force = False):  # TODO : add WSSClient to subscribe to get updated
         if force or self.validtime is None or datetime.now() > self.updated + self.validtime:
@@ -77,6 +80,13 @@ class Assets(Mapping):
     #     return new  # immutable behavior...
 
     # TODO : maybe extract a partial map proxy pattern from similar classes... might be useful given REST API usual structures.
+
+
+async def assets(restclient: RestClient):
+    # async constructor, to enable RAII for this class - think directed container in time, extracting more data from the now...
+    a = Assets(restclient=restclient)
+    return await a()  # RAII()
+    # TODO : return a proxy instead...
 
 
 if __name__ == '__main__':

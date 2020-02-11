@@ -26,7 +26,7 @@ class Balance(Mapping):
         self._filter = Filter(blacklist=[])
         self.restclient = restclient  # we require a restclient here, since all requests are private
         self.validtime = valid_time   # None means always valid
-        # TODO : implement filter by filtering balance view
+        self.assets = dict()
 
     def filter(self,  whitelist=None, blacklist=None, default_allow = True):
         """
@@ -36,15 +36,17 @@ class Balance(Mapping):
         f = Filter(whitelist=whitelist, blacklist=blacklist, default_allow=default_allow)
         self._filter = self._filter + f
 
+        # immediately apply blacklist to content
+        self.impl = {k: v for k, v in self.impl.items() if k not in blacklist}
+
     async def __call__(self):
         """
         """
-        # TODO : meaning of filter here... not showing blacklisted assets ?
+        # TODO : meaning of filter here... not showing blacklisted assets ? only retrieving whitelist assets ?
         self.impl = (await self.restclient.balance()())
-         # TODO : why the extra 'accounts' level ? can we get rid of it somehow ?
 
         # get a partial view of assets locally
-        self.assets = {n: a for n, a in self.restclient._assets.items()}
+        self.assets = {n: a for n, a in self.restclient._assets.items() if n not in self._filter.blacklist}
 
         return self
 
@@ -63,6 +65,14 @@ class Balance(Mapping):
 
     def __len__(self):
         return len(self.impl)
+
+
+
+async def balance(restclient: RestClient):
+    # async constructor, to enable RAII for this class - think directed container in time, extracting more data from the now...
+    b = Balance(restclient=restclient)
+    return await b()  # RAII()
+    # TODO : return a proxy instead...
 
 
 if __name__ == '__main__':

@@ -38,6 +38,7 @@ dpcontracts = "*"
 result = "*"
 typeclasses = "*"
 aioresponses = "*"
+mplfinance = "*"
 
 [requires]
 python_version = "3.7"

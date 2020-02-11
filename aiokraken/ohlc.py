@@ -143,6 +143,7 @@ class OHLC:
         return plt
 
     # something in the background, not blocking, but closing properly...
+    # TODO : maybe a context manager for plotting ?
     async def ashow(self):
         plt = self.show(block=False)
         await asyncio.sleep(10)

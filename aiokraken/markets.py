@@ -1,4 +1,5 @@
 import asyncio
+import re
 import time
 from collections import OrderedDict
 from collections.abc import Mapping
@@ -66,6 +67,16 @@ class Markets(Mapping):
         f = Filter(whitelist=whitelist, blacklist=blacklist, default_allow=default_allow)
         self._filter = self._filter + f
 
+        # immediately apply blacklist to content
+        self.impl = {k: v for k, v in self.impl.items() if k not in blacklist}
+
+        # TODO : embed in filter ?
+        for b in blacklist:
+            #bcomp = re.compile(b) # TMP : not working ??
+            for mt in [(re.match(b, m), self.impl[m]) for m in self.impl]:
+                if mt[0]:
+                    self.impl.pop(mt[1])
+
     async def __call__(self):
         """
         Trigger the actual retrieval of the market details, through the rest client.
@@ -110,7 +121,7 @@ class Markets(Mapping):
                 try:
                     p = self.details[pn]
                 except Exception as e:
-                    print(f" {e}: pair from trade not found in list of pair, cancelling tradecost computation")
+                    print(f" {e.args[0]}: pair from trade not found in list of pair, cancelling tradecost computation")
             if p is not None:  # TODO :maybe filter useless pairs ealier ??
                 if t.type is KABTypeModel.sell and p.quote in [asset.restname, asset.altname]:
                     if total + t.cost - t.fee > amount:
@@ -158,6 +169,13 @@ class Markets(Mapping):
 
     def __len__(self):
         return len(self.details)
+
+
+async def markets(restclient: typing.Optional[RestClient] = None):
+    # async constructor, to enable RAII for this class - think directed container in time, extracting more data from the now...
+    m = Markets(restclient=restclient)
+    return await m()  # RAII()
+    # TODO : return a proxy instead...
 
 
 if __name__ == '__main__':
