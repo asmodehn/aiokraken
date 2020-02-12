@@ -112,7 +112,9 @@ class KLedgersResponseSchema(BaseSchema):
     # maybe not ?
 
     @post_load
-    def build_model(self, data, **kwargs):
+    def build_model(self, data, many, partial):
+        for n in data['ledger'].keys():
+            data['ledger'][n].ledger_id = n
         # we need to return the trades AND the total count (the trade response might be partial...)
         return data['ledger'], data['count']  # Note we wont use any special type here for now TODO: maybe PartialPayload ?
 

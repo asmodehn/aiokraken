@@ -278,4 +278,7 @@ class RestClient:
             more_ledgers, count = await self._offset_ledgers(offset=len(ledgers))()
             ledgers.update(more_ledgers)
 
+        # TODO : here we should probably convert to a Model (dataframe, etc.),
+        # more complex/complete than a dict structure...
+
         return ledgers  # count stays internally managed by client.
