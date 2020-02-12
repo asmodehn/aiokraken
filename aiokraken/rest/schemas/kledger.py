@@ -107,14 +107,14 @@ def KLedgerInfoDictStrategy(draw,
 
 
 class KLedgersResponseSchema(BaseSchema):
-    ledgers = fields.Dict(keys=fields.Str(), values=fields.Nested(KLedgerInfoSchema()))
-    #count = fields.Integer(allow_none=False)  # we need the count to know the max offset
+    ledger = fields.Dict(keys=fields.Str(), values=fields.Nested(KLedgerInfoSchema()))
+    count = fields.Integer(allow_none=False)  # we need the count to know the max offset
     # maybe not ?
 
     @post_load
     def build_model(self, data, **kwargs):
         # we need to return the trades AND the total count (the trade response might be partial...)
-        return data['ledgers'] #, data['count']  # Note we wont use any special type here for now TODO: maybe PartialPayload ?
+        return data['ledger'], data['count']  # Note we wont use any special type here for now TODO: maybe PartialPayload ?
 
         # TODO : dataframe for ledgers ? We have the time... we can have another (reversed) timeindexed dataframe...
 

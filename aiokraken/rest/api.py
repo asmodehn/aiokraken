@@ -2,6 +2,8 @@ import types
 
 import typing
 
+from aiokraken.rest.schemas.kledger import KLedgersResponseSchema
+
 from aiokraken.rest.schemas.ktrade import TradeResponseSchema
 
 from aiokraken.model.timeframe import KTimeFrameModel
@@ -317,10 +319,32 @@ class Server:
                                                           result_schema=TradeResponseSchema()
                                                       ))
                                     )
-
     #
     # def query_trades(self):
     #     pass
+
+    def ledgers(self, asset=None, offset=0, type = None, start: typing.Optional[int] = None, end: typing.Optional[int] = None):
+        # aclass = asset class (optional):
+        #     currency (default)
+        # asset = comma delimited list of assets to restrict output to (optional.  default = all)
+        # type = type of ledger to retrieve (optional):
+        #     all (default)
+        #     deposit
+        #     withdrawal
+        #     trade
+        #     margin
+        # start = starting unix timestamp or ledger id of results (optional.  exclusive)
+        # end = ending unix timestamp or ledger id of results (optional.  inclusive)
+        # ofs = result offset
+        # TODO : integration tests !!!
+        return self.private.request('Ledgers',
+                                    data={'ofs': offset},
+                                    expected=Response(status=200,
+                                                      schema=PayloadSchema(
+                                                          result_schema=KLedgersResponseSchema()
+                                                      ))
+                                    )
+
 
 # API DEFINITION - TODO
 

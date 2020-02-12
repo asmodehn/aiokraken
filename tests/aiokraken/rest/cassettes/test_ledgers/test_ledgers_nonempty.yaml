@@ -1,0 +1,114 @@
+interactions:
+- request:
+    body:
+      nonce: 1581513879417
+      ofs: 0
+    headers:
+      User-Agent:
+      - Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML,
+        like Gecko) Chrome/74.0.3729.131 Safari/537.36
+    method: POST
+    uri: https://api.kraken.com/0/private/Ledgers
+  response:
+    body:
+      string: '{"error":[],"result":{
+              "ledger":{"L2OEFI-7UMQC-CQBLTV":{"refid":"TYNT7A-PNDEM-4KTNZF","time":1581505985.4609,"type":"trade","aclass":"currency","asset":"ZEUR","amount":"43.7204","fee":"1.1537","balance":"124.6483"},
+              "LROUT5-5B3VT-V5FLTS":{"refid":"TYNT7A-PNLEM-4KTMZF","time":1581505985.4604,"type":"trade","aclass":"currency","asset":"XTZ","amount":"-149.77397027","fee":"0.00000000","balance":"0.00000001"},
+              "LF5JHR-DPMZL-M6XVFZ":{"refid":"LA3IEQQ-4LSOI-DYRVXM","time":1575784721.2153,"type":"transfer","aclass":"currency","asset":"XXBT","amount":"0.0003250000","fee":"0.0000000000","balance":"0.0303250000"},
+              "LDOUZM-LD6P5-LXNEMX":{"refid":"LA2ZTOL-CMSCW-PVTPNK","time":1575784721.2145,"type":"transfer","aclass":"currency","asset":"BSV","amount":"-0.0250000000","fee":"0.0000000000","balance":"0.0000000000"},
+              "LJSU5P-5ASDX-UF7GFH":{"refid":"TJRLWI-OFVTB-BX6AJ5","time":1572968950.2399,"type":"trade","aclass":"currency","asset":"ZEUR","amount":"16.5820","fee":"0.4409","balance":"90.3504"}},
+              "count":13}}'
+    headers:
+      CF-Cache-Status: DYNAMIC
+      CF-RAY: 563ee2531a24cd83-CDG
+      Connection: keep-alive
+      Content-Encoding: gzip
+      Content-Type: application/json; charset=utf-8
+      Date: Wed, 12 Feb 2020 13:24:39 GMT
+      Expect-CT: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      Server: cloudflare
+      Set-Cookie: __cf_bm=588c01ea404088d0940a54e5a8f4174d0ce633fd-1581513879-1800-AXRqsFsWpSTkKYzdeQUFjLxgp8h5SmkHS3YnBIUudSXwCNCjYIUpzpuu4iTPHeQAH1troZWkiLP5DhXgDV38K8E=;
+        path=/; expires=Wed, 12-Feb-20 13:54:39 GMT; domain=.kraken.com; HttpOnly;
+        Secure; SameSite=None
+      Transfer-Encoding: chunked
+      Vary: Accept-Encoding
+      strict-transport-security: max-age=15768000
+    status:
+      code: 200
+      message: OK
+    url: https://api.kraken.com/0/private/Ledgers
+- request:
+    body:
+      nonce: 1581513879417
+      ofs: 5
+    headers:
+      User-Agent:
+      - Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML,
+        like Gecko) Chrome/74.0.3729.131 Safari/537.36
+    method: POST
+    uri: https://api.kraken.com/0/private/Ledgers
+  response:
+    body:
+      string: '{"error":[],"result":{
+              "ledger":{"L2QEFI-7UMQC-CQBLTV":{"refid":"TYNN7A-PNDEM-4KTNZF","time":1581505985.4609,"type":"trade","aclass":"currency","asset":"ZEUR","amount":"43.7204","fee":"1.1537","balance":"124.6483"},
+              "LROUT5-5B3VT-V5FLTZ":{"refid":"TYNT7A-PNLDM-4KTMZF","time":1581505985.4604,"type":"trade","aclass":"currency","asset":"XTZ","amount":"-149.77397027","fee":"0.00000000","balance":"0.00000001"},
+              "LF5JWR-DPMZL-M6XVFZ":{"refid":"LA3IEQQ-4MSOI-DYRVXM","time":1575784721.2153,"type":"transfer","aclass":"currency","asset":"XXBT","amount":"0.0003250000","fee":"0.0000000000","balance":"0.0303250000"},
+              "LDOUGM-LD6P5-LXNEMX":{"refid":"LA2ZTOL-CNSCW-PVTPNK","time":1575784721.2145,"type":"transfer","aclass":"currency","asset":"BSV","amount":"-0.0250000000","fee":"0.0000000000","balance":"0.0000000000"},
+              "LJSE5P-5ASDX-UF7GFH":{"refid":"TJRLWI-OFWTB-BX6AJ5","time":1572968950.2399,"type":"trade","aclass":"currency","asset":"ZEUR","amount":"16.5820","fee":"0.4409","balance":"90.3504"}},
+              "count":13}}'
+    headers:
+      CF-Cache-Status: DYNAMIC
+      CF-RAY: 563ee2531a24cd83-CDG
+      Connection: keep-alive
+      Content-Encoding: gzip
+      Content-Type: application/json; charset=utf-8
+      Date: Wed, 12 Feb 2020 13:24:39 GMT
+      Expect-CT: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      Server: cloudflare
+      Set-Cookie: __cf_bm=588c01ea404088d0940a54e5a8f4174d0ce633fd-1581513879-1800-AXRqsFsWpSTkKYzdeQUFjLxgp8h5SmkHS3YnBIUudSXwCNCjYIUpzpuu4iTPHeQAH1troZWkiLP5DhXgDV38K8E=;
+        path=/; expires=Wed, 12-Feb-20 13:54:39 GMT; domain=.kraken.com; HttpOnly;
+        Secure; SameSite=None
+      Transfer-Encoding: chunked
+      Vary: Accept-Encoding
+      strict-transport-security: max-age=15768000
+    status:
+      code: 200
+      message: OK
+    url: https://api.kraken.com/0/private/Ledgers
+- request:
+    body:
+      nonce: 1581513879417
+      ofs: 10
+    headers:
+      User-Agent:
+      - Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML,
+        like Gecko) Chrome/74.0.3729.131 Safari/537.36
+    method: POST
+    uri: https://api.kraken.com/0/private/Ledgers
+  response:
+    body:
+      string: '{"error":[],"result":{
+              "ledger":{"L2OEFI-7UMQC-CQCLTV":{"refid":"TTNT7A-PNDEM-4KTNZF","time":1581505985.4609,"type":"trade","aclass":"currency","asset":"ZEUR","amount":"43.7204","fee":"1.1537","balance":"124.6483"},
+              "LROUT5-5B3VT-V5FLTO":{"refid":"TYNN7A-PNLEM-4KTMZF","time":1581505985.4604,"type":"trade","aclass":"currency","asset":"XTZ","amount":"-149.77397027","fee":"0.00000000","balance":"0.00000001"},
+              "LF5JBR-DPMZL-M6XVFA":{"refid":"LA3JEQQ-4LDOI-DYRVXM","time":1575784722.2153,"type":"transfer","aclass":"currency","asset":"XXBT","amount":"0.0003000000","fee":"0.0000000000","balance":"0.0306250000"}},
+              "count":13}}'
+    headers:
+      CF-Cache-Status: DYNAMIC
+      CF-RAY: 563ee2531a24cd83-CDG
+      Connection: keep-alive
+      Content-Encoding: gzip
+      Content-Type: application/json; charset=utf-8
+      Date: Wed, 12 Feb 2020 13:24:39 GMT
+      Expect-CT: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      Server: cloudflare
+      Set-Cookie: __cf_bm=588c01ea404088d0940a54e5a8f4174d0ce633fd-1581513879-1800-AXRqsFsWpSTkKYzdeQUFjLxgp8h5SmkHS3YnBIUudSXwCNCjYIUpzpuu4iTPHeQAH1troZWkiLP5DhXgDV38K8E=;
+        path=/; expires=Wed, 12-Feb-20 13:54:39 GMT; domain=.kraken.com; HttpOnly;
+        Secure; SameSite=None
+      Transfer-Encoding: chunked
+      Vary: Accept-Encoding
+      strict-transport-security: max-age=15768000
+    status:
+      code: 200
+      message: OK
+    url: https://api.kraken.com/0/private/Ledgers
+version: 1

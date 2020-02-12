@@ -251,3 +251,31 @@ class RestClient:
         req = self.server.trades_history(offset = offset)
         trades_list, count = await self._post(request=req)
         return trades_list, count  # making multiple return explicit in interface
+
+    # TODO : manage offsets in client (only http technical stuff, not conceptual, it should be handled here.
+
+
+    @rest_command
+    @private_limiter
+    async def _offset_ledgers(self, offset=0): # offset 0 or None ??
+        req = self.server.ledgers(offset=offset)
+        more_ledgers, count = await self._post(request=req)
+        return more_ledgers, count
+
+    # Note we do not need limiter here, we are limited by _offset_ledgers
+    # rest_command should for now stay with private limiter, but maybe hte command role is not to limite,
+    # but only log/replay independently ?
+    async def ledgers(self):  # offset 0 or None ??
+        """ make public requests to kraken api"""
+
+        ledgers, count = await self._offset_ledgers(offset=0)()
+
+        # recurse until we get *everything*
+        # Note : if this is too much, leverage local storage (TODO !)
+        #  or refine filters (time, etc.)
+        while len(ledgers) < count:
+            # Note : here we recurse only one time. we need to recurse to respect ratelimit...
+            more_ledgers, count = await self._offset_ledgers(offset=len(ledgers))()
+            ledgers.update(more_ledgers)
+
+        return ledgers  # count stays internally managed by client.
