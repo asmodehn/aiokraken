@@ -54,6 +54,21 @@ class KTimeFrameModel(Enum):
     def __int__(self):
         return self.value
 
+    # Note  DO NOT DEFINE THIS. It breaks enum hashability and we need it.
+    # def __eq__(self, other):
+
+    def __lt__(self, other):
+        return self.value < other.value
+
+    def __gt__(self, other):
+        return self.value > other.value
+
+    def __le__(self, other):
+        return self.value <= other.value
+
+    def __ge__(self, other):
+        return self.value >= other.value
+
 
 # Using partial call here to delay evaluation (and get same semantics as potentially more complex strategies)
 KTimeFrameStrategy = functools.partial(st.sampled_from, KTimeFrameModel)
