@@ -66,7 +66,7 @@ class TradeHistory(TimeindexedDataframe):
     #     # TODO : access by time (esp slice),
 
 
-def trade_history(tradehistory_as_dict: typing.Dict[str, KTradeModel], attr_index="time") -> Result[TradeHistory]:
+def trade_history(tradehistory_as_dict: typing.Dict[str, KTradeModel]) -> Result[TradeHistory]:
     if not tradehistory_as_dict:
         df = pd.DataFrame(columns=[f.name for f in dataclasses.fields(KTradeModel)])  # we only know about index name
     else:
