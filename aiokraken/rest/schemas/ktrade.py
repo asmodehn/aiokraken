@@ -1,6 +1,6 @@
 
-from dataclasses import dataclass
-from datetime import datetime, MAXYEAR
+from dataclasses import dataclass, field
+from datetime import datetime, MAXYEAR, MINYEAR
 from decimal import Decimal
 from enum import Enum
 
@@ -14,7 +14,7 @@ from .kabtype import KABTypeModel, KABTypeField, KABTypeStrategy
 from .kordertype import KOrderTypeModel, KOrderTypeField, KOrderTypeStrategy
 
 
-@dataclass
+@dataclass(frozen=True)
 class KTradeModel:
     ordertxid: str  # order responsible for execution of trade
     pair: str  # asset pair
@@ -40,12 +40,16 @@ class KTradeModel:
     #     net = net profit/loss of closed portion of position (quote currency, quote currency scale)
     #     trades = list of closing trades for position (if available)
 
+    trade_id: typing.Optional[str] = field(default=None)  # this will be set a bit after initialization
+
 @composite
 def KTradeStrategy(draw,
                       ordertxid= st.text(max_size=20),  # TODO : type for ordertxid ?
                       pair=st.text(max_size=8),
-                      time=st.integers(min_value=int(datetime(year=1970, month=1, day=1).timestamp()),
-                                       max_value=int(datetime(year=MAXYEAR, month=12, day=31).timestamp())),
+                   # NOte : to be able to store into pandas, we have to have compatible timestamps :
+                   # Ref : https://github.com/pandas-dev/pandas/issues/28104
+                      time=st.integers(min_value=int(datetime(year=1678, month=1, day=1).timestamp()),
+                                       max_value=int(datetime(year=2261, month=12, day=31).timestamp())),
                       type=KABTypeStrategy(),
                       ordertype=KOrderTypeStrategy(),
                     price= st.decimals(allow_nan=False, allow_infinity=False),
@@ -117,8 +121,8 @@ def TradeDictStrategy(draw,
                           # Here we mirror arguments for the model strategy
                       ordertxid=st.text(max_size=20),
                       pair=st.text(max_size=8),
-                      time=st.integers(min_value=int(datetime(year=1970, month=1, day=1).timestamp()),
-                                       max_value=int(datetime(year=MAXYEAR, month=12, day=31).timestamp())),
+                      time=st.integers(min_value=int(datetime(year=1678, month=1, day=1).timestamp()),
+                                       max_value=int(datetime(year=2261, month=12, day=31).timestamp())),
                       type=KABTypeStrategy(),
                       ordertype=KOrderTypeStrategy(),
                       price=st.decimals(allow_nan=False, allow_infinity=False),
@@ -160,6 +164,9 @@ class TradeResponseSchema(BaseSchema):
 
     @post_load
     def build_model(self, data, **kwargs):
+        for n in data['trades'].keys():
+            data['trades'][n].trade_id = n
+
         # we need to return the trades AND the total count (the trade response might be partial...)
         return data['trades'], data['count']  # Note we wont use any special type here for now TODO: maybe PartialPayload ?
 
