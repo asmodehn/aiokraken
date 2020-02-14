@@ -7,7 +7,7 @@ from enum import Enum
 import hypothesis.strategies as st
 import typing
 from hypothesis.strategies import composite
-from marshmallow import fields, post_load
+from marshmallow import fields, post_load, pre_load
 
 from .base import BaseSchema
 from .kabtype import KABTypeModel, KABTypeField, KABTypeStrategy
@@ -111,6 +111,8 @@ class KTradeSchema(BaseSchema):
     #     net = net profit/loss of closed portion of position (quote currency, quote currency scale)
     #     trades = list of closing trades for position (if available)
 
+    trade_id= fields.Str()
+
     @post_load
     def build_model(self, data, **kwargs):
         return KTradeModel(**data)
@@ -162,13 +164,17 @@ class TradeResponseSchema(BaseSchema):
     trades = fields.Dict(keys=fields.Str(), values=fields.Nested(KTradeSchema()))
     count = fields.Integer(allow_none=False)
 
-    @post_load
-    def build_model(self, data, **kwargs):
+    @pre_load
+    def retrieve_id(self, data, many, partial):  # we must retreive the id in pre_load (before parsing to KLedgerInfoSchema
         for n in data['trades'].keys():
-            data['trades'][n].trade_id = n
+            data['trades'][n].setdefault("trade_id", n)
+        return data
+
+    @post_load
+    def build_model(self, obj, many, partial):
 
         # we need to return the trades AND the total count (the trade response might be partial...)
-        return data['trades'], data['count']  # Note we wont use any special type here for now TODO: maybe PartialPayload ?
+        return obj['trades'], obj['count']  # Note we wont use any special type here for now TODO: maybe PartialPayload ?
 
         # TODO : dataframe for trades ? We have the time... we can have another (reversed) timeindexed dataframe...
 

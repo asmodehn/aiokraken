@@ -62,8 +62,16 @@ class TradeHistory(TimeindexedDataframe):
     # def thing(self):
     #     return
     #
-    # def __getitem__(self, item):
-    #     # TODO : access by time (esp slice),
+
+    def __getitem__(self, item):
+        # TODO : proper dataframe usage
+        if isinstance(item, int):  # Note : because of this, access by timestamp (int) directly cannot work.
+            return self.dataframe.iloc[item]
+        else:
+            return self.dataframe.loc[item]
+
+    def __len__(self):
+        return len(self.dataframe)
 
 
 def trade_history(tradehistory_as_dict: typing.Dict[str, KTradeModel]) -> Result[TradeHistory]:

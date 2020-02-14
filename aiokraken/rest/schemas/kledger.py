@@ -4,13 +4,13 @@ from enum import Enum
 
 import typing
 import hypothesis.strategies as st
-from marshmallow import fields, post_load
+from marshmallow import fields, post_load, pre_load
 
 from aiokraken.rest.schemas.base import BaseSchema
 from hypothesis.strategies import composite
 
 
-@dataclass
+@dataclass(frozen=True)
 class KLedgerInfo:
     refid: str  # reference id
     time: str  # unix timestamp of ledger
@@ -27,8 +27,8 @@ class KLedgerInfo:
 def KLedgerInfoStrategy(draw,
 
                         refid= st.text(max_size=20),
-                        time = st.integers(min_value=int(datetime(year=1970, month=1, day=1).timestamp()),
-                                       max_value=int(datetime(year=MAXYEAR, month=12, day=31).timestamp())),
+                        time = st.integers(min_value=int(datetime(year=1678, month=1, day=1).timestamp()),
+                                       max_value=int(datetime(year=2261, month=12, day=31).timestamp())),
                     type= st.text(max_size=8),
                     aclass= st.text(max_size=8),
                     asset= st.text(max_size=8),
@@ -65,7 +65,7 @@ class KLedgerInfoSchema(BaseSchema):
     amount= fields.Decimal(as_string=True)  # transaction amount
     fee= fields.Decimal(as_string=True)  # transaction fee
     balance= fields.Decimal(as_string=True)  # resulting balance
-    ledger_id= fields.Str(allow_none=True, required=False)  # this will be set a bit after initialization
+    ledger_id= fields.Str()
 
     @post_load
     def build_model(self, data, **kwargs):
@@ -78,8 +78,8 @@ def KLedgerInfoDictStrategy(draw,
                           # Here we mirror arguments for the element strategy
 
                            refid=st.text(max_size=20),
-                           time=st.integers(min_value=int(datetime(year=1970, month=1, day=1).timestamp()),
-                                            max_value=int(datetime(year=MAXYEAR, month=12, day=31).timestamp())),
+                           time=st.integers(min_value=int(datetime(year=1678, month=1, day=1).timestamp()),
+                                       max_value=int(datetime(year=2261, month=12, day=31).timestamp())),
                            type=st.text(max_size=8),
                            aclass=st.text(max_size=8),
                            asset=st.text(max_size=8),
@@ -111,12 +111,16 @@ class KLedgersResponseSchema(BaseSchema):
     count = fields.Integer(allow_none=False)  # we need the count to know the max offset
     # maybe not ?
 
-    @post_load
-    def build_model(self, data, many, partial):
+    @pre_load
+    def retrieve_id(self, data, many, partial):  # we must retreive the id in pre_load (before parsing to KLedgerInfoSchema
         for n in data['ledger'].keys():
-            data['ledger'][n].ledger_id = n
+            data['ledger'][n].setdefault("ledger_id", n)
+        return data
+
+    @post_load
+    def build_model(self, obj, many, partial):
         # we need to return the trades AND the total count (the trade response might be partial...)
-        return data['ledger'], data['count']  # Note we wont use any special type here for now TODO: maybe PartialPayload ?
+        return obj['ledger'], obj['count']  # Note we wont use any special type here for now TODO: maybe PartialPayload ?
 
         # TODO : dataframe for ledgers ? We have the time... we can have another (reversed) timeindexed dataframe...
 

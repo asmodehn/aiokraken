@@ -6,8 +6,13 @@ import ssl
 import aiohttp
 import typing
 
+from aiokraken.rest.schemas.ktrade import KTradeModel
+
+from aiokraken.rest.schemas.kledger import KLedgerInfo
+
 from aiokraken.model.assetpair import AssetPair
 from aiokraken.model.asset import Asset
+from aiokraken.model.ledger import Ledger
 from aiokraken.model.timeframe import KTimeFrameModel
 
 from aiokraken.utils import get_kraken_logger, get_nonce
@@ -245,40 +250,40 @@ class RestClient:
 
     @rest_command
     @private_limiter
-    async def trades(self, offset = 0):  # offset 0 or None ??
+    async def trades(self, offset = 0, start: datetime =None, end: datetime = None) -> typing.Tuple[typing.Dict[str, KTradeModel], int]:  # offset 0 or None ??
         """ make public requests to kraken api"""
         # TODO : accept order, (but only use its userref or id)
         req = self.server.trades_history(offset = offset)
         trades_list, count = await self._post(request=req)
         return trades_list, count  # making multiple return explicit in interface
 
-    # TODO : manage offsets in client (only http technical stuff, not conceptual, it should be handled here.
-
-
     @rest_command
     @private_limiter
-    async def _offset_ledgers(self, offset=0): # offset 0 or None ??
+    async def _offset_ledgers(self, offset=0, start: datetime =None, end: datetime = None) -> typing.Tuple[typing.Dict[str, KLedgerInfo], int]:
         req = self.server.ledgers(offset=offset)
         more_ledgers, count = await self._post(request=req)
         return more_ledgers, count
 
-    # Note we do not need limiter here, we are limited by _offset_ledgers
-    # rest_command should for now stay with private limiter, but maybe hte command role is not to limite,
-    # but only log/replay independently ?
-    async def ledgers(self):  # offset 0 or None ??
-        """ make public requests to kraken api"""
-
-        ledgers, count = await self._offset_ledgers(offset=0)()
-
-        # recurse until we get *everything*
-        # Note : if this is too much, leverage local storage (TODO !)
-        #  or refine filters (time, etc.)
-        while len(ledgers) < count:
-            # Note : here we recurse only one time. we need to recurse to respect ratelimit...
-            more_ledgers, count = await self._offset_ledgers(offset=len(ledgers))()
-            ledgers.update(more_ledgers)
-
-        # TODO : here we should probably convert to a Model (dataframe, etc.),
-        # more complex/complete than a dict structure...
-
-        return ledgers  # count stays internally managed by client.
+    #
+    # # Note we do not need limiter here, we are limited by _offset_ledgers
+    # # rest_command should for now stay with private limiter, but maybe hte command role is not to limite,
+    # # but only log/replay independently ?
+    # async def ledgers(self, da):  # offset 0 or None ??
+    #     """ make public requests to kraken api"""
+    #
+    #     ledgerinfos, count = await self._offset_ledgers(offset=0)()
+    #
+    #     # recurse until we get *everything*
+    #     # Note : if this is too much, leverage local storage (TODO !)
+    #     #  or refine filters (time, etc.)
+    #     while len(ledgerinfos) < count:
+    #         # Note : here we recurse only one time. we need to recurse to respect ratelimit...
+    #         more_ledgers, count = await self._offset_ledgers(offset=len(ledgerinfos))()
+    #         ledgerinfos.update(more_ledgers)
+    #
+    #     # TODO : here we should probably convert to a Model (dataframe, etc.),
+    #     # more complex/complete than a dict structure...
+    #
+    #     ledger = Ledger(ledgerinfos)
+    #     # TODO : goal : return immutable data !
+    #     return ledger

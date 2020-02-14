@@ -47,6 +47,11 @@ class TimeindexedDataframe:
     sleeper: typing.Callable
     index_name: str
 
+    # TODO : idea (see datafun / category theory for background):
+    #  - TimedSet (unicity of rows) => matches a type instance evolving over time (with implicit equality on attributes)
+    #  - TimedBags ( number of row occurence ) => same as timedSet  + a kind of reference counting semantics
+    #  - TimedPreorder (ordering of rows - independent of index -> multiindex) => a preorder relation evolving overtime
+    #  - maybe more...
     def __init__(
         self,
         data: dataframe = pd.DataFrame(columns=["datetime"]),
