@@ -69,14 +69,14 @@ class Client:
         # TODO : at this level we manage the time of the request
         """ request ledger from kraken """
 
-        ledgerinfos, count = await self.rest._offset_ledgers(offset=0, start=start, end=end)()
+        ledgerinfos, count = await self.rest.ledgers(offset=0, start=start, end=end)()
 
         # loop until we get *everything*
         # Note : if this is too much, leverage local storage (TODO ! - in relation with time... assume past data doesnt change)
         #  or refine filters (time, etc.)
         while len(ledgerinfos) < count:
             # Note : here we recurse only one time. we need to recurse to respect ratelimit...
-            more_ledgers, count = await self.rest._offset_ledgers(offset=len(ledgerinfos), start=start, end=end)()
+            more_ledgers, count = await self.rest.ledgers(offset=len(ledgerinfos), start=start, end=end)()
             ledgerinfos.update(more_ledgers)
 
         # TODO : here we should probably convert to a Model (dataframe, etc.),

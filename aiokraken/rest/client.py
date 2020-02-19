@@ -259,7 +259,7 @@ class RestClient:
 
     @rest_command
     @private_limiter
-    async def _offset_ledgers(self, offset=0, start: datetime =None, end: datetime = None) -> typing.Tuple[typing.Dict[str, KLedgerInfo], int]:
+    async def ledgers(self, offset=0, start: datetime =None, end: datetime = None) -> typing.Tuple[typing.Dict[str, KLedgerInfo], int]:
         req = self.server.ledgers(offset=offset)
         more_ledgers, count = await self._post(request=req)
         return more_ledgers, count
