@@ -68,7 +68,7 @@ class TestKLedgerInfoSchema(unittest.TestCase):
             "amount": "{0:f}".format(model.amount),  # total cost of order (quote currency)
             "fee": "{0:f}".format(model.fee),  # total fee (quote currency)
             "balance": "{0:f}".format(model.balance),  # volume (base currency)
-            "ledger_id": model.ledger_id,  # comma delimited list of miscellaneous info
+            "ledger_id": model.ledger_id,
         }
 
         # check equality on dicts with usual python types, but display strings.

@@ -61,6 +61,8 @@ def KTradeStrategy(draw,
 
                       postxid= st.one_of(st.none(),st.text(max_size=20)),  # TODO : type for postxid ?
                     posstatus=st.one_of(st.none(),st.text(max_size=5)),
+
+                   trade_id=st.one_of(st.none(), st.text(max_size=20)),
 ):
 
     return KTradeModel(
@@ -79,9 +81,10 @@ def KTradeStrategy(draw,
 
         misc=draw(misc),
         postxid = draw(postxid),
-        posstatus=draw(posstatus)
-    )
+        posstatus=draw(posstatus),
 
+        trade_id=draw(trade_id)
+    )
 
 
 
@@ -111,7 +114,7 @@ class KTradeSchema(BaseSchema):
     #     net = net profit/loss of closed portion of position (quote currency, quote currency scale)
     #     trades = list of closing trades for position (if available)
 
-    trade_id= fields.Str()
+    trade_id= fields.Str(allow_none=True)
 
     @post_load
     def build_model(self, data, **kwargs):
@@ -136,6 +139,8 @@ def TradeDictStrategy(draw,
 
                       postxid=st.one_of(st.none(),st.text(max_size=20)),
                       posstatus=st.one_of(st.none(),st.text(max_size=5)),
+
+                      trade_id=st.one_of(st.none(), st.text(max_size=20))
                           ):
     model = draw(KTradeStrategy(
         ordertxid = ordertxid,
@@ -153,7 +158,8 @@ def TradeDictStrategy(draw,
         margin=margin,
 
         misc=misc,
-        posstatus=posstatus
+        posstatus=posstatus,
+        trade_id=trade_id
         )
     )
     schema = KTradeSchema()

@@ -46,6 +46,8 @@ class TestTradeModel(unittest.TestCase):
         #optionals
 
         assert trade.postxid is None or isinstance(trade.postxid, str)  # order responsible for execution of trade
+
+        assert trade.trade_id is None or isinstance(trade.trade_id, str)  # this will be set a bit after initialization
         # TODO : improve
 
 
@@ -74,6 +76,7 @@ class TestTradeSchema(unittest.TestCase):
             "misc": model.misc,  # comma delimited list of miscellaneous info
 
             "posstatus": model.posstatus,
+            "trade_id": model.trade_id,
         }
 
         # check equality on dicts with usual python types, but display strings.

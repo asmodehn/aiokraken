@@ -65,7 +65,7 @@ class KLedgerInfoSchema(BaseSchema):
     amount= fields.Decimal(as_string=True)  # transaction amount
     fee= fields.Decimal(as_string=True)  # transaction fee
     balance= fields.Decimal(as_string=True)  # resulting balance
-    ledger_id= fields.Str()
+    ledger_id= fields.Str(allow_none=True)
 
     @post_load
     def build_model(self, data, **kwargs):
