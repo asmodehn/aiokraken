@@ -12,7 +12,7 @@ from aiokraken.rest.schemas.krequestorder import RequestOrder
 async def test_ledgers_nonempty(keyfile):
     async with RestClient(server=Server(**keyfile)) as rest_kraken:
         ledgers_run = rest_kraken.ledgers()
-        response = await ledgers_run  # CAREFUL rest_command changing level...
+        response = await ledgers_run()  # CAREFUL rest_command changing level...
     print(f'response is {response}')
 
     # assert 'OEES77-MGNR7-HDQLW7' in response
