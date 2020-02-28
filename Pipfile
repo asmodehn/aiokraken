@@ -1,18 +1,22 @@
 [[source]]
+
 name = "pypi"
 url = "https://pypi.org/simple"
 verify_ssl = true
 
+
 [dev-packages]
+
 pytest-recording = "==0.3.6"
 pytest-asyncio = "==0.10.0"
 pytest-dependency = "*"
 black = "*"
 jupyterlab = "*"
 jupyterlab-git = "*"
-aiokraken = {path = ".",editable = true}
+
 
 [packages]
+
 aiohttp = "==3.6.2"
 aiodns = "==2.0.0"
 cchardet = "==2.1.4"
@@ -22,7 +26,7 @@ pandas = "==0.25.3"
 parameterized = "==0.7.0"
 marshmallow-dataframe = "==0.1.4"
 jupyterlab = "*"
-ipympl = "==0.3.3"
+ipympl = "==0.5.2"
 jupyterlab-git = "*"
 pandas-ta = "==0.1.36b"
 pyjanitor = "*"
@@ -32,8 +36,18 @@ aiounittest = "*"
 timecontrol = "==0.2.2"
 tinydb = "*"
 
+
 [requires]
+
 python_version = "3.7"
 
+
 [pipenv]
+
 allow_prereleases = true
+
+
+[dev-packages.aiokraken]
+
+path = "."
+editable = true
