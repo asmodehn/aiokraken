@@ -10,8 +10,9 @@ from decimal import Decimal
 from datetime import datetime, timezone
 
 import pandas as pd
+import pandas.util
 # CAREFUL to what we are doing
-pd.set_option('mode.chained_assignment','raise')
+pd.set_option('mode.chained_assignment', 'raise')
 # import pandas_ta as ta
 import janitor
 
@@ -19,6 +20,7 @@ import janitor
 OHLCValue = namedtuple("OHLCValue", ["datetime", "open", "high", "low", "close", "vwap", "volume", "count"])
 
 from aiokraken.utils.timeindexeddataframe import TimeindexedDataframe
+
 
 class OHLC(TimeindexedDataframe):
 
@@ -82,6 +84,9 @@ class OHLC(TimeindexedDataframe):
     @property
     def volume(self) -> Decimal:
         return self.dataframe['volume'].sum()
+
+    def __hash__(self):
+        return super(OHLC, self).__hash__()
 
     def __repr__(self):
         # TODO : have a representation of OHLC that makes sense when '(de)composing' them...

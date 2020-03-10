@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 from datetime import datetime, date, time, timezone
 import functools
 
@@ -40,7 +41,7 @@ class TimeindexedDataframe:
     For more insight on how to see dataframe as categories, see Spivak's book: Category Theory for Scientists
     It is a central concept in aiokraken.
     """
-
+    # TODO : type index of contained (row) type => will check dtypes of dataframe columns.
     # : A Dataframe, indexed on datetime.
     dataframe: pd.DataFrame
     timer: typing.Callable
@@ -95,6 +96,10 @@ class TimeindexedDataframe:
             row = rows.iloc[-1]
 
         return row
+
+    def __hash__(self):
+        # Current best solution, but not ideal (collisions ?)
+        return int(hashlib.sha256(pd.util.hash_pandas_object(self.dataframe, index=True).values).hexdigest(), 16)
 
     def __call__(self, tidf: TimeindexedDataframe):
 
