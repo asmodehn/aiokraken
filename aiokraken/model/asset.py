@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from enum import Enum
 
 import typing
@@ -20,7 +20,7 @@ class AssetClass(Enum):
         return f'{self.name}'
 
 
-@dataclass
+@dataclass(frozen=True)
 class Asset:
     altname: str  # alternate name
     aclass: str  # asset class
@@ -28,3 +28,7 @@ class Asset:
     display_decimals: int  # scaling decimal places for output display
     restname: typing.Optional[str] = field(default=None)  # this will be set a bit after initialization
 
+    def __call__(self, restname):  # for late naming
+        newdata = asdict(self)
+        newdata.update({'restname': restname})
+        return Asset(**newdata)

@@ -1,3 +1,5 @@
+from aiokraken.rest.schemas.kledger import KLedgerInfoSchema
+
 from aiokraken.rest.schemas.kasset import AssetSchema
 from aiokraken.rest.schemas.kassetpair import KAssetPairSchema
 from aiokraken.rest.schemas.ohlc import PairOHLCSchema
@@ -32,7 +34,7 @@ class AssetPayloadSchema(PayloadBaseSchema):
     @post_load()
     def register_name(self, data, many, partial):
         for n in data.keys():
-            data[n].restname = n
+            data[n] = data[n](restname=n)
         return data
 
 
@@ -43,7 +45,7 @@ class AssetPairPayloadSchema(PayloadBaseSchema):
     @post_load()
     def register_name(self, data, many, partial):
         for n in data.keys():
-            data[n].restname = n
+            data[n] = data[n](restname=n)
         return data
 
 
