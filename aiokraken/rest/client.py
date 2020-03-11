@@ -191,8 +191,7 @@ class RestClient:
         """ make balance requests to kraken api"""
         #  We need the list of assets to return proper types in balance
         if not self._assets:
-            req = self.assets()
-            await req()
+            await self.assets()
         req = self.server.balance()
         resp = await self._post(request=req)  # Private request must use POST !
         return resp.accounts  # Note : this depends on the schema.

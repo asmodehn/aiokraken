@@ -43,7 +43,7 @@ class Balance(Mapping):
         """
         """
         # TODO : meaning of filter here... not showing blacklisted assets ? only retrieving whitelist assets ?
-        self.impl = (await self.restclient.balance()())
+        self.impl = (await self.restclient.balance())
 
         # get a partial view of assets locally
         self.assets = {n: a for n, a in self.restclient._assets.items() if n not in self._filter.blacklist}

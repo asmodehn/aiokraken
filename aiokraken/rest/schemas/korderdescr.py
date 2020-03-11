@@ -53,7 +53,7 @@ class KOrderDescrNoPriceFinalized(KOrderDescrNoPriceData):
             KOrderDescrNoPriceData, KOrderDescrOnePriceData, KOrderDescrTwoPriceData
         ]
     ]
-    leverage: Decimal = field(default=Decimal(0))
+    leverage: typing.Optional[str] = field(default=None)
 
 
 @dataclass(frozen=True, init=True)
@@ -64,7 +64,7 @@ class KOrderDescrOnePriceFinalized(KOrderDescrOnePriceData):
             KOrderDescrNoPriceData, KOrderDescrOnePriceData, KOrderDescrTwoPriceData
         ]
     ]
-    leverage: Decimal = field(default=Decimal(0))
+    leverage: typing.Optional[str] = field(default=None)
 
 
 @dataclass(frozen=True, init=True)
@@ -75,7 +75,7 @@ class KOrderDescrTwoPriceFinalized(KOrderDescrTwoPriceData):
             KOrderDescrNoPriceData, KOrderDescrOnePriceData, KOrderDescrTwoPriceData
         ]
     ]
-    leverage: Decimal = field(default=Decimal(0))
+    leverage:  typing.Optional[str] = field(default=None)
 
 
 class KOrderDescrNoPrice(KOrderDescrNoPriceData):
@@ -467,8 +467,8 @@ class KOrderDescrSchema(BaseSchema):
     ordertype = KOrderTypeField(required=True)
     price = fields.Decimal(required=False, as_string=True)
     price2 = fields.Decimal(required=False, as_string=True)
-    leverage = fields.Decimal(
-        required=False, as_string=True
+    leverage = fields.String(
+        required=False
     )  # Kraken returns 'none' on this (cf cassettes)...
     order = fields.String()  # TODO ??? idea : should be isomorphic to repr()
     close = fields.Nested(nested=KOrderDescrCloseSchema(), required=False)

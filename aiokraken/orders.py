@@ -65,12 +65,12 @@ class Orders:
         # In all cases we can refresh our open/closed orders...
 
         # TODO : manage mutating dicts...
-        new_open = (await self.restclient.openorders()())
+        new_open = (await self.restclient.openorders())
 
         # open order are updated regularly
         self.open = new_open
 
-        new_closed = (await self.restclient.closedorders()())
+        new_closed = (await self.restclient.closedorders())
 
         # closed orders are supposed to just keep increasing
         self.closed.update(new_closed)  # TODO : manage offset somehow...
