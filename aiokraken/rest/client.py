@@ -12,14 +12,13 @@ from aiokraken.rest.schemas.kledger import KLedgerInfo
 
 from aiokraken.model.assetpair import AssetPair
 from aiokraken.model.asset import Asset
-from aiokraken.model.ledger import Ledger
 from aiokraken.model.timeframe import KTimeFrameModel
 
 from aiokraken.utils import get_kraken_logger, get_nonce
 from aiokraken.rest.api import Server, API
+from timecontrol.calllimiter import calllimiter
 
-from timecontrol.underlimiter import UnderLimiter
-from timecontrol.command import Command
+from timecontrol.eventful import eventful
 
 BASE_URL = 'https://api.kraken.com'
 LOGGER = get_kraken_logger(__name__)
@@ -35,9 +34,12 @@ Intent : usability of the API...
 """
 
 # Because we need one limiter for multiple decorators
-public_limiter = UnderLimiter(period=3)
-private_limiter = UnderLimiter(period=5)
-rest_command = Command(timer=datetime.datetime.now)
+# public_limiter = UnderLimiter(period=3)
+# private_limiter = UnderLimiter(period=5)
+# rest_command = Command(timer=datetime.datetime.now)
+
+private_limiter = calllimiter(ratelimit=datetime.timedelta(seconds=5))
+public_limiter = calllimiter(ratelimit=datetime.timedelta(seconds=3))
 
 
 class RestClient:
@@ -134,7 +136,6 @@ class RestClient:
             LOGGER.error(err, exc_info=True)
             return {'error': err}
 
-    @rest_command
     @public_limiter
     async def time(self):
         """ make public requests to kraken api"""
@@ -142,7 +143,6 @@ class RestClient:
         req = self.server.time()   # returns the request to be made for this API.
         return await self._get(request=req)
 
-    @rest_command
     @public_limiter
     async def assets(self, assets: typing.Optional[typing.List[typing.Union[Asset, str]]]=None):
         """ make assets request to kraken api"""
@@ -153,7 +153,6 @@ class RestClient:
         self._assets = await self._get(request=req)
         return self._assets
 
-    @rest_command
     @public_limiter
     async def assetpairs(self, pairs: typing.Optional[typing.List[typing.Union[AssetPair, str]]]=None):
         """ make assetpairs request to kraken api"""
@@ -162,7 +161,6 @@ class RestClient:
         self._assetpairs = await self._get(request=req)
         return self._assetpairs
 
-    @rest_command
     @public_limiter  # skippable because OHLC is not supposed to change very often, and changes should apper in later results.
     async def ohlc(self, pair: typing.Union[AssetPair, str], interval: KTimeFrameModel = KTimeFrameModel.one_minute):  # TODO: make pair mandatory
         """ make ohlc request to kraken api"""
@@ -188,7 +186,6 @@ class RestClient:
         # Note : marshmallow has already checked that the response pair matches what was requested.
         return resp
 
-    @rest_command
     @private_limiter
     async def balance(self):
         """ make balance requests to kraken api"""
@@ -200,7 +197,6 @@ class RestClient:
         resp = await self._post(request=req)  # Private request must use POST !
         return resp.accounts  # Note : this depends on the schema.
 
-    @rest_command
     @private_limiter
     async def trade_balance(self):
         """ make trade balance requests to kraken api"""
@@ -208,7 +204,6 @@ class RestClient:
         req = self.server.trade_balance()
         return await self._post(request=req)
 
-    @rest_command
     @public_limiter
     async def ticker(self, pairs=['XBTEUR']):  # TODO : model currency pair/'market' in ccxt (see crypy)
         """ make public requests to kraken api"""
@@ -216,7 +211,6 @@ class RestClient:
         req = self.server.ticker(pairs=pairs)   # returns the request to be made for this API.)
         return await self._get(request=req)
 
-    @rest_command
     @private_limiter
     async def openorders(self, trades=False):  # TODO : trades
         """ make private openorders request to kraken api"""
@@ -224,7 +218,6 @@ class RestClient:
         req = self.server.openorders(trades=trades)   # returns the request to be made for this API.)
         return await self._post(request=req)
 
-    @rest_command
     @private_limiter
     async def closedorders(self, trades=False):  # TODO : trades
         """ make private closedorders request to kraken api"""
@@ -232,7 +225,6 @@ class RestClient:
         req = self.server.closedorders(trades=trades)   # returns the request to be made for this API.)
         return await self._post(request=req)
 
-    @rest_command
     @private_limiter
     async def addorder(self, order):
         """ make public requests to kraken api"""
@@ -240,7 +232,6 @@ class RestClient:
         req = self.server.addorder(order=order)
         return await self._post(request=req)
 
-    @rest_command
     @private_limiter
     async def cancel(self, txid_userref):
         """ make public requests to kraken api"""
@@ -248,21 +239,20 @@ class RestClient:
         req = self.server.cancel(txid_userref = txid_userref)
         return await self._post(request=req)
 
-    @rest_command
     @private_limiter
-    async def trades(self, offset = 0, start: datetime =None, end: datetime = None) -> typing.Tuple[typing.Dict[str, KTradeModel], int]:  # offset 0 or None ??
-        """ make public requests to kraken api"""
-        # TODO : accept order, (but only use its userref or id)
-        req = self.server.trades_history(offset = offset)
+    async def trades(self, pair: typing.Union[AssetPair, str], start: datetime =None, end: datetime = None, offset = 0) -> typing.Tuple[typing.Dict[str, KTradeModel], int]:  # offset 0 or None ??
+        """ make tradeshistory requests to kraken api"""
+        # Note : here there is no filtering by assetpair, it needs to be managed one level up...
+        req = self.server.trades_history(start=int(start.timestamp()), end=int(end.timestamp()), offset = offset)
         trades_list, count = await self._post(request=req)
         return trades_list, count  # making multiple return explicit in interface
 
-    @rest_command
     @private_limiter
-    async def ledgers(self, offset=0, start: datetime =None, end: datetime = None) -> typing.Tuple[typing.Dict[str, KLedgerInfo], int]:
-        req = self.server.ledgers(offset=offset)
+    async def ledgers(self, asset: typing.Union[Asset, str], start: datetime =None, end: datetime = None, offset=0) -> typing.Tuple[typing.Dict[str, KLedgerInfo], int]:
+        """ make ledgers requests to kraken api """
+        req = self.server.ledgers(asset=asset, start=int(start.timestamp()), end=int(end.timestamp()), offset=offset)
         more_ledgers, count = await self._post(request=req)
-        return more_ledgers, count
+        return more_ledgers, count  # making multiple return explicit in interface
 
     #
     # # Note we do not need limiter here, we are limited by _offset_ledgers
