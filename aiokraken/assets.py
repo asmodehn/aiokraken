@@ -32,6 +32,7 @@ class Assets(Mapping):
         self._filter = Filter(blacklist=[])
         self.restclient = restclient or RestClient()  # default restclient is possible here, but only usable for public requests...
         self.validtime = valid_time   # None means always valid
+        self.impl = dict()
 
     def filter(self,  whitelist=None, blacklist=None, default_allow = True):
         """
@@ -51,9 +52,9 @@ class Assets(Mapping):
             # result not valid any longer -> new request needed
 
             if self._filter.whitelist:
-                self.impl = await self.restclient.assets(assets=self._filter.whitelist)()
+                self.impl = await self.restclient.assets(assets=self._filter.whitelist)
             else:
-                self.impl = await self.restclient.assets()()
+                self.impl = await self.restclient.assets()
             self.updated = datetime.now(tz=timezone.utc)
 
         # in any case
