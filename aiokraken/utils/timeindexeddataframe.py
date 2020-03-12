@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-from datetime import datetime, date, time, timezone
+from datetime import datetime, date, time, timezone, timedelta
 import functools
 
 import pandas as pd
@@ -45,7 +45,6 @@ class TimeindexedDataframe:
     # : A Dataframe, indexed on datetime.
     dataframe: pd.DataFrame
     timer: typing.Callable
-    sleeper: typing.Callable
     index_name: str
 
     # TODO : idea (see datafun / category theory for background):
@@ -57,8 +56,8 @@ class TimeindexedDataframe:
         self,
         data: dataframe = pd.DataFrame(columns=["datetime"]),
         index: typing.Optional[str] = "datetime",
-        timer: typing.Callable = functools.partial(datetime.now, tz=timezone.utc),  # Maybe more part of hte contect than the dataframe ?
-        sleeper: typing.Callable = asyncio.sleep,  # Maybe more part of the context than dataframe ?
+        tz: timezone = None,  # needed as argument as this definitely depends on context/hypoerparams...
+        timer: typing.Callable = None,  # Maybe more part of the contect than the dataframe ?
     ):
         """
         Dataframe instantiation with explicit time index and datetime human readable equivalent.
@@ -67,8 +66,8 @@ class TimeindexedDataframe:
         :param time_colname:
         :param datetime_colname:
         """
-        self.timer = timer
-        self.sleeper = sleeper
+        self.tz = tz  # Note None means local (same default as python, is it really a good idea ?)
+        self.timer = timer if timer is not None else functools.partial(datetime.now, tz=tz)
 
         self.dataframe = data.copy(deep=True)  # copy to not modify origin (immutable semantics for generic dataframes)
         # TODO : maybe manage that with contracts instead ?
@@ -162,8 +161,9 @@ class TimeindexedDataframe:
         return TimeindexedDataframe(
             data=subdata,
             timer=self.timer,
-            sleeper=self.sleeper
         )
+
+    # TODO : __iter__ backwards ?
 
     async def __aiter__(self):
         """
@@ -180,9 +180,9 @@ class TimeindexedDataframe:
             next_pointer = self.dataframe.index[pointer_loc]
 
             now = self.timer()
-            if next_pointer > now.timestamp():
+            if next_pointer.to_pydatetime() > now:
                 # we sleep to wait for the next present. we are prevented from going into the future.
-                await self.sleeper((next_pointer - now.timestamp()))
+                await asyncio.sleep((next_pointer.to_pydatetime() - now).total_seconds())
 
             yield self.dataframe.loc[next_pointer]
 
@@ -193,7 +193,7 @@ class TimeindexedDataframe:
         return len(self.dataframe)
 
     def __copy__(self):
-        return TimeindexedDataframe(data=self.dataframe.copy(), timer=self.timer, sleeper=self.sleeper, index=self.index_name)
+        return TimeindexedDataframe(data=self.dataframe.copy(), timer=self.timer, index=self.index_name)
 
     def __mul__(self, other: TimeindexedDataframe):  # categorical product : merging columns
 
@@ -202,25 +202,26 @@ class TimeindexedDataframe:
         merged_df = pd.merge(self.dataframe, other.dataframe, right_index=True, left_index=True)
 
         # TODO : semantics ? copy or ref ?
-        return TimeindexedDataframe(data=merged_df, timer=self.timer, sleeper=self.sleeper)
+        return TimeindexedDataframe(data=merged_df, timer=self.timer)
 
 
 if __name__ == "__main__":
 
     from time import time as unixtime
-    now = unixtime()
-    tidf = TimeindexedDataframe(data=pd.DataFrame(
+    # now = unixtime()  # TODO : unify/formalize time representation...
+    now = datetime.now()
+    tidf = TimeindexedDataframe(data=pd.DataFrame.from_records(
                     [
                         [
                             now,
                             1,
                         ],
                         [
-                            now + 5,  # five secs later
+                            now + timedelta(seconds=5),  # five secs later
                             5,
                         ],
                         [
-                            now + 10,  # ten secs later
+                            now + timedelta(seconds=10),  # ten secs later
                             10,
                         ],
                     ],
@@ -229,6 +230,7 @@ if __name__ == "__main__":
                         "time",
                         "number"
                     ],
+        index=["time"],  # we want to specify the timing here -> pass an index !
                 ),
     )
 
