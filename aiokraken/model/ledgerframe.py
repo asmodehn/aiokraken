@@ -11,7 +11,7 @@ from result import Result, Ok
 
 from aiokraken.rest.schemas.kledger import KLedgerInfo
 
-""" A common data structure for OHLC based on pandas """
+""" A common data structure for ledger based on pandas """
 from datetime import datetime, timezone
 
 import pandas as pd
@@ -59,15 +59,6 @@ class LedgerFrame(TimeindexedDataframe):
 
         # REMINDER : immutability interface design.
         return new_th
-
-    @property
-    def begin(self):
-        # reminder : the dataframe is sorted on index
-        return self.dataframe.index.iloc[0]
-
-    @property
-    def end(self):
-        return self.dataframe.index.iloc[-1]
 
     # # TODO : one property per type for filtering
     # @property

@@ -59,6 +59,44 @@ class RestClient:
         self._assets = {}
         self._assetpairs = {}
 
+    async def validate_asset(self, asset: typing.Union[str, Asset]) -> Asset:
+        if isinstance(asset, str):  # Just to be user friendly...
+            #  We need the list of markets to validate pair string passed in the request
+            if not self._assets:
+                await self.assets()
+            if not asset in self._assets.keys():
+                altname_map = {p.altname: p for n, p in self._assets.items()}
+                if not asset in altname_map.keys():
+                    # TODO : proper exception class
+                    RuntimeError(f"{asset} not in {[k for k in self._assets.keys()]} nor {altname_map.keys()}")
+                else:
+                    asset = altname_map[asset]  # get the proper type.
+            else:
+                asset = self._assets[asset]
+        elif not isinstance(asset, Asset):
+            RuntimeError(f"{asset} not of the proper type...")
+
+        return asset
+
+    async def validate_pair(self, pair: typing.Union[str, AssetPair]) -> AssetPair:
+        if isinstance(pair, str):  # Just to be user friendly...
+            #  We need the list of markets to validate pair string passed in the request
+            if not self._assetpairs:
+                await self.assetpairs()
+            if not pair in self._assetpairs.keys():
+                altname_map = {p.altname: p for n, p in self._assetpairs.items()}
+                if not pair in altname_map.keys():
+                    # TODO : proper exception class
+                    RuntimeError(f"{pair} not in {[k for k in self._assetpairs.keys()]} nor {altname_map.keys()}")
+                else:
+                    pair = altname_map[pair]  # get the proper type.
+            else:
+                pair = self._assetpairs[pair]
+        elif not isinstance(pair, AssetPair):
+            RuntimeError(f"{pair} not of the proper type...")
+
+        return pair
+
     async def __aenter__(self):
         """ Initializes a session.
         Although very useful for proper usage, this is not mandatory,
@@ -164,22 +202,7 @@ class RestClient:
     @public_limiter  # skippable because OHLC is not supposed to change very often, and changes should apper in later results.
     async def ohlc(self, pair: typing.Union[AssetPair, str], interval: KTimeFrameModel = KTimeFrameModel.one_minute):  # TODO: make pair mandatory
         """ make ohlc request to kraken api"""
-        if isinstance(pair, str):  # Just to be user friendly...
-            #  We need the list of markets to validate pair string passed in the request
-            if not self._assetpairs:
-                req = self.assetpairs()
-                await req()
-            if not pair in self._assetpairs.keys():
-                altname_map = {p.altname: p for n, p in self._assetpairs.items()}
-                if not pair in altname_map.keys():
-                    # TODO : proper exception class
-                    RuntimeError(f"{pair} not in {[k for k in self._assetpairs.keys()]} nor {altname_map.keys()}")
-                else:
-                    pair = altname_map[pair]  # get the proper type.
-            else:
-                pair = self._assetpairs[pair]
-        elif not isinstance(pair, AssetPair):
-            RuntimeError(f"{pair} not of the proper type...")
+        pair = self.validate_pair(pair)
         # TODO : or maybe we should pass the assetpair from model, and let the api deal with it ??
         req = self.server.ohlc(pair=pair, interval=interval)   # returns the request to be made for this API.)
         resp = await self._get(request=req)
@@ -204,9 +227,9 @@ class RestClient:
         return await self._post(request=req)
 
     @public_limiter
-    async def ticker(self, pairs=['XBTEUR']):  # TODO : model currency pair/'market' in ccxt (see crypy)
+    async def ticker(self, pairs: typing.Optional[typing.List[AssetPair]]=None):  # TODO : model currency pair/'market' in ccxt (see crypy)
         """ make public requests to kraken api"""
-
+        pairs = [self.validate_pair(p) for p in pairs] if pairs else []
         req = self.server.ticker(pairs=pairs)   # returns the request to be made for this API.)
         return await self._get(request=req)
 
@@ -239,16 +262,17 @@ class RestClient:
         return await self._post(request=req)
 
     @private_limiter
-    async def trades(self, pair: typing.Union[AssetPair, str], start: datetime =None, end: datetime = None, offset = 0) -> typing.Tuple[typing.Dict[str, KTradeModel], int]:  # offset 0 or None ??
+    async def trades(self, start: datetime =None, end: datetime = None, offset = 0) -> typing.Tuple[typing.Dict[str, KTradeModel], int]:  # offset 0 or None ??
         """ make tradeshistory requests to kraken api"""
-        # Note : here there is no filtering by assetpair, it needs to be managed one level up...
+        # Note : here there is no filtering by assetpair from Kraken API, it needs to be managed one level up...
         req = self.server.trades_history(start=int(start.timestamp()), end=int(end.timestamp()), offset = offset)
         trades_list, count = await self._post(request=req)
         return trades_list, count  # making multiple return explicit in interface
 
     @private_limiter
-    async def ledgers(self, asset: typing.Union[Asset, str], start: datetime =None, end: datetime = None, offset=0) -> typing.Tuple[typing.Dict[str, KLedgerInfo], int]:
+    async def ledgers(self, asset: typing.Optional[typing.List[typing.Union[Asset, str]]], start: datetime =None, end: datetime = None, offset=0) -> typing.Tuple[typing.Dict[str, KLedgerInfo], int]:
         """ make ledgers requests to kraken api """
+        asset = [await self.validate_asset(a) for a in asset]
         req = self.server.ledgers(asset=asset, start=int(start.timestamp()), end=int(end.timestamp()), offset=offset)
         more_ledgers, count = await self._post(request=req)
         return more_ledgers, count  # making multiple return explicit in interface

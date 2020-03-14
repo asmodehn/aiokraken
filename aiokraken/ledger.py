@@ -2,6 +2,7 @@
 import typing
 from datetime import datetime, timedelta, timezone
 from types import MappingProxyType
+import asyncio
 
 from aiokraken.model.asset import Asset
 
@@ -14,7 +15,7 @@ class Ledger:
     """ Note : This is the monad / mutable state, providing an "imperative" interface to immutable data.
         There fore it should act as a container, on the (reversed) time axis...
     """
-    model: LedgerFrame
+    model: typing.Optional[LedgerFrame]
     # TODO : maybe use traitlets (see ipython) for a more implicit/interactive management of time here ??
 
     @property
@@ -26,22 +27,27 @@ class Ledger:
         return self.model.end
 
     def __init__(self,  restclient: RestClient, asset: typing.Union[Asset, str], loop = None):
+        # We want all assets, or just one at a time. Note ledger instances are mergeable vertically on this...
         self.asset = asset  # TODO: None asset is "all" (API default)
         self.restclient = restclient
         # Note if Restclient is None, this is just a proxy,
         # it cannot update by itself, it doesnt really "contain" data.
 
-        self.loop = loop if loop is not None else asyncio.get_running_loop()
+        self.loop = loop if loop is not None else asyncio.get_event_loop()
         self.model = None  # Need async call : raii is not doable here...
         # TODO : mapping proxy to avoid mutation problems ?
+
+    def query(self):
+        # TODO : interface to query ledger request
+        raise NotImplementedError
 
     async def __call__(self, start: datetime = None, stop: datetime = None):  # TODO : pass necessary parameters (cf ledger request)
         # self update
         # TODO : note how managing times here is similar to managing cache... probably in an another class, interfacing via decorator...
 
         if self.restclient is not None and (self.model is None or start < self.model.begin or stop > self.model.end):
-            # we retrieve all matching trades... lazy on times !
-            ledgerinfos, count = await self.restclient.ledgers(asset=self.asset, start=start, end=stop, offset=0)
+            # we retrieve all matching ledgerinfos... lazy on times !
+            ledgerinfos, count = await self.restclient.ledgers(asset=[self.asset], start=start, end=stop, offset=0)
 
             # loop until we get *everything*
             # Note : if this is too much, leverage local storage (TODO ! - in relation with time... assume past data doesnt change)
@@ -51,17 +57,11 @@ class Ledger:
                 more_ledgers, count = await self.restclient.ledgers(asset=self.asset,start=start, end=stop, offset=len(ledgerinfos))
                 ledgerinfos.update(more_ledgers)
 
-            # TODO : here we should probably convert to a Model (dataframe, etc.),
-            # more complex/complete than a dict structure...
-
             model = ledgerframe(ledger_as_dict=ledgerinfos)
             if model:
                 self.model = model.value
             else:
                 raise RuntimeError("Something went wrong")
-
-        # ELSE if there is no client, it means this instance is supposed to be just a proxy on the mutating data.
-        # OR WE want to make a specific class ??? Probably AFTER doing the timeindexed dataframe for trades.
 
         # we keep aggregating in place on the same object
         return self
@@ -121,10 +121,8 @@ if __name__ == '__main__':
     rest = RestClient(server=Server(key=keystruct.get('key'),
                                     secret=keystruct.get('secret')))
 
-    loop = asyncio.get_event_loop()  # get or create the event loop
-
     # This creates the ledger for this asset
-    ldg = Ledger(asset='XTZ', restclient=rest, loop=loop)
+    ldg = Ledger(asset='XTZ', restclient=rest)
 
     # this retrieves (asynchronously and transparently) the data from the last week only
     now = datetime.now(tz=timezone.utc)

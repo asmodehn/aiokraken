@@ -47,6 +47,15 @@ class TimeindexedDataframe:
     timer: typing.Callable
     index_name: str
 
+    @property
+    def begin(self):
+        # reminder : the dataframe is sorted on index
+        return self.dataframe.index.iloc[0]
+
+    @property
+    def end(self):
+        return self.dataframe.index.iloc[-1]
+
     # TODO : idea (see datafun / category theory for background):
     #  - TimedSet (unicity of rows) => matches a type instance evolving over time (with implicit equality on attributes)
     #  - TimedBags ( number of row occurence ) => same as timedSet  + a kind of reference counting semantics
@@ -163,7 +172,10 @@ class TimeindexedDataframe:
             timer=self.timer,
         )
 
-    # TODO : __iter__ backwards ?
+    # TODO : __setitem__ to allow mutation, but only in the future timeindexes ??
+    #   BUT : probably not a good idea to silently drop mutations... => exception if time for mutation is expired.
+
+    # TODO : __iter__ backwards ? => we need to sort the dataframe on timeindex. (see timecontrol.timelog)
 
     async def __aiter__(self):
         """

@@ -156,7 +156,7 @@ class Server:
 
     ### Requests
     def time(self):
-        return self.public.request('Time', data=None, expected=Response(status=200, schema=PayloadSchema(TimeSchema)))
+        return self.public.request('Time', data=None, expected=Response(status=200, schema=PayloadSchema(TimeSchema())))
 
     def assets(self, assets: typing.Optional[typing.List[typing.Union[Asset, str]]]=None):
         # Here we allow asset type to update existing partial/old knowledge.
@@ -210,7 +210,7 @@ class Server:
                                     data=None,
                                     expected=Response(status=200,
                                                       schema=PayloadSchema(
-                                                          result_schema=BalanceSchema
+                                                          result_schema=BalanceSchema()
                                                       ))
                                     )
 
@@ -224,7 +224,7 @@ class Server:
                                     },
                                     expected=Response(status=200,
                                                       schema=PayloadSchema(
-                                                          result_schema=TradeBalanceSchema
+                                                          result_schema=TradeBalanceSchema()
                                                       ))
                                     )
 
@@ -245,7 +245,7 @@ class Server:
                                    data=data,
                                    expected=Response(status=200,
                                                      schema=PayloadSchema(
-                                                        result_schema=OpenOrdersResponseSchema
+                                                        result_schema=OpenOrdersResponseSchema()
                                                         )
                                                      )
                                    )
@@ -281,7 +281,7 @@ class Server:
                                     data=data,
                                     expected=Response(status=200,
                                                       schema=PayloadSchema(
-                                                          result_schema=AddOrderResponseSchema
+                                                          result_schema=AddOrderResponseSchema()
                                                       ))
                                     )
 
@@ -291,7 +291,7 @@ class Server:
                                     data={'txid': txid_userref},  # TODO : produce dict from marshmallow...
                                     expected = Response(status=200,
                                                         schema=PayloadSchema(
-                                                            result_schema=CancelOrderResponseSchema
+                                                            result_schema=CancelOrderResponseSchema()
                                                         ))
                                 )
 
@@ -300,7 +300,7 @@ class Server:
     #     pass
     #
     #
-    def trades_history(self, offset, type = None, trades: bool = False, start: typing.Optional[int] = None, end: typing.Optional[int] = None):
+    def trades_history(self, type = None, trades: bool = False, start: typing.Optional[int] = None, end: typing.Optional[int] = None, offset=0):
         # type = type of trade (optional)
         #     all = all types (default)
         #     any position = any position (open or closed)
@@ -312,8 +312,15 @@ class Server:
         # end = ending unix timestamp or trade tx id of results (optional.  inclusive)
         # ofs = result offset
         # TODO : integration tests !!!
+        data = dict()
+        if offset > 0:
+            data.update({'ofs': offset})
+        if start is not None:
+            data.update({'start': start})
+        if end is not None:
+            data.update({'end': end})
         return self.private.request('TradesHistory',
-                                    data={'ofs': offset},
+                                    data=data,
                                     expected=Response(status=200,
                                                       schema=PayloadSchema(
                                                           result_schema=TradeResponseSchema()
@@ -323,7 +330,7 @@ class Server:
     # def query_trades(self):
     #     pass
 
-    def ledgers(self, asset=None, offset=0, type = None, start: typing.Optional[int] = None, end: typing.Optional[int] = None):
+    def ledgers(self, asset: typing.Optional[typing.List[Asset]] =None, offset=0, type = None, start: typing.Optional[int] = None, end: typing.Optional[int] = None):
         # aclass = asset class (optional):
         #     currency (default)
         # asset = comma delimited list of assets to restrict output to (optional.  default = all)
@@ -337,8 +344,18 @@ class Server:
         # end = ending unix timestamp or ledger id of results (optional.  inclusive)
         # ofs = result offset
         # TODO : integration tests !!!
+        data = dict()
+        if offset > 0:
+            data.update({'ofs': offset})
+        if asset is not None:
+            data.update({'asset': ",".join(a.restname for a in asset)})
+        if start is not None:
+            data.update({'start': start})
+        if end is not None:
+            data.update({'end': end})
+
         return self.private.request('Ledgers',
-                                    data={'ofs': offset},
+                                    data=data,
                                     expected=Response(status=200,
                                                       schema=PayloadSchema(
                                                           result_schema=KLedgersResponseSchema()
