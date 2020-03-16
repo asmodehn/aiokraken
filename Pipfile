@@ -19,7 +19,7 @@ jupyterlab-git = "*"
 
 aiohttp = "==3.6.2"
 aiodns = "==2.0.0"
-cchardet = "==2.1.4"
+cchardet = "==2.1.6"
 pytest = "==5.3.2"
 marshmallow = "==3.3.0"
 pandas = "==1.0.1"
