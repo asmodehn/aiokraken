@@ -20,14 +20,14 @@ class IntLocator:
         return self.dataframe.iloc[item]
 
 
-class TimeLocator:
-    def __init__(self, tidf: TimeindexedDataframe):
-        self.dataframe = tidf.dataframe
-
-    def __getitem__(self, item: int):
-        # TODO : slice case
-        dt = datetime.fromtimestamp(item, tz=timezone.utc)
-        return self.dataframe[dt]
+# class TimeLocator:
+#     def __init__(self, tidf: TimeindexedDataframe):
+#         self.dataframe = tidf.dataframe
+#
+#     def __getitem__(self, item: int):
+#         # TODO : slice case
+#         dt = datetime.fromtimestamp(item, tz=timezone.utc)
+#         return self.dataframe[dt]
 
 # Note : stupid name idea if this ever makes it into his own package : Ailuridae
 # It s probably doomed anyway. Just a matter of time.
@@ -105,11 +105,15 @@ class TimeindexedDataframe:
 
         return row
 
+    def __eq__(self, other):
+        return (self.dataframe == other.dataframe).all().all()
+
     def __hash__(self):
         # Current best solution, but not ideal (collisions ?)
         return int(hashlib.sha256(pd.util.hash_pandas_object(self.dataframe, index=True).values).hexdigest(), 16)
 
-    def __call__(self, tidf: TimeindexedDataframe):
+    # NOTE: we want to keep call for triggering effects (retrieving data)
+    def merge(self, tidf: TimeindexedDataframe):
 
         newdf_noidx = self.dataframe.reset_index().merge(
             tidf.dataframe.reset_index(), how="outer", sort=True
@@ -143,14 +147,15 @@ class TimeindexedDataframe:
         """
         return IntLocator(self)
 
-    @property
-    def tloc(self):
-        """
-        Intent: (unix) time based accessor. works also on slices.
-        LATER: If time as a pint unit, same behavior as man datetime index locator
-        :return:
-        """
-        return TimeLocator(self)
+    # NOT TESTED. is actually useful ?
+    # @property
+    # def tloc(self):
+    #     """
+    #     Intent: (unix) time based accessor. works also on slices.
+    #     LATER: If time as a pint unit, same behavior as man datetime index locator
+    #     :return:
+    #     """
+    #     return TimeLocator(self)
 
     # ref : https://stackoverflow.com/questions/16033017/how-to-override-the-slice-functionality-of-list-in-its-derived-class
     def __getitem__(self, item: typing.Union[slice, datetime, date, time, str]):  # TODO : deal with slices as well !!
@@ -159,23 +164,25 @@ class TimeindexedDataframe:
         # Note : this is always dependent on the precision of the dataframe
         # TODO: probably we want to match the semantics of pandas for this
         if isinstance(item, datetime):
-            subdata = self.dataframe[self.dataframe[self.index_name] == item]
-        elif isinstance(item, date):
-            subdata = self.dataframe[self.dataframe[self.index_name].date() == item]
-        elif isinstance(item, time):  # CAREFUL This gives a daily dataframe
-            subdata = self.dataframe[self.dataframe[self.index_name].time() == item]
+            return self.dataframe.loc[item]
+        # elif isinstance(item, date):
+        #     subdata = self.dataframe[self.dataframe.index.date() == item]
+        # elif isinstance(item, time):  # CAREFUL This gives a daily dataframe
+        #     subdata = self.dataframe[self.dataframe[self.index_name].time() == item]
+        elif isinstance(item, slice):
+            # check for slice of times
+            if isinstance(item.start, datetime) and isinstance(item.stop, datetime):
+                # Note: derived classes can implement an async __call__ to retrieve specific data...
+                return TimeindexedDataframe(data=self.dataframe.loc[item.start:item.stop], index=None)
         else:  # we dont know just try something (the general pandas case)
-            subdata = self.dataframe[item]
-
-        return TimeindexedDataframe(
-            data=subdata,
-            timer=self.timer,
-        )
+            return self.dataframe[item]
 
     # TODO : __setitem__ to allow mutation, but only in the future timeindexes ??
     #   BUT : probably not a good idea to silently drop mutations... => exception if time for mutation is expired.
 
-    # TODO : __iter__ backwards ? => we need to sort the dataframe on timeindex. (see timecontrol.timelog)
+    def __iter__(self):  # extract past (immutable => non-blocking)
+        for r in self.dataframe.iloc[::-1].iterrows():  # we need to reverse the dataframe order (going back in time)...
+            yield r
 
     async def __aiter__(self):
         """
