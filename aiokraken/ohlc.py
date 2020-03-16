@@ -59,7 +59,7 @@ class OHLC:
     updated: datetime    # TODO : maybe use traitlets (see ipython) for a more implicit/interactive management of time here ??
     validtime: timedelta
 
-    indicators: typing.Dict[str, Indicator]
+    indicators: typing.Dict[str, EMA]
 
     def __init__(self, pair, timeframe: KTimeFrameModel = KTimeFrameModel.one_minute, restclient: RestClient = None, valid_time: timedelta = None):
         self.restclient = restclient or RestClient()  # default restclient is possible here, but only usable for public requests...
@@ -108,7 +108,7 @@ class OHLC:
             wait_time = self.timeframe.to_timedelta() - (datetime.now(tz=timezone.utc) - self.model.last)
             await asyncio.sleep(wait_time.total_seconds())
 
-        new_ohlc = (await self.restclient.ohlc(pair=self.pair, interval=self.timeframe)())
+        new_ohlc = (await self.restclient.ohlc(pair=self.pair, interval=self.timeframe))
 
         if new_ohlc:
             if self.model:

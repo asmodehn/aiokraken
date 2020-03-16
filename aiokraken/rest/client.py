@@ -6,6 +6,8 @@ import ssl
 import aiohttp
 import typing
 
+from aiokraken.model.ohlc import OHLC
+
 from aiokraken.rest.schemas.ktrade import KTradeModel
 
 from aiokraken.rest.schemas.kledger import KLedgerInfo
@@ -200,9 +202,9 @@ class RestClient:
         return self._assetpairs
 
     @public_limiter  # skippable because OHLC is not supposed to change very often, and changes should apper in later results.
-    async def ohlc(self, pair: typing.Union[AssetPair, str], interval: KTimeFrameModel = KTimeFrameModel.one_minute):  # TODO: make pair mandatory
+    async def ohlc(self, pair: typing.Union[AssetPair, str], interval: KTimeFrameModel = KTimeFrameModel.one_minute) -> OHLC:  # TODO: make pair mandatory
         """ make ohlc request to kraken api"""
-        pair = self.validate_pair(pair)
+        pair = await self.validate_pair(pair)
         # TODO : or maybe we should pass the assetpair from model, and let the api deal with it ??
         req = self.server.ohlc(pair=pair, interval=interval)   # returns the request to be made for this API.)
         resp = await self._get(request=req)

@@ -317,6 +317,14 @@ class TestTimeindexedDataframe(unittest.TestCase):
         assert isinstance(tidf[firstdatetime:scnddatetime], TimeindexedDataframe)
         assert tidf[firstdatetime:scnddatetime] == tidf
 
+        # get list of columns only
+        assert isinstance(tidf[["open", "high", "low", "close"]], TimeindexedDataframe)
+        assert tidf[["open", "high", "low", "close"]][firstdatetime]["open"] == tidf[firstdatetime]["open"]
+        assert tidf[["open", "high", "low", "close"]][firstdatetime]["high"] == tidf[firstdatetime]["high"]
+        assert tidf[["open", "high", "low", "close"]][firstdatetime]["low"] == tidf[firstdatetime]["low"]
+        assert tidf[["open", "high", "low", "close"]][firstdatetime]["close"] == tidf[firstdatetime]["close"]
+
+
     @parameterized.expand(
         [
             [

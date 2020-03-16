@@ -54,7 +54,7 @@ class Ledger:
             #  or refine filters (time, etc.)
             while len(ledgerinfos) < count:
                 # Note : here we recurse only one time. we need to recurse to respect ratelimit...
-                more_ledgers, count = await self.restclient.ledgers(asset=self.asset,start=start, end=stop, offset=len(ledgerinfos))
+                more_ledgers, count = await self.restclient.ledgers(asset=[self.asset], start=start, end=stop, offset=len(ledgerinfos))
                 ledgerinfos.update(more_ledgers)
 
             model = ledgerframe(ledger_as_dict=ledgerinfos)

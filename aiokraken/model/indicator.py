@@ -86,7 +86,7 @@ class EMA(Indicator):
         for n, p in other.params.items():
             if p not in self.params.values():  # dropping identical params
                 merging_params.update({n: p})
-                merged_df = merged_df * other.timedataframe[n]  # join with one column only
+                merged_df = merged_df * other.timedataframe[[n]]  # join with one column only
 
         # TODO : semantics ? copy or ref ?
         # CAREFUL with optimizations here, equality not trivial if we have nans...

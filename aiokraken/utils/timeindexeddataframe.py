@@ -65,7 +65,7 @@ class TimeindexedDataframe:
         self,
         data: dataframe = pd.DataFrame(columns=["datetime"]),
         index: typing.Optional[str] = "datetime",
-        tz: timezone = None,  # needed as argument as this definitely depends on context/hypoerparams...
+        tz: timezone = None,  # needed as argument as this definitely depends on context/hyperparams...
         timer: typing.Callable = None,  # Maybe more part of the contect than the dataframe ?
     ):
         """
@@ -158,7 +158,7 @@ class TimeindexedDataframe:
     #     return TimeLocator(self)
 
     # ref : https://stackoverflow.com/questions/16033017/how-to-override-the-slice-functionality-of-list-in-its-derived-class
-    def __getitem__(self, item: typing.Union[slice, datetime, date, time, str]):  # TODO : deal with slices as well !!
+    def __getitem__(self, item: typing.Union[slice, list, datetime]):  # TODO : deal with slices as well !!
         # TODO : note  this can be used as a filter... on time or other...
         # Here we have to try guessing the user intent...
         # Note : this is always dependent on the precision of the dataframe
@@ -174,7 +174,9 @@ class TimeindexedDataframe:
             if isinstance(item.start, datetime) and isinstance(item.stop, datetime):
                 # Note: derived classes can implement an async __call__ to retrieve specific data...
                 return TimeindexedDataframe(data=self.dataframe.loc[item.start:item.stop], index=None)
-        else:  # we dont know just try something (the general pandas case)
+        elif isinstance(item, list):  # this is suppoerted by pandas, to select columns.
+            return TimeindexedDataframe(data=self.dataframe[item], index=None)
+        else:  # we dont know just try something (attempt the general pandas case)
             return self.dataframe[item]
 
     # TODO : __setitem__ to allow mutation, but only in the future timeindexes ??
