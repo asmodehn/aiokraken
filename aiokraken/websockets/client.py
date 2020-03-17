@@ -53,7 +53,10 @@ class WssClient:
                         data = json.loads(msg.data)
                         if isinstance(data, dict) and data['event'] == 'pong' and 'reqid' in data:
                             await self.set_future_pong_value(data)
-                        callback(data)
+                        try:
+                            callback(data)
+                        except Exception as e:
+                            print(e)  # TODO : need a sideeffect channels to show errors !
                     elif msg.type == aiohttp.WSMsgType.ERROR:
                         LOGGER.error(f'{msg}')
                         LOGGER.error(f'{msg.type}')
@@ -129,3 +132,52 @@ class WssClient:
         if future_id in self.pong_futures:
             self.pong_futures[future_id].set_result(pong_message)
             del self.pong_futures[future_id]
+
+
+if __name__ == '__main__':
+
+    def process_message(message):
+        print(f'processed message {message}')
+
+
+    async def main() -> None:
+        """Start kraken websockets api
+        """
+        wss_kraken = WssClient()
+
+        asyncio.ensure_future(
+            wss_kraken.create_connection(process_message)
+        )
+        await wss_kraken.subscribe(
+            ['XBT/USD'],  # TODO : we need to grab the pair wsname. From REST client ?
+            {
+                "name": 'ticker'
+            }
+        )
+        # await wss_kraken.subscribe(
+        #     ['ETH/USD'],
+        #     {
+        #         "name": '*'
+        #     }
+        # )
+
+
+    @asyncio.coroutine
+    def ask_exit(sig_name):
+        print("got signal %s: exit" % sig_name)
+        yield from asyncio.sleep(2.0)
+        asyncio.get_event_loop().stop()
+
+
+    loop = asyncio.get_event_loop()
+
+    loop.create_task(
+        main()
+    )
+    import signal
+    for signame in ('SIGINT', 'SIGTERM'):
+        loop.add_signal_handler(
+            getattr(signal, signame),
+            lambda: asyncio.ensure_future(ask_exit(signame))
+        )
+    loop.run_forever()

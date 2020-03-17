@@ -26,6 +26,12 @@ class TickerPayloadSchema(PayloadBaseSchema):
     #  => requires human understanding and should probably be part of a "formal" modeling layer instead...
     result= fields.Dict(keys = fields.String(), values = fields.Nested(TickerSchema))
 
+    @post_load()
+    def register_name(self, data, many, partial):
+        for n in data.keys():
+            data[n] = data[n](pairname=n)
+        return data
+
 
 class AssetPayloadSchema(PayloadBaseSchema):
 

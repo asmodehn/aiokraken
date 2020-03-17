@@ -231,7 +231,7 @@ class RestClient:
     @public_limiter
     async def ticker(self, pairs: typing.Optional[typing.List[AssetPair]]=None):  # TODO : model currency pair/'market' in ccxt (see crypy)
         """ make public requests to kraken api"""
-        pairs = [self.validate_pair(p) for p in pairs] if pairs else []
+        pairs = [await self.validate_pair(p) for p in pairs] if pairs else []
         req = self.server.ticker(pairs=pairs)   # returns the request to be made for this API.)
         return await self._get(request=req)
 
