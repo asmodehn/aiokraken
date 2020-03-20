@@ -6,6 +6,8 @@ import inspect
 
 import typing
 
+from aiokraken.model.tests.strats.st_assetpair import AssetPairStrategy
+from aiokraken.websockets.schemas.ohlc import OHLCUpdateSchema
 from aiokraken.websockets.schemas.pingpong import Ping
 
 from aiokraken.websockets.schemas.subscribe import Subscribe, Subscription
@@ -20,6 +22,8 @@ from aiokraken.websockets.schemas.subscriptionstatus import SubscriptionStatusSc
 
 from aiokraken.websockets.schemas.systemstatus import SystemStatusSchema, SystemStatus
 
+# TODO : careful, it seems that exceptions are not forwarded to the top process
+#  but somehow get lost into the event loop... needs investigation...
 
 class WSAPI:
     """
@@ -44,7 +48,7 @@ class WSAPI:
             if message.get('event') == "pong":
                 self.ping_callback(message)
             else:
-                raise RuntimeWarning(f"Unexpected event ! : {data}")
+                raise RuntimeWarning(f"Unexpected event ! : {message}")
 
     def ping(self, reqid, callback):
         pingdata = Ping(reqid=reqid)
@@ -56,6 +60,8 @@ class WSAPI:
             # setting up parsers for data
             if message.channel_name == "ticker":
                 channel_schema = TickerWSSchema()
+            elif message.channel_name.startswith("ohlc"):  # name depends also on interval !
+                channel_schema = OHLCUpdateSchema()
             else:
                 raise NotImplementedError("unknown channel name. please add it to the code...")
 
@@ -64,6 +70,7 @@ class WSAPI:
                            schema=channel_schema,
                            pair=message.pair,
                            callbacks=[self._callbacks[message.channel_name]])
+            print(f"Channel created: {chan}")
             self._channels[message.channel_id] = chan
             return chan  # we return channel so the client can finally register callbacks in there...
         else:
@@ -73,7 +80,6 @@ class WSAPI:
         return message  # nothing to do here (maybe internal to the client ?)
 
     def ticker(self, pairs: typing.List[AssetPair], callback: typing.Callable) -> Subscribe:
-        # TODO : maybe we should accumulate the pair names here ?
         subdata = Subscribe(pair =[p.wsname for p in pairs], subscription=Subscription(name="ticker"))
 
         self._callbacks["ticker"] = callback  # callback by expected channel name, waiting for channel open message...
@@ -81,35 +87,23 @@ class WSAPI:
         # TODO : maybe do something to expect the subscription callback ?
         return subdata  # the channel expected name
 
+    def ohlc(self, pairs: typing.List[AssetPair], callback: typing.Callable, interval: int = 1) -> Subscribe:
+        subdata = Subscribe(pair=[p.wsname for p in pairs],  subscription=Subscription(name="ohlc", interval=interval))
 
-    #
-    # def ticker(self, pairs, connection_name = "main"):
-    #     """ subscribe to the ticker update stream.
-    #     if the returned wrapper is not used, the message will still be parsed,
-    #     until the appropriate wrapper (stored in _callbacks) is called.
-    #     """
-    #     self.subt = self.loop.create_task(self.client.subscribe(pairs=pairs, subscription={
-    #             "name": 'ticker'
-    #         }, connection_name=connection_name))
-    #
-    #     @wrapt.decorator
-    #     def wrapper(wrapped, instance, args, kwargs):
-    #         # called on message received
-    #         wrapped(*args, **kwargs)
-    #
-    #     self._callbacks["ticker"] = wrapper
-    #
-    #     return wrapper
+        self._callbacks["ohlc-" + str(interval)] = callback  # callback by expected channel name, waiting for channel open message...
 
-    # TODO : or maybe via generator ??? (cf design of timecontrol, and final user interface concepts...)
-    #  Note: we should keep the buffer behavior for the input and outputs of the whole process
-    #  => no buffer 'inside' for simplicity.
+        # TODO : maybe do something to expect the subscription callback ?
+        return subdata  # the channel expected name
 
 
 if __name__ == '__main__':
     wsapi = WSAPI()
 
-    wsapi.ticker()
+    print(wsapi.ping(reqid=42,  callback= lambda x: x))
+
+    print(wsapi.ticker([AssetPairStrategy().example()], callback= lambda x: x))
+
+    print(wsapi.ohlc([AssetPairStrategy().example()], callback= lambda x: x))
 
 
 

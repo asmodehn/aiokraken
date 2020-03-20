@@ -134,6 +134,11 @@ class WssClient:
             )
             # TODO: save subscriptions and resubscribe automatically...
 
+        except Exception as e:
+            # Here because we nedd to manage our exceptions here, and not blindly rely on the async framework...
+            print(e)
+            raise
+
     def __del__(self):
         if self._runtask:  # we can stop the running task if this instance disappears
             self._runtask.cancel()
@@ -196,6 +201,19 @@ class WssClient:
 
         await self.subscribe(subs_data, connection_name="main")
 
+    async def ohlc(self, pairs: typing.List[typing.Union[str, AssetPair]], callback: typing.Callable, interval: int = 1):
+        """ subscribe to the ticker update stream.
+        if the returned wrapper is not used, the message will still be parsed,
+        until the appropriate wrapper (stored in _callbacks) is called.
+        """
+        # we need to depend on restclient for usability
+        pairs = [await self.restclient.validate_pair(p) for p in pairs] if pairs else []
+
+        # TODO : expect subscription status
+        subs_data = self.api.ohlc(pairs=pairs, interval=interval, callback=callback)
+
+        await self.subscribe(subs_data, connection_name="main")
+
 
 if __name__ == '__main__':
 
@@ -204,9 +222,15 @@ if __name__ == '__main__':
     def ticker_update(message):
         print(f'ticker update: {message}')
 
-    async def ticker_sub(pairs):
+    def ohlc_update(message):
+        print(f'ohlc update: {message}')
+
+
+    async def subsetup(pairs):
         # this will validate the pairs via the rest client
         await wss_kraken.ticker(pairs=pairs, callback=ticker_update)
+        await wss_kraken.ohlc(pairs=pairs, callback=ohlc_update)
+
 
     @asyncio.coroutine
     def ask_exit(sig_name):
@@ -220,5 +244,5 @@ if __name__ == '__main__':
             getattr(signal, signame),
             lambda: asyncio.ensure_future(ask_exit(signame))
         )
-    wss_kraken.loop.run_until_complete(ticker_sub(["XXBTZEUR"]))
+    wss_kraken.loop.run_until_complete(subsetup(["XXBTZEUR"]))
     wss_kraken.loop.run_forever()

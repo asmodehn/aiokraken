@@ -1,5 +1,3 @@
-# <class 'dict'>: {'connectionID': 12997236506998204415, 'event': 'systemStatus', 'status': 'online', 'version': '1.0.0'}
-
 
 from dataclasses import dataclass
 
