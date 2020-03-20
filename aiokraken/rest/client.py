@@ -61,6 +61,25 @@ class RestClient:
         self._assets = {}
         self._assetpairs = {}
 
+    def sync_assets(self, loop=None):
+        """ a sync point to grab assets from REST client directly """
+        loop = loop if loop is not None else asyncio.get_event_loop()
+        # TODO: maybe move the loop into client itself to add some local basic sync capabilities ?
+
+        loop.run_until_complete(self.assets())
+
+        return self._assets
+
+    def sync_assetpairs(self, loop=None):
+        """ a sync point to grab assets from REST client directly """
+        loop = loop if loop is not None else asyncio.get_event_loop()
+        # TODO: maybe move the loop into client itself to add some local basic sync capabilities ?
+
+        loop.run_until_complete(self.assetpairs())
+
+        return self._assetpairs
+
+    # TODO : sync version of this as well ??
     async def validate_asset(self, asset: typing.Union[str, Asset]) -> Asset:
         if isinstance(asset, str):  # Just to be user friendly...
             #  We need the list of markets to validate pair string passed in the request

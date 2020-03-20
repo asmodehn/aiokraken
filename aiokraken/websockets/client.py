@@ -1,8 +1,31 @@
+
+
+# TODO : rewriting client...
+
+
 import asyncio
 import json
 import aiohttp
 from asyncio import InvalidStateError, CancelledError
+
+import typing
+import wrapt
+
+from aiokraken import RestClient
+from aiokraken.model.assetpair import AssetPair
+
+from aiokraken.websockets.schemas.subscribe import SubscribeSchema, Subscribe
+
+from aiokraken.websockets.api import WSAPI
+
+from aiokraken.rest.exceptions import AIOKrakenSchemaValidationException
+
+from aiokraken.rest.schemas.base import BaseSchema
+
+from aiokraken.websockets.schemas.subscriptionstatus import SubscriptionStatusSchema, SubscriptionStatus
+
 from aiokraken.utils import get_kraken_logger
+from aiokraken.websockets.schemas.systemstatus import SystemStatusSchema
 
 LOGGER = get_kraken_logger(__name__)
 SANDBOX_URL = 'wss://ws-sandbox.kraken.com'
@@ -10,53 +33,76 @@ PRODUCTION_URL = 'wss://ws.kraken.com'
 
 
 class WssClient:
-    """ asyncio websocket client for kraken """
+    """ asyncio websocket client for kraken.
+        The client manages the connections.
+        The subscription and data parsing should be managed via the API.
+    """
 
-    def __init__(self):
+    def __init__(self, api: WSAPI, loop=None):  #API here is supposed to give us the interface (just like for rest), while client is the "thing" the user interracts with...
+
+        #  We need to pass hte loop to hook it up to any potentially preexisting loop
+        self.loop = loop if loop is not None else asyncio.get_event_loop()
+
         self.reqid = 1
-        self.pong_futures = {}
+
         self.connections = {}
+        self.connections_status = dict()
+
         headers = {
             'User-Agent': 'aiokraken'
         }
+        self.api = api
+        # TODO : DeprecationWarning: The object should be created from async function
         self.session = aiohttp.ClientSession(headers=headers, raise_for_status=True)
-        asyncio.get_event_loop().create_task(self.clear_expired_pong_futures())
 
-    async def clear_expired_pong_futures(self, futures_cleanup_interval=10):
-        await asyncio.sleep(futures_cleanup_interval)
-        delete_keys = []
-        for future_id, future in self.pong_futures.items():
-            try:
-                is_complete = any([
-                    future.done(),
-                    future.cancelled(),
-                    future.exception() == TimeoutError
-                ])
-                if is_complete:
-                    delete_keys.append(future_id)
-            except (InvalidStateError, CancelledError):
-                pass
-        for future_id in delete_keys:
-            LOGGER.debug(f'clearing expired pong future with id {future_id}')
-            del self.pong_futures[future_id]
-        asyncio.get_event_loop().create_task(self.clear_expired_pong_futures())
+        # REMINDER : channels and callbackas are managed in the API directly.
+        # Client takes care of connections and requests (not callbacks)
+        # TODO : how about responses ? we should find similar design with the REST client for consistency
 
-    async def create_connection(self, callback, connection_name="main", connection_env='production'):
-        """ Create a new websocket connection """
+        self._expected_event = set()
+
+        self._runtask = self.loop.create_task(
+            self(callback=self.api)
+        )
+
+    async def __call__(self, callback, connection_name="main", connection_env='production'):
+        """ Create a new websocket connection and extracts messages from it """
         websocket_url = PRODUCTION_URL if connection_env == 'production' else SANDBOX_URL
 
         try:
             async with self.session.ws_connect(websocket_url) as ws:
                 self.connections[connection_name] = ws
-                async for msg in ws:
+                async for msg in ws:  # REF:https://docs.kraken.com/websockets/#info
                     if msg.type == aiohttp.WSMsgType.TEXT:
+
+                        # to avoid flying blind we first need to parse json into python
                         data = json.loads(msg.data)
-                        if isinstance(data, dict) and data['event'] == 'pong' and 'reqid' in data:
-                            await self.set_future_pong_value(data)
-                        try:
-                            callback(data)
-                        except Exception as e:
-                            print(e)  # TODO : need a sideeffect channels to show errors !
+                        if isinstance(data, list):
+                            self.api(data)
+
+                        elif isinstance(data, dict):
+                            # special cases
+                            # TODO : LOG everything, somewhere...  and document how to display it...
+                            if data.get('event') == 'systemStatus':
+                                sysst = SystemStatusSchema().load(data)
+                                self.api.systemStatus(sysst)
+                                self.connections_status[connection_name] = sysst
+                            elif data.get('event') == 'heartbeat':
+                                pass  # TODO : something that will shout when heartbeat doesnt arrive on time...
+                            elif data.get('event') == 'subscriptionStatus':
+                                subst = SubscriptionStatusSchema().load(data)
+                                # this will create a channel in WSAPI
+                                self.api.subscriptionStatus(subst)
+                            else:
+
+                                print(data)
+                                raise RuntimeWarning(f"Unexpected event ! : {data}")
+
+                        else:
+
+                            print(data)
+                            raise RuntimeWarning(f"Unexpected message data ! : {data}")
+
                     elif msg.type == aiohttp.WSMsgType.ERROR:
                         LOGGER.error(f'{msg}')
                         LOGGER.error(f'{msg.type}')
@@ -71,10 +117,15 @@ class WssClient:
         # there will be no subscriptions though...
         except aiohttp.ClientConnectionError:
             await asyncio.sleep(5)
-            asyncio.create_task(
-                self.create_connection(callback=callback, connection_name=connection_name, connection_env=connection_env)
+            print(" !!! RUnning client interrupted, restarting...")
+            self._runtask = self.loop.create_task(
+                self(callback=self.api, connection_name=connection_name, connection_env=connection_env)
             )
-            # to resubscribe automatically to all subscriptions i should save them first
+            # TODO: save subscriptions and resubscribe automatically...
+
+    def __del__(self):
+        if self._runtask:  # we can stop the running task if this instance disappears
+            self._runtask.cancel()
 
     async def close_connection(self, connection_name='main'):
         """ close  websocket connection """
@@ -83,84 +134,51 @@ class WssClient:
         del self.connections[connection_name]
         LOGGER.info(f'close response {resp}')
 
-    async def subscribe(self, pairs, subscription, connection_name="main"):
+    async def subscribe(self, subdata: Subscribe, connection_name="main"):
         """ add new subscription """
         while connection_name not in self.connections:
             await asyncio.sleep(0.1)
         ws = self.connections[connection_name]
-        subscription_data = {
-            "event": "subscribe",
-            "pair": pairs,
-            "subscription": subscription
-        }
-        await ws.send_str(json.dumps(subscription_data))
+        schema = SubscribeSchema()
+        strdata = schema.dumps(subdata)
 
-    async def kraken_ping(self, connection_name="main", reqid=None, timeout=None):
-        """Ping a kraken websocket connection
+        # TODO : generate a schema based on what we expect ?
+        # self._expected_event["subscriptionStatus"] += SubscriptionStatus()
 
-        Parameters
-        ----------
-        connection_name : default is main unless otherwise specified
-        reqid: will be generated if none specified
-        timeout: no timeout unless otherwise specified
-        """
-        if reqid is None:
-            reqid = self.reqid
-            self.reqid += 1
+        await ws.send_str(strdata)
 
-        ping_data = {
-            'event': 'ping',
-            'reqid': reqid
-        }
+    def ping(self):
+        pass  # TODO : a method for "acting" on the environment
 
-        while connection_name not in self.connections:
-            await asyncio.sleep(0.1)
-        ws = self.connections[connection_name]
+    def pong(self):
+        pass  # TODO : a decorator that point to the "acted on"/callback
+              #  when change in environemnt is detected (msg received)
 
-        # Create a new Future object.
-        loop = asyncio.get_event_loop()
-        future_id = reqid
-        self.pong_futures[future_id] = loop.create_future()
-        await ws.send_str(json.dumps(ping_data))
-        return self.pong_futures[future_id]
-
-    async def set_future_pong_value(self, pong_message):
-        """ check if the pong reqid is in the dict of pong_futures created
+    async def ticker(self, pairs: typing.List[AssetPair], callback: typing.Callable):
+        """ subscribe to the ticker update stream.
+        if the returned wrapper is not used, the message will still be parsed,
+        until the appropriate wrapper (stored in _callbacks) is called.
         """
 
-        future_id = pong_message['reqid']
-        if future_id in self.pong_futures:
-            self.pong_futures[future_id].set_result(pong_message)
-            del self.pong_futures[future_id]
+        # TODO : expect subscription status
+        subs_data = self.api.ticker(pairs=pairs, callback=callback)
+
+        await self.subscribe(subs_data, connection_name="main")
 
 
 if __name__ == '__main__':
 
-    def process_message(message):
-        print(f'processed message {message}')
+    rest_kraken = RestClient()
+    wss_kraken = WssClient(api=WSAPI())
 
+    # this will retrieve assetpairs and pick the one we want
+    xbt_eur = rest_kraken.sync_assetpairs().get("XXBTZEUR")
 
-    async def main() -> None:
-        """Start kraken websockets api
-        """
-        wss_kraken = WssClient()
+    def ticker_update(message):
+        print(f'ticker update: {message}')
 
-        asyncio.ensure_future(
-            wss_kraken.create_connection(process_message)
-        )
-        await wss_kraken.subscribe(
-            ['XBT/USD'],  # TODO : we need to grab the pair wsname. From REST client ?
-            {
-                "name": 'ticker'
-            }
-        )
-        # await wss_kraken.subscribe(
-        #     ['ETH/USD'],
-        #     {
-        #         "name": '*'
-        #     }
-        # )
-
+    async def ticker_sub(pairs):
+        await wss_kraken.ticker(pairs=pairs, callback=ticker_update)
 
     @asyncio.coroutine
     def ask_exit(sig_name):
@@ -168,16 +186,11 @@ if __name__ == '__main__':
         yield from asyncio.sleep(2.0)
         asyncio.get_event_loop().stop()
 
-
-    loop = asyncio.get_event_loop()
-
-    loop.create_task(
-        main()
-    )
     import signal
     for signame in ('SIGINT', 'SIGTERM'):
-        loop.add_signal_handler(
+        wss_kraken.loop.add_signal_handler(
             getattr(signal, signame),
             lambda: asyncio.ensure_future(ask_exit(signame))
         )
-    loop.run_forever()
+    wss_kraken.loop.run_until_complete(ticker_sub([xbt_eur]))
+    wss_kraken.loop.run_forever()

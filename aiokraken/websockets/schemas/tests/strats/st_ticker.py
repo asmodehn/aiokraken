@@ -1,7 +1,5 @@
 import hypothesis.strategies as st
-from aiokraken.websockets.schemas.ticker import TickerWS, TickerWSSchema
-
-from aiokraken.model.ticker import MinOrder, MinTrade, DailyValue
+from aiokraken.websockets.schemas.ticker import TickerWS, TickerWSSchema, MinOrder, MinTrade, DailyValue
 
 
 @st.composite
