@@ -3,7 +3,7 @@
 import unittest
 
 from aiokraken.websockets.schemas.ticker import TickerWSSchema, TickerWS
-from hypothesis import given
+from hypothesis import given, settings, Verbosity
 from hypothesis.strategies import data
 
 from aiokraken.websockets.tests.strats.st_channel import st_channel
@@ -24,6 +24,7 @@ class TestChannel(unittest.TestCase):
         # # TODO : test !
         # channel()
 
+    @settings(verbosity=Verbosity.verbose)
     @given(channel=st_channel(), data=data())
     def test_samplecallback(self, channel, data):
 
@@ -43,3 +44,7 @@ class TestChannel(unittest.TestCase):
 
         # make sure the message was relayed to the callback
         assert isinstance(received, TickerWS) and received == TickerWSSchema().load(tick_msg)
+
+
+if __name__ == '__main__':
+    unittest.main()

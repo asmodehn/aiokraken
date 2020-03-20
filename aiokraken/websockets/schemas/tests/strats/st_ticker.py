@@ -7,23 +7,23 @@ from aiokraken.model.ticker import MinOrder, MinTrade, DailyValue
 @st.composite
 def st_minorder(draw):
     return MinOrder(
-        price = draw(st.decimals()),
-        whole_lot_volume = draw(st.decimals()),
-        lot_volume = draw(st.decimals())
+        price = draw(st.decimals(allow_nan=False, allow_infinity=False)),
+        whole_lot_volume = draw(st.decimals(allow_nan=False, allow_infinity=False)),
+        lot_volume = draw(st.decimals(allow_nan=False, allow_infinity=False))
     )
 
 @st.composite
 def st_mintrade(draw):
     return MinTrade(
-        price=draw(st.decimals()),
-        lot_volume=draw(st.decimals())
+        price=draw(st.decimals(allow_nan=False, allow_infinity=False)),
+        lot_volume=draw(st.decimals(allow_nan=False, allow_infinity=False))
     )
 
 @st.composite
 def st_dailyvalue(draw):
     return DailyValue(
-        today=draw(st.decimals()),
-        last_24_hours=draw(st.decimals())
+        today=draw(st.decimals(allow_nan=False, allow_infinity=False)),
+        last_24_hours=draw(st.decimals(allow_nan=False, allow_infinity=False))
     )
 
 @st.composite
