@@ -10,6 +10,7 @@ from asyncio import InvalidStateError, CancelledError
 
 import typing
 import wrapt
+from aiokraken.websockets.schemas.pingpong import PingSchema
 
 from aiokraken import RestClient
 from aiokraken.model.assetpair import AssetPair
@@ -38,13 +39,17 @@ class WssClient:
         The subscription and data parsing should be managed via the API.
     """
 
-    def __init__(self, api: WSAPI =None, loop=None):
+    def __init__(self, api: WSAPI =None, loop=None, restclient=None):
         # API here is supposed to help us define the interface (just like for rest),
         # while client is the "thing" the user interracts with...
 
         #  We need to pass the loop to hook it up to any potentially preexisting loop
         self.loop = loop if loop is not None else asyncio.get_event_loop()
         self.api = api if api is not None else WSAPI()
+
+        self.restclient = restclient if restclient is not None else RestClient()
+        # we need a rest client to get proper assets and pairs
+        # TODO : there should only ever be ONE restclient... for the whole python process => simplifiable
 
         self.reqid = 1
 
@@ -64,9 +69,12 @@ class WssClient:
 
         self._expected_event = set()
 
+        # Note HOW the instance is scheduling itself to run (in async)
+        #  as well as providing async entrypoints for library user.
         self._runtask = self.loop.create_task(
             self(callback=self.api)
         )
+        # TODO : We should try to converge both rest and wss clients designs.
 
     async def __call__(self, callback, connection_name="main", connection_env='production'):
         """ Create a new websocket connection and extracts messages from it """
@@ -80,6 +88,7 @@ class WssClient:
 
                         # to avoid flying blind we first need to parse json into python
                         data = json.loads(msg.data)
+                        # TODO : move this interface details into WSAPI (IN PROGRESS)
                         if isinstance(data, list):
                             self.api(data)
 
@@ -91,15 +100,14 @@ class WssClient:
                                 self.api.systemStatus(sysst)
                                 self.connections_status[connection_name] = sysst
                             elif data.get('event') == 'heartbeat':
-                                pass  # TODO : something that will shout when heartbeat doesnt arrive on time...
+                                self._heartbeat()
                             elif data.get('event') == 'subscriptionStatus':
                                 subst = SubscriptionStatusSchema().load(data)
                                 # this will create a channel in WSAPI
                                 self.api.subscriptionStatus(subst)
                             else:
 
-                                print(data)
-                                raise RuntimeWarning(f"Unexpected event ! : {data}")
+                                self.api(data)
 
                         else:
 
@@ -130,6 +138,31 @@ class WssClient:
         if self._runtask:  # we can stop the running task if this instance disappears
             self._runtask.cancel()
 
+    def _heartbeat(self):
+        # TODO : something that will shout when heartbeat doesnt arrive on time...
+        # This is supposed to help manage connections
+        pass
+
+    async def ping(self):
+        print("PING")
+        # TODO : expect pong
+        ping_data = self.api.ping(reqid=self.reqid, callback=self.pong)
+        self.reqid +=1
+
+        # TODO : better management of connections here...
+        ws = self.connections["main"]
+
+        schema = PingSchema()
+        strdata = schema.dumps(ping_data)
+
+        await ws.send_str(strdata, connection_name="main")
+
+    def pong(self):
+        print("PONG")
+        # TODO : something that shout when pong takes too long to arrive after a ping
+        # This is supposed to help manage connections
+        pass
+
     async def close_connection(self, connection_name='main'):
         """ close  websocket connection """
         LOGGER.info('closing the websocket connection')
@@ -150,18 +183,13 @@ class WssClient:
 
         await ws.send_str(strdata)
 
-    def ping(self):
-        pass  # TODO : a method for "acting" on the environment
-
-    def pong(self):
-        pass  # TODO : a decorator that point to the "acted on"/callback
-              #  when change in environemnt is detected (msg received)
-
-    async def ticker(self, pairs: typing.List[AssetPair], callback: typing.Callable):
+    async def ticker(self, pairs: typing.List[typing.Union[str, AssetPair]], callback: typing.Callable):
         """ subscribe to the ticker update stream.
         if the returned wrapper is not used, the message will still be parsed,
         until the appropriate wrapper (stored in _callbacks) is called.
         """
+        # we need to depend on restclient for usability
+        pairs = [await self.restclient.validate_pair(p) for p in pairs] if pairs else []
 
         # TODO : expect subscription status
         subs_data = self.api.ticker(pairs=pairs, callback=callback)
@@ -171,16 +199,13 @@ class WssClient:
 
 if __name__ == '__main__':
 
-    rest_kraken = RestClient()
     wss_kraken = WssClient(api=WSAPI())
-
-    # this will retrieve assetpairs and pick the one we want
-    xbt_eur = rest_kraken.sync_assetpairs().get("XXBTZEUR")
 
     def ticker_update(message):
         print(f'ticker update: {message}')
 
     async def ticker_sub(pairs):
+        # this will validate the pairs via the rest client
         await wss_kraken.ticker(pairs=pairs, callback=ticker_update)
 
     @asyncio.coroutine
@@ -195,5 +220,5 @@ if __name__ == '__main__':
             getattr(signal, signame),
             lambda: asyncio.ensure_future(ask_exit(signame))
         )
-    wss_kraken.loop.run_until_complete(ticker_sub([xbt_eur]))
+    wss_kraken.loop.run_until_complete(ticker_sub(["XXBTZEUR"]))
     wss_kraken.loop.run_forever()

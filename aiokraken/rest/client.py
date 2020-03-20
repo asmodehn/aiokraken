@@ -46,7 +46,7 @@ public_limiter = calllimiter(ratelimit=datetime.timedelta(seconds=3))
 
 class RestClient:
 
-    def __init__(self, server = None, protocol = "https://"):
+    def __init__(self, server = None, protocol = "https://"):  # TODO : pass the loop here to simplify REstClient direct interface
         self.server = server or Server()
         self.protocol = protocol
 

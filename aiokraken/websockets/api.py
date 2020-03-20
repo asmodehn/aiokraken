@@ -6,6 +6,8 @@ import inspect
 
 import typing
 
+from aiokraken.websockets.schemas.pingpong import Ping
+
 from aiokraken.websockets.schemas.subscribe import Subscribe, Subscription
 
 from aiokraken.model.assetpair import AssetPair
@@ -19,8 +21,11 @@ from aiokraken.websockets.schemas.subscriptionstatus import SubscriptionStatusSc
 from aiokraken.websockets.schemas.systemstatus import SystemStatusSchema, SystemStatus
 
 
-
 class WSAPI:
+    """
+    API help describe the websocket interface.
+    It deals with the model and schemas, and also manages message channels.
+    """
 
     def __init__(self):
         self._callbacks = dict()
@@ -28,35 +33,23 @@ class WSAPI:
         self._channels = dict()
 
     def __call__(self, message):
-        current = self._channels[message[0]]  # matching by channel id
+        if isinstance(message, list):
+            current = self._channels[message[0]]  # matching by channel id
 
-        # we need to verify the match on other criteria
-        if current.channel_name == message[2] and current.pair == message[3]:
-            current(message[1])
+            # we need to verify the match on other criteria
+            if current.channel_name == message[2] and current.pair == message[3]:
+                current(message[1])
 
+        elif isinstance(message, dict):
+            if message.get('event') == "pong":
+                self.ping_callback(message)
+            else:
+                raise RuntimeWarning(f"Unexpected event ! : {data}")
 
-
-
-    # def _callback(self, message):
-    #     # generic "all events" method, dispatching to others
-    #     if isinstance(message, dict):
-    #         if message.get('event') == 'subscriptionStatus':
-    #             print(f"subscription status : {message}")  # TODO : manage errors here
-    #         elif message.get('event') == 'systemStatus':
-    #             print(f'system status: {message}')
-    #         else:
-    #             print(f"unprocessed message {message}")
-    #     else:  # IDEA : heartbeat is a specific event that should trigger ALL callbacks, so that the user knows
-    #         #        its final callback is "connected", ie "eventually callable"
-    #         print(f'unexpected message {message}')
-    #         ts = TickerSchema()
-    #         tkr = ts.load(data=message)
-    #         self._callbacks["ticker"](tkr=tkr)
-
-    # Special API:
-
-    async def heartbeat(self):
-        pass
+    def ping(self, reqid, callback):
+        pingdata = Ping(reqid=reqid)
+        self.ping_callback = callback
+        return pingdata
 
     def subscriptionStatus(self, message: SubscriptionStatus):
         if message.status == 'subscribed':

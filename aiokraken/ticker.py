@@ -4,6 +4,8 @@ from datetime import datetime, timedelta, timezone
 from types import MappingProxyType
 import asyncio
 
+from aiokraken.websockets.schemas.ticker import TickerWS as TickerModel
+
 from aiokraken import WssClient
 
 from aiokraken.model.assetpair import AssetPair
@@ -34,31 +36,20 @@ class Ticker:
     def __init__(self,  restclient: RestClient, pair: typing.Union[AssetPair, str], wsclient: WssClient= None, loop = None):
         # We want all assets, or just one at a time. Note ledger instances are mergeable vertically on this...
         self.pair = pair  # one pair at a time, (but mergeable !)
+        self.loop = loop if loop is not None else asyncio.get_event_loop()
+
         self.restclient = restclient
         # Note if Restclient is None, this is just a proxy,
         # it cannot update by itself, it doesnt really "contain" data.
-        self.wsclient = wsclient if wsclient is not None else WssClient()  # defaults to have a websocket client
 
-        self.loop = loop if loop is not None else asyncio.get_event_loop()
-        # create the connection task with the proper loop
-        self.runner = self.loop.create_task(
-            self.wsclient.create_connection(self.process_message)
-        )
+        self.wsclient = wsclient if wsclient is not None else WssClient(loop=self.loop)
+        # defaults to have a websocket client
 
         self.model = None  # Need async call : raii is not doable here...
         # TODO : mapping proxy to avoid mutation problems ?
 
-    def process_message(self, message): # TODO : case split on event...
-        if isinstance(message, dict):
-            if message.get('event') == 'subscriptionStatus':
-                print(f"subscription status : {message}")  # TODO : manage errors here
-            elif message.get('event') == 'systemStatus':
-                print(f'system status: {message}')
-            else:
-                print(f"unprocessed message {message}")
-        else:
-            print(f'unexpected message {message}')
-        # TODO : marshmallow parse !
+    def _update(self, tkr: TickerWS):
+        self.model(tkr)  # tickerframe update
 
     async def __call__(self):  # ticker request doesnt allow requesting for a specific time (use OHLC for this)
         # self update
@@ -78,13 +69,8 @@ class Ticker:
             p = await self.restclient.validate_pair(pair=self.pair)
 
             if self.wsclient is not None:
-
-                await self.wsclient.subscribe(
-                    [p.wsname],  # TODO : validate pair before sending over WS
-                    {
-                        "name": 'ticker'
-                    }
-                )
+                # TODO : prevent redundant subscription ?
+                await self.wsclient.ticker(pairs=[self.pair], callback=self._update)
 
         # we keep aggregating in place on the same object
         return self
