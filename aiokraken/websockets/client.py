@@ -38,10 +38,13 @@ class WssClient:
         The subscription and data parsing should be managed via the API.
     """
 
-    def __init__(self, api: WSAPI, loop=None):  #API here is supposed to give us the interface (just like for rest), while client is the "thing" the user interracts with...
+    def __init__(self, api: WSAPI =None, loop=None):
+        # API here is supposed to help us define the interface (just like for rest),
+        # while client is the "thing" the user interracts with...
 
-        #  We need to pass hte loop to hook it up to any potentially preexisting loop
+        #  We need to pass the loop to hook it up to any potentially preexisting loop
         self.loop = loop if loop is not None else asyncio.get_event_loop()
+        self.api = api if api is not None else WSAPI()
 
         self.reqid = 1
 
@@ -51,7 +54,7 @@ class WssClient:
         headers = {
             'User-Agent': 'aiokraken'
         }
-        self.api = api
+
         # TODO : DeprecationWarning: The object should be created from async function
         self.session = aiohttp.ClientSession(headers=headers, raise_for_status=True)
 

@@ -1,8 +1,6 @@
 
 # This concept of channels comes directly from the Kraken API docs : https://docs.kraken.com/websockets/#message-ohlc
 
-# <class 'dict'>: {'connectionID': 12997236506998204415, 'event': 'systemStatus', 'status': 'online', 'version': '1.0.0'}
-
 
 from dataclasses import dataclass, field
 
