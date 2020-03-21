@@ -72,24 +72,26 @@ class RestClient:
     @property
     def assets(self) -> typing.Union[Assets, typing.Coroutine[ None, None, Assets]]:
         """ Specific method that can be called both as sync from a sync function, and as async from an async function"""
-        if self._assets is None:
+        if self.loop.is_running():  # if we are already in an eventloop, we just return the coroutine
+            return self.retrieve_assets()
+        else:
             # No point to run this multiple times in one process run.
-            if self.loop.is_running():  # if we are already in an eventloop, we just return the coroutine
-                return self.retrieve_assets()
-            else:  # we run it ourselves before returning
+            if self._assets is None:
+                # we run it ourselves before returning
                 self.loop.run_until_complete(self.retrieve_assets())
-        return self._assets
+            return self._assets
 
     @property
     def assetpairs(self) -> typing.Union[Assets, typing.Coroutine[ None, None, Assets]]:
         """ Specific method that can be called both as sync from a sync function, and as async from an async function"""
-        if self._assetpairs is None:
+        if self.loop.is_running():  # if we are already in an eventloop, we just return the coroutine
+            return self.retrieve_assetpairs()
+        else:
             # No point to run this multiple times in one process run.
-            if self.loop.is_running():  # if we are already in an eventloop, we just return the coroutine
-                return self.retrieve_assetpairs()
-            else:  # we run it ourselves before returning
+            if self._assetpairs is None:
+                # we run it ourselves before returning
                 self.loop.run_until_complete(self.retrieve_assetpairs())
-        return self._assetpairs
+            return self._assetpairs
 
     async def __aenter__(self):
         """ Initializes a session.
@@ -178,27 +180,27 @@ class RestClient:
     @public_limiter
     async def retrieve_assets(self, assets: typing.Optional[typing.List[typing.Union[Asset, str]]]=None):
         """ make assets request to kraken api"""
-
-        req = self.server.assets(assets=assets)   # returns the request to be made for this API.)
-        # This request is special, because it will give us more informations about other possible requests.
-        resp = await self._get(request=req)
-        self._assets = Assets(assets_as_dict=resp)
+        if self._assets is None:  # we only need it once !
+            req = self.server.assets(assets=assets)   # returns the request to be made for this API.)
+            # This request is special, because it will give us more informations about other possible requests.
+            resp = await self._get(request=req)
+            self._assets = Assets(assets_as_dict=resp)
         return self._assets
 
     @public_limiter
     async def retrieve_assetpairs(self, pairs: typing.Optional[typing.List[typing.Union[AssetPair, str]]]=None):
         """ make assetpairs request to kraken api"""
-
-        req = self.server.assetpair(pairs=pairs)   # returns the request to be made for this API.)
-        # This request is special, because it will give us more informations about other possible requests.
-        resp = await self._get(request=req)
-        self._assetpairs = AssetPairs(assetpairs_as_dict=resp)
+        if self._assetpairs is None:  # we only need it once !
+            req = self.server.assetpair(pairs=pairs)   # returns the request to be made for this API.)
+            # This request is special, because it will give us more informations about other possible requests.
+            resp = await self._get(request=req)
+            self._assetpairs = AssetPairs(assetpairs_as_dict=resp)
         return self._assetpairs
 
     @public_limiter  # skippable because OHLC is not supposed to change very often, and changes should apper in later results.
     async def ohlc(self, pair: typing.Union[AssetPair, str], interval: KTimeFrameModel = KTimeFrameModel.one_minute) -> OHLC:  # TODO: make pair mandatory
         """ make ohlc request to kraken api"""
-        pair = self.assetpairs[pair]
+        pair = (await self.assetpairs)[pair]
         # TODO : or maybe we should pass the assetpair from model, and let the api deal with it ??
         req = self.server.ohlc(pair=pair, interval=interval)   # returns the request to be made for this API.)
         resp = await self._get(request=req)
@@ -223,9 +225,9 @@ class RestClient:
         return await self._post(request=req)
 
     @public_limiter
-    async def ticker(self, pairs: typing.Optional[typing.List[AssetPair]]=None):  # TODO : model currency pair/'market' in ccxt (see crypy)
+    async def ticker(self, pairs: typing.Optional[typing.List[typing.Union[str, AssetPair]]]=None):  # TODO : model currency pair/'market' in ccxt (see crypy)
         """ make public requests to kraken api"""
-        pairs = [self.assetpairs[p] for p in pairs] if pairs else []
+        pairs = [(await self.assetpairs)[p] for p in pairs] if pairs else []
         req = self.server.ticker(pairs=pairs)   # returns the request to be made for this API.)
         return await self._get(request=req)
 

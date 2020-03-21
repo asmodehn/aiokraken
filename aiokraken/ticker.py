@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from types import MappingProxyType
 import asyncio
 
-from aiokraken.websockets.schemas.ticker import TickerWS as TickerModel
+from aiokraken.websockets.schemas.ticker import TickerWS as TickerModel, TickerWS
 
 from aiokraken import WssClient
 
@@ -66,11 +66,11 @@ class Ticker:
 
             # we got a response from REST, we can now subscribe to our topic via the websocket connection
 
-            p = await self.restclient.validate_pair(pair=self.pair)
+            p = self.restclient.assetpairs[self.pair]
 
             if self.wsclient is not None:
                 # TODO : prevent redundant subscription ?
-                await self.wsclient.ticker(pairs=[self.pair], callback=self._update)
+                await self.wsclient.ticker(pairs=[p], callback=self._update)
 
         # we keep aggregating in place on the same object
         return self

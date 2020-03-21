@@ -1,5 +1,6 @@
 from __future__ import annotations
 import asyncio
+import dataclasses
 from collections import namedtuple
 from datetime import timedelta, datetime, timezone
 
@@ -7,6 +8,8 @@ import typing
 from decimal import Decimal
 
 import pandas as pd
+from aiokraken.websockets.client import WssClient
+
 from aiokraken.model.assetpair import AssetPair
 
 from aiokraken.model.indicator import Indicator, EMA_params
@@ -16,6 +19,7 @@ from aiokraken.rest import RestClient, Server
 from aiokraken.model.timeframe import KTimeFrameModel
 from aiokraken.model.ohlc import OHLC as OHLCModel
 from aiokraken.model.indicator import ema, EMA as EMAModel
+from aiokraken.websockets.schemas.ohlc import OHLCUpdate
 from collections.abc import Mapping
 
 from aiokraken.utils.filter import Filter
@@ -55,16 +59,22 @@ class OHLC:
         on the time *interval* axis (nagivating between timeframes), probably via mapping protocol...
     """
     pair: AssetPair
-    model: OHLCModel
+    model: typing.Optional[OHLCModel]
     updated: datetime    # TODO : maybe use traitlets (see ipython) for a more implicit/interactive management of time here ??
     validtime: timedelta
 
     indicators: typing.Dict[str, EMA]
 
-    def __init__(self, pair, timeframe: KTimeFrameModel = KTimeFrameModel.one_minute, restclient: RestClient = None, valid_time: timedelta = None):
+    def __init__(self, pair, timeframe: KTimeFrameModel = KTimeFrameModel.one_minute, restclient: RestClient = None, wsclient: WssClient = None, loop=None, valid_time: timedelta = None):
+        self.pair = pair  # TODO : validate the pair using the rest client pair = await self.restclient.validate_pair(pair=self.pair)
+
         self.restclient = restclient or RestClient()  # default restclient is possible here, but only usable for public requests...
+
+        self.loop = loop if loop is not None else asyncio.get_event_loop()
+        self.wsclient = wsclient if wsclient is not None else WssClient(loop=self.loop)
+        # defaults to have a websocket client
+
         self.validtime = valid_time   # None means always valid
-        self.pair = pair
         self.timeframe = timeframe
         self.model = None  # Need async call : raii is not doable here...
         self.indicators = dict()
@@ -97,10 +107,20 @@ class OHLC:
     def volume(self)-> Decimal:
         return self.model.volume
 
+    def _update(self, ohlc_update: OHLCUpdate):
+        try:
+            append_data = ohlc_update.to_tidfrow()
+            # TODO : something about etime to filter relevant data...
+            self.model.append(append_data)
+            # TODO : indicators... and more
+        except Exception as e:
+            print(e)
+            raise  # TO immadiately explicitely catch it
+
     async def __call__(self):
         """
         This is a call mutating this object. GOAL : updating OHLC out of the view of the user
-        (contained datastructures change by themselves, from REST calls of websockets callback...)
+        (contained datastructures change by themselves, from REST calls or websockets callback...)
         """
 
         if self.model and self.model.last > datetime.now(tz=timezone.utc) - self.timeframe.to_timedelta():
@@ -118,6 +138,12 @@ class OHLC:
 
         for n, i in self.indicators.items():
             i(self.model)  # updating all indicators from new ohlc data
+
+        # we got a response from REST, we can now subscribe to our topic via the websocket connection
+
+        if self.wsclient is not None:
+            # TODO : prevent redundant subscription ?
+            await self.wsclient.ohlc(pairs=[self.pair], callback=self._update)
 
         return self
 
@@ -213,7 +239,7 @@ class OHLC:
         if self.model:  # Immediately calling on ohlc if possible => TODO : improve design ?
             self.indicators['ema'] = self.indicators['ema'](self.model)
 
-        return self # return self, to allow chaining methods. (no point returning the ema created, it is stored already)
+        return self  # to allow chaining methods. (no point returning the ema created, it is stored already)
 
     # TODO : Since we have indicators here (totally dependent on ohlc), we probably also want signals...
 
@@ -265,7 +291,7 @@ if __name__ == '__main__':
     assert len(emas_1m) == 720, f"EMA: {len(emas_1m)} values"
 
     print("Waiting one more minute to attempt retrieving more ohlc data and stitch them...")
-    time.sleep(60)
+    time.sleep(60)   # NOTE : this seesm to block asyncio tasks ????
     loop.run_until_complete(ohlc_retrieve_nosession())
     # ohlc_1m.show()  # blocking test
 
