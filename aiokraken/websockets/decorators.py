@@ -18,11 +18,7 @@ def ticker(pairs: typing.List[typing.Union[str, AssetPair]], restclient: RestCli
     until the appropriate wrapper (stored in _callbacks) is called.
     """
 
-    restclient = restclient if restclient is not None else RestClient()
-    client = client if client is not None else WssClient()
-
-    # this will retrieve assetpairs and pick the one we want
-    pairs = [restclient.assetpairs[p] for p in pairs]
+    client = client if client is not None else WssClient(restclient=restclient)
 
     def decorator(wrpd):
 
@@ -51,11 +47,7 @@ def ohlc(pairs: typing.List[typing.Union[str, AssetPair]], restclient: RestClien
     if the returned wrapper is not used, the message will still be parsed,
     until the appropriate wrapper (stored in _callbacks) is called.
     """
-    restclient = restclient if restclient is not None else RestClient()
-    client = client if client is not None else WssClient()
-
-    # this will retrieve assetpairs and pick the one we want
-    pairs = [restclient.assetpairs[p] for p in pairs]
+    client = client if client is not None else WssClient(restclient=restclient)
 
     def decorator(wrpd):
 
@@ -86,17 +78,20 @@ if __name__ == '__main__':
     def ticker_update(message):
         print(f'ticker update: {message}')
 
-    @asyncio.coroutine
-    def ask_exit(sig_name):
+    @ohlc(pairs=["XBTEUR"])
+    def ohlc_update(message):
+        print(f'ohlc update: {message}')
+
+    async def ask_exit(sig_name):
         print("got signal %s: exit" % sig_name)
-        yield from asyncio.sleep(2.0)
+        await asyncio.sleep(2.0)
         asyncio.get_event_loop().stop()
 
     import signal
     for signame in ('SIGINT', 'SIGTERM'):
         asyncio.get_event_loop().add_signal_handler(
             getattr(signal, signame),
-            lambda: asyncio.ensure_future(ask_exit(signame))
+            lambda: asyncio.create_task(ask_exit(signame))
         )
 
     asyncio.get_event_loop().run_forever()

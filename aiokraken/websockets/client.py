@@ -194,7 +194,7 @@ class WssClient:
         until the appropriate wrapper (stored in _callbacks) is called.
         """
         # we need to depend on restclient for usability
-        pairs = [(await self.restclient.assetpairs)[p] for p in pairs] if pairs else []
+        pairs = [(await self.restclient.assetpairs)[p] if isinstance(p, str) else p for p in pairs] if pairs else []
 
         # TODO : expect subscription status
         subs_data = self.api.ticker(pairs=pairs, callback=callback)
@@ -207,7 +207,7 @@ class WssClient:
         until the appropriate wrapper (stored in _callbacks) is called.
         """
         # we need to depend on restclient for usability
-        pairs = [(await self.restclient.assetpairs)[p] for p in pairs] if pairs else []
+        pairs = [(await self.restclient.assetpairs)[p] if isinstance(p, str) else p for p in pairs] if pairs else []
 
         # TODO : expect subscription status
         subs_data = self.api.ohlc(pairs=pairs, interval=interval, callback=callback)
