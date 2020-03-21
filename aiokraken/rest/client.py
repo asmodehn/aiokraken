@@ -3,8 +3,14 @@ import asyncio
 import datetime
 import functools
 import ssl
+import time
+
 import aiohttp
 import typing
+
+from aiokraken.rest.assetpairs import AssetPairs
+
+from aiokraken.rest.assets import Assets
 
 from aiokraken.model.ohlc import OHLC
 
@@ -46,8 +52,10 @@ public_limiter = calllimiter(ratelimit=datetime.timedelta(seconds=3))
 
 class RestClient:
 
-    def __init__(self, server = None, protocol = "https://"):  # TODO : pass the loop here to simplify REstClient direct interface
+    def __init__(self, server = None, loop=None, protocol = "https://"):
         self.server = server or Server()
+        self.loop = loop if loop is not None else asyncio.get_event_loop()
+
         self.protocol = protocol
 
         self._headers = {  # TODO : aiokraken useragent
@@ -58,65 +66,30 @@ class RestClient:
         self.session = None
 
         # we store locally assets and pairs to help validate subsequent requests
-        self._assets = {}
-        self._assetpairs = {}
+        self._assets = None
+        self._assetpairs = None
 
-    def sync_assets(self, loop=None):
-        """ a sync point to grab assets from REST client directly """
-        loop = loop if loop is not None else asyncio.get_event_loop()
-        # TODO: maybe move the loop into client itself to add some local basic sync capabilities ?
-
-        loop.run_until_complete(self.assets())
-
+    @property
+    def assets(self) -> typing.Union[Assets, typing.Coroutine[ None, None, Assets]]:
+        """ Specific method that can be called both as sync from a sync function, and as async from an async function"""
+        if self._assets is None:
+            # No point to run this multiple times in one process run.
+            if self.loop.is_running():  # if we are already in an eventloop, we just return the coroutine
+                return self.retrieve_assets()
+            else:  # we run it ourselves before returning
+                self.loop.run_until_complete(self.retrieve_assets())
         return self._assets
 
-    def sync_assetpairs(self, loop=None):
-        """ a sync point to grab assets from REST client directly """
-        loop = loop if loop is not None else asyncio.get_event_loop()
-        # TODO: maybe move the loop into client itself to add some local basic sync capabilities ?
-
-        loop.run_until_complete(self.assetpairs())
-
+    @property
+    def assetpairs(self) -> typing.Union[Assets, typing.Coroutine[ None, None, Assets]]:
+        """ Specific method that can be called both as sync from a sync function, and as async from an async function"""
+        if self._assetpairs is None:
+            # No point to run this multiple times in one process run.
+            if self.loop.is_running():  # if we are already in an eventloop, we just return the coroutine
+                return self.retrieve_assetpairs()
+            else:  # we run it ourselves before returning
+                self.loop.run_until_complete(self.retrieve_assetpairs())
         return self._assetpairs
-
-    # TODO : sync version of this as well ??
-    async def validate_asset(self, asset: typing.Union[str, Asset]) -> Asset:
-        if isinstance(asset, str):  # Just to be user friendly...
-            #  We need the list of markets to validate pair string passed in the request
-            if not self._assets:
-                await self.assets()
-            if not asset in self._assets.keys():
-                altname_map = {p.altname: p for n, p in self._assets.items()}
-                if not asset in altname_map.keys():
-                    # TODO : proper exception class
-                    RuntimeError(f"{asset} not in {[k for k in self._assets.keys()]} nor {altname_map.keys()}")
-                else:
-                    asset = altname_map[asset]  # get the proper type.
-            else:
-                asset = self._assets[asset]
-        elif not isinstance(asset, Asset):
-            RuntimeError(f"{asset} not of the proper type...")
-
-        return asset
-
-    async def validate_pair(self, pair: typing.Union[str, AssetPair]) -> AssetPair:
-        if isinstance(pair, str):  # Just to be user friendly...
-            #  We need the list of markets to validate pair string passed in the request
-            if not self._assetpairs:
-                await self.assetpairs()
-            if not pair in self._assetpairs.keys():
-                altname_map = {p.altname: p for n, p in self._assetpairs.items()}
-                if not pair in altname_map.keys():
-                    # TODO : proper exception class
-                    RuntimeError(f"{pair} not in {[k for k in self._assetpairs.keys()]} nor {altname_map.keys()}")
-                else:
-                    pair = altname_map[pair]  # get the proper type.
-            else:
-                pair = self._assetpairs[pair]
-        elif not isinstance(pair, AssetPair):
-            RuntimeError(f"{pair} not of the proper type...")
-
-        return pair
 
     async def __aenter__(self):
         """ Initializes a session.
@@ -198,32 +171,34 @@ class RestClient:
     @public_limiter
     async def time(self):
         """ make public requests to kraken api"""
-
+        # TODO : build a property, similar to assets and assetpairs, but with a local clock, sync with the server clock.
         req = self.server.time()   # returns the request to be made for this API.
         return await self._get(request=req)
 
     @public_limiter
-    async def assets(self, assets: typing.Optional[typing.List[typing.Union[Asset, str]]]=None):
+    async def retrieve_assets(self, assets: typing.Optional[typing.List[typing.Union[Asset, str]]]=None):
         """ make assets request to kraken api"""
 
         req = self.server.assets(assets=assets)   # returns the request to be made for this API.)
         # This request is special, because it will give us more informations about other possible requests.
-
-        self._assets = await self._get(request=req)
+        resp = await self._get(request=req)
+        self._assets = Assets(assets_as_dict=resp)
         return self._assets
 
     @public_limiter
-    async def assetpairs(self, pairs: typing.Optional[typing.List[typing.Union[AssetPair, str]]]=None):
+    async def retrieve_assetpairs(self, pairs: typing.Optional[typing.List[typing.Union[AssetPair, str]]]=None):
         """ make assetpairs request to kraken api"""
 
         req = self.server.assetpair(pairs=pairs)   # returns the request to be made for this API.)
-        self._assetpairs = await self._get(request=req)
+        # This request is special, because it will give us more informations about other possible requests.
+        resp = await self._get(request=req)
+        self._assetpairs = AssetPairs(assetpairs_as_dict=resp)
         return self._assetpairs
 
     @public_limiter  # skippable because OHLC is not supposed to change very often, and changes should apper in later results.
     async def ohlc(self, pair: typing.Union[AssetPair, str], interval: KTimeFrameModel = KTimeFrameModel.one_minute) -> OHLC:  # TODO: make pair mandatory
         """ make ohlc request to kraken api"""
-        pair = await self.validate_pair(pair)
+        pair = self.assetpairs[pair]
         # TODO : or maybe we should pass the assetpair from model, and let the api deal with it ??
         req = self.server.ohlc(pair=pair, interval=interval)   # returns the request to be made for this API.)
         resp = await self._get(request=req)
@@ -235,7 +210,7 @@ class RestClient:
         """ make balance requests to kraken api"""
         #  We need the list of assets to return proper types in balance
         if not self._assets:
-            await self.assets()
+            await self.retrieve_assets()
         req = self.server.balance()
         resp = await self._post(request=req)  # Private request must use POST !
         return resp.accounts  # Note : this depends on the schema.
@@ -250,7 +225,7 @@ class RestClient:
     @public_limiter
     async def ticker(self, pairs: typing.Optional[typing.List[AssetPair]]=None):  # TODO : model currency pair/'market' in ccxt (see crypy)
         """ make public requests to kraken api"""
-        pairs = [await self.validate_pair(p) for p in pairs] if pairs else []
+        pairs = [self.assetpairs[p] for p in pairs] if pairs else []
         req = self.server.ticker(pairs=pairs)   # returns the request to be made for this API.)
         return await self._get(request=req)
 
@@ -293,31 +268,18 @@ class RestClient:
     @private_limiter
     async def ledgers(self, asset: typing.Optional[typing.List[typing.Union[Asset, str]]], start: datetime =None, end: datetime = None, offset=0) -> typing.Tuple[typing.Dict[str, KLedgerInfo], int]:
         """ make ledgers requests to kraken api """
-        asset = [await self.validate_asset(a) for a in asset]
+        asset = [(await self.assets)[a] for a in asset]  # retrieve the proper asset instance
         req = self.server.ledgers(asset=asset, start=int(start.timestamp()), end=int(end.timestamp()), offset=offset)
         more_ledgers, count = await self._post(request=req)
         return more_ledgers, count  # making multiple return explicit in interface
 
-    #
-    # # Note we do not need limiter here, we are limited by _offset_ledgers
-    # # rest_command should for now stay with private limiter, but maybe hte command role is not to limite,
-    # # but only log/replay independently ?
-    # async def ledgers(self, da):  # offset 0 or None ??
-    #     """ make public requests to kraken api"""
-    #
-    #     ledgerinfos, count = await self._offset_ledgers(offset=0)()
-    #
-    #     # recurse until we get *everything*
-    #     # Note : if this is too much, leverage local storage (TODO !)
-    #     #  or refine filters (time, etc.)
-    #     while len(ledgerinfos) < count:
-    #         # Note : here we recurse only one time. we need to recurse to respect ratelimit...
-    #         more_ledgers, count = await self._offset_ledgers(offset=len(ledgerinfos))()
-    #         ledgerinfos.update(more_ledgers)
-    #
-    #     # TODO : here we should probably convert to a Model (dataframe, etc.),
-    #     # more complex/complete than a dict structure...
-    #
-    #     ledger = Ledger(ledgerinfos)
-    #     # TODO : goal : return immutable data !
-    #     return ledger
+
+if __name__ == '__main__':
+
+    client = RestClient()
+
+    print(client.assets)
+
+    print(client.assetpairs)
+
+    # print(client.time())
