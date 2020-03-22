@@ -124,14 +124,14 @@ class OHLC(TimeindexedDataframe):
     def __call__(self, tidf: OHLC):
         return self.stitch(tidf)
 
-    def stitch(self, other: OHLC):
+    def stitch(self, other: OHLC) -> OHLC:
         """ Stitching two OHLC together """
 
         newdf_noidx = self.dataframe.reset_index().merge(other.dataframe.reset_index(), how='outer', sort=True)
 
         # newdf = newdf_noidx.groupby('time') # This works on axis=0, not what we want...
 
-        def stitcher(row: pd.Series):
+        def stitcher(row: pd.Series) -> pd.Series:
             nonlocal newdf_noidx
 
             #retrieving the index by matching time
@@ -216,6 +216,9 @@ class OHLC(TimeindexedDataframe):
     def head(self):
         return self.dataframe.head()
 
+    def append(self, other) -> OHLC:  # append in place (mutate !)
+        self.dataframe = self.dataframe.append(other)
+        return self
 
-    # TODO: instance of OHLC will depend on chosen timeframe...
+        # TODO: instance of OHLC will depend on chosen timeframe...
 

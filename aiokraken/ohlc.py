@@ -107,15 +107,15 @@ class OHLC:
     def volume(self)-> Decimal:
         return self.model.volume
 
+    # TODO : use  the decorator for wss callback here !
     def _update(self, ohlc_update: OHLCUpdate):
         try:
             append_data = ohlc_update.to_tidfrow()
-            # TODO : something about etime to filter relevant data...
             self.model.append(append_data)
-            # TODO : indicators... and more
+            # TODO : indicators update... and more
         except Exception as e:
             print(e)
-            raise  # TO immadiately explicitely catch it
+            raise  # TO immediately explicitely catch it
 
     async def __call__(self):
         """
@@ -147,33 +147,11 @@ class OHLC:
 
         return self
 
-    # TODO : howto make display to string / repr ??
+    def __repr__(self):
+        return f"<OHLC {self.pair} {self.timeframe}>"
 
-    def show(self, block=True):
-        import matplotlib
-        from matplotlib import pyplot as plt
-        matplotlib.use('TkAgg')  # Note : Tkinter needs to be installed ! "sudo apt install python3-tk"
-        import mplfinance as mpf
-        print(f" Showing OHLCV for {self.pair}")
-        if block:
-            plt.ioff()
-        else:
-            plt.ion()  # by default with TkAgg
-        mpf.plot(self.model.dataframe.rename(columns={'open': 'Open',
-                                 'high': 'High',
-                                 'low': 'Low',
-                                 'close': 'Close',
-                                  'volume': 'Volume'}), type='ohlc', volume=True)
-        if block:
-            plt.ion()  # reset
-        return plt
-
-    # something in the background, not blocking, but closing properly...
-    # TODO : maybe a context manager for plotting ?
-    async def ashow(self):
-        plt = self.show(block=False)
-        await asyncio.sleep(10)
-        plt.close("all")
+    def __str__(self):
+        return f"OHLC {self.pair} {self.timeframe}"
 
     # TODO : maybe we need something to express the value of the asset relative to the fees
     #  => nothing change while < fees, and then it s step by step *2, *3, etc.
@@ -265,41 +243,39 @@ if __name__ == '__main__':
     # ohlc data can be global (one per market*timeframe only)
     ohlc_1m = OHLC(pair='ETHEUR', timeframe=KTimeFrameModel.one_minute, restclient=rest)
 
-    # Here we register and retrieve an indicator on ohlc data.
-    # It will be automagically updated when we update ohlc.
-    emas_1m = ohlc_1m.ema(name="EMA_12", length=12)
-    # Note these two should merge...
-    ohlc_1m.ema(name="EMA_26", length=26)
+    loop = asyncio.get_event_loop()
 
-    async def ohlc_retrieve_nosession():
-        global rest, ohlc_1m, emas_1m
+    async def ohlc_update_watcher():
+        # we need an async def here to allow "pausing" in the flow (await), and wait for ohlc updates
+
+        # Here we register and retrieve an indicator on ohlc data.
+        # It will be automagically updated when we update ohlc.
+        emas_1m = ohlc_1m.ema(name="EMA_12", length=12)
+        # Note these two should merge...
+        ohlc_1m.ema(name="EMA_26", length=26)
+
+        assert len(ohlc_1m) == 0
+
         await ohlc_1m()
         for k in ohlc_1m:
             print(f" - {k}")
-        await ohlc_1m.ashow()  # interactive test
 
-        # TODO : this should probably be done out of sight...
+        assert len(ohlc_1m) == 720, f"from: {ohlc_1m.begin} to: {ohlc_1m.end} -> {len(ohlc_1m)} values"
+        # ema has been updated
+        assert len(emas_1m) == 720, f"EMA: {len(emas_1m)} values"
 
-    loop = asyncio.get_event_loop()
+        print("Waiting 6 more minute to attempt retrieving more ohlc data - via websockets - and stitch them...")
+        for mins in range(1, 6):
+            await asyncio.sleep(60)  # need await to not block other async tasks
+            print(f" - {ohlc_1m.model[:-1]}")
 
-    assert len(ohlc_1m) == 0
+        assert len(ohlc_1m) == 727, f"from: {ohlc_1m.begin} to: {ohlc_1m.end} -> {len(ohlc_1m)} values"
+        # ema has been updated
+        assert len(emas_1m) == 727, f"EMA: {len(emas_1m)} values"
 
-    loop.run_until_complete(ohlc_retrieve_nosession())
-    # ohlc_1m.show()  # blocking test
-    assert len(ohlc_1m) == 720, f"from: {ohlc_1m.begin} to: {ohlc_1m.end} -> {len(ohlc_1m)} values"
-    # ema has been updated
-    assert len(emas_1m) == 720, f"EMA: {len(emas_1m)} values"
+        # TODO : another REST update should fit with already gathered data
 
-    print("Waiting one more minute to attempt retrieving more ohlc data and stitch them...")
-    time.sleep(60)   # NOTE : this seesm to block asyncio tasks ????
-    loop.run_until_complete(ohlc_retrieve_nosession())
-    # ohlc_1m.show()  # blocking test
-
-    assert len(ohlc_1m) == 721, f"from: {ohlc_1m.begin} to: {ohlc_1m.end} -> {len(ohlc_1m)} values"
-    # ema has been updated
-    assert len(emas_1m) == 721, f"EMA: {len(emas_1m)} values"
-
-    loop.close()
+    loop.run_until_complete(ohlc_update_watcher())
 
 
 
