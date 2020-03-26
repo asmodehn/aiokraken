@@ -63,3 +63,5 @@ https://www.kraken.com/features/api
 ## Licence
 
 The MIT License (MIT)
+
+TODO : Change to GPL (NB: Dan is okay)
