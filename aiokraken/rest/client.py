@@ -8,6 +8,8 @@ import time
 import aiohttp
 import typing
 
+from async_property import async_property, async_cached_property
+
 from aiokraken.rest.assetpairs import AssetPairs
 
 from aiokraken.rest.assets import Assets
@@ -24,9 +26,10 @@ from aiokraken.model.timeframe import KTimeFrameModel
 
 from aiokraken.utils import get_kraken_logger, get_nonce
 from aiokraken.rest.api import Server, API
-from timecontrol.calllimiter import calllimiter
+from timecontrol import calllimiter
 
-from timecontrol.eventful import eventful
+# maybe later to help with better logging...
+from timecontrol import eventful
 
 BASE_URL = 'https://api.kraken.com'
 LOGGER = get_kraken_logger(__name__)
@@ -69,29 +72,19 @@ class RestClient:
         self._assets = None
         self._assetpairs = None
 
-    @property
-    def assets(self) -> typing.Union[Assets, typing.Coroutine[ None, None, Assets]]:
-        """ Specific method that can be called both as sync from a sync function, and as async from an async function"""
-        if self.loop.is_running():  # if we are already in an eventloop, we just return the coroutine
-            return self.retrieve_assets()
-        else:
-            # No point to run this multiple times in one process run.
-            if self._assets is None:
-                # we run it ourselves before returning
-                self.loop.run_until_complete(self.retrieve_assets())
-            return self._assets
+    @async_cached_property
+    async def assets(self) -> typing.Union[Assets, typing.Coroutine[None, None, Assets]]:
+        """ Async property, caching the retrieved Assets """
+        # this will store retrieved data into self._assets
+        # but we want a cached property to be able to call this synchronously
+        return await self.retrieve_assets()
 
-    @property
-    def assetpairs(self) -> typing.Union[Assets, typing.Coroutine[ None, None, Assets]]:
-        """ Specific method that can be called both as sync from a sync function, and as async from an async function"""
-        if self.loop.is_running():  # if we are already in an eventloop, we just return the coroutine
-            return self.retrieve_assetpairs()
-        else:
-            # No point to run this multiple times in one process run.
-            if self._assetpairs is None:
-                # we run it ourselves before returning
-                self.loop.run_until_complete(self.retrieve_assetpairs())
-            return self._assetpairs
+    @async_cached_property
+    async def assetpairs(self) -> typing.Union[Assets, typing.Coroutine[None, None, Assets]]:
+        """ Async property, caching the retrieved AssetPairs """
+        # this will store retrieved data into self._assetpairs
+        # but we want a cached property to be able to call this synchronously
+        return await self.retrieve_assetpairs()
 
     async def __aenter__(self):
         """ Initializes a session.
