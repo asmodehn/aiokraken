@@ -12,7 +12,7 @@ pytest-asyncio = "==0.10.0"
 pytest-dependency = "*"
 black = "*"
 jupyterlab = "*"
-jupyterlab-git = "*"
+jupyterlab-git = "==0.10.0"
 
 
 [packages]
@@ -27,7 +27,7 @@ parameterized = "==0.7.0"
 marshmallow-dataframe = "==0.1.4"
 jupyterlab = "*"
 ipympl = "==0.3.3"
-jupyterlab-git = "*"
+jupyterlab-git = "==0.10.0"
 pandas-ta = "==0.1.36b"
 pyjanitor = "*"
 hypothesis = "==5.6.0"
