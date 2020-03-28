@@ -28,7 +28,7 @@ class SubscriptionSchema(BaseSchema):
     >>> s.load({
     ... 'name': 'ticker',
     ... })
-    Subscription(name='ticker', depth=10, interval=1, token='')
+    Subscription(name='ticker', interval=None, depth=None, token='')
     """
     name = fields.String()
     depth = fields.Integer()
@@ -48,11 +48,11 @@ class SubscriptionSchema(BaseSchema):
 class SubscribeSchema(BaseSchema):
     """
     >>> s= SubscribeSchema()
-    >>> s.load({'event': 'subscription',
-    ... 'pair': 'XBT/USD',
+    >>> s.load({'event': 'subscribe',
+    ... 'pair': ['XBT/USD'],
     ... 'subscription': {'name': 'ticker'}
     ... })
-    Subscribe(subscription=Subscription(name='ticker', depth=10, interval=1, token=''), pair='XBT/USD', reqid=None)
+    Subscribe(subscription=Subscription(name='ticker', interval=None, depth=None, token=''), pair=['XBT/USD'], reqid=None)
     """
     event = fields.Constant("subscribe")
     pair = fields.List(fields.String())
