@@ -35,6 +35,10 @@ We follow the [gitflow](https://danielkummer.github.io/git-flow-cheatsheet/) wor
 
 ## [websocket example](https://github.com/dantimofte/aiokraken/blob/master/aiokraken/examples/wss_example.py)
 
+## Running the bokeh app
+     bokeh serve --show aiokraken/bokeh_app/ohlc_dynfig.py 
+
+
 ## Documentation
 
 ## Compatibility

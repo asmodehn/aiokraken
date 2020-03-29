@@ -52,7 +52,10 @@ class OHLC(TimeindexedDataframe):
         self.dataframe.open = pd.to_numeric(self.dataframe.open)
         self.dataframe.high = pd.to_numeric(self.dataframe.high)
         self.dataframe.low = pd.to_numeric(self.dataframe.low)
+
         self.dataframe.vwap = pd.to_numeric(self.dataframe.vwap)
+        # TODO : vwap at 0 can happen and should be corrected... => midpoint (open+close / 2) just in case open and close were different.
+
         self.dataframe.volume = pd.to_numeric(self.dataframe.volume)
 
     # TODO : we should probably provide "simple"/explicit interface to useful property of the dataframe ???

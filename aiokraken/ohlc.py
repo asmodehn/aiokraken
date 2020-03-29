@@ -8,6 +8,8 @@ import typing
 from decimal import Decimal
 
 import pandas as pd
+import wrapt
+
 from aiokraken.websockets.client import WssClient
 
 from aiokraken.model.assetpair import AssetPair
@@ -22,6 +24,7 @@ from aiokraken.model.indicator import ema, EMA as EMAModel
 from aiokraken.websockets.schemas.ohlc import OHLCUpdate
 from collections.abc import Mapping
 
+from aiokraken.websockets.decorators import ohlc as ohlc_callback
 from aiokraken.utils.filter import Filter
 # from aiokraken.tradesignal import TradeSignal
 
@@ -107,7 +110,7 @@ class OHLC:
     def volume(self)-> Decimal:
         return self.model.volume
 
-    # TODO : use  the decorator for wss callback here !
+    # TODO : use the decorator for wss callback here !
     def _update(self, ohlc_update: OHLCUpdate):
         try:
             append_data = ohlc_update.to_tidfrow()
@@ -115,7 +118,21 @@ class OHLC:
             # TODO : indicators update... and more
         except Exception as e:
             print(e)
-            raise  # TO immediately explicitely catch it
+            raise  # To immediately explicitely catch it
+
+    def callback(self, user_cb):  #TODO
+        """ a decorator to be called asynchronously by an update of OHLC data """
+        # design to allow wrapper based on user_cb nature (coroutine, pydef, etc.)
+        @wrapt.decorator
+        def wrapper(instance, wrapped, args, kwargs):
+            return wrapped(args, **kwargs)
+
+        wrp = wrapper(user_cb)
+
+        # register wrp as a callback for ohlc
+        ohlc_callback(wrp)
+
+        return wrp
 
     async def __call__(self):
         """
@@ -176,7 +193,7 @@ class OHLC:
         else:
             return 0
 
-    def pivot(self, before: typing.Union[datetime,timedelta], now: datetime= datetime.now(tz=timezone.utc)) -> Pivot:
+    def pivot(self, before: typing.Union[datetime, timedelta], now: datetime= datetime.now(tz=timezone.utc)) -> Pivot:
         if isinstance(before, timedelta):
             before = now - before
 

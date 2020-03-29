@@ -34,8 +34,8 @@ display(await client.assets)
 
 await client.assetpairs
 
-source = (await client.ohlc(pair="XBTEUR")).dataframe
-source
+df = (await client.ohlc(pair="XBTEUR")).dataframe
+df
 
 # +
 
@@ -52,40 +52,50 @@ from bokeh.plotting import figure, show
 from bokeh.io import output_notebook
 output_notebook()
 
-TOOLS = "pan,wheel_zoom,box_zoom,reset,save"
-# -
-
-p = figure(plot_height=320, tools=TOOLS, x_axis_type="datetime", y_axis_location="right", sizing_mode="scale_width")
-# p.x_range.follow = "end"
-# p.x_range.follow_interval = 100
-# p.x_range.range_padding = 0
 
 # +
+from aiokraken.model.bokeh_figs.fig_ohlc import fig_ohlc
 
-p.segment(x0='datetime', y0='low', x1='datetime', y1='high', line_width=1, color='black', source=source)
-
-inc = source.open < source.close
-dec = source.close < source.open
-w = source.index[1] - source.index[0]  # width is one index step
-
-p.vbar(x=source.index[inc],width=w, bottom=source.open[inc], top=source.close[inc], fill_color="#D5E1DD", line_color="black")
-p.vbar(x=source.index[dec],width=w, top=source.open[dec], bottom=source.close[dec], fill_color="#F2583E", line_color="black")
-
-p.line(x='datetime', y='vwap', line_width=2, color='navy', source=source)
+p = fig_ohlc(df=df)
 
 show(p)
 
-# +
-from aiokraken.websockets.client import WssClient
 
+# +
+import pandas as pd
+from aiokraken.websockets.client import WssClient
+from datetime import timedelta
 import asyncio
+
+# extra instructions to follow the end of the x range
+# p.x_range.follow = "end"
+# p.x_range.follow_interval = pd.Timedelta(minutes=720)
+# p.x_range.range_padding = pd.Timedelta(minutes=1)
+
+# use a ColumnDataSource to get the stream method (on top of existing panda dataframe)
+source = ColumnDataSource(df)
+print(source)
+
+#draw the same plot as before
+show(p)
+
 
 ws = WssClient(restclient=client)
 
+
+# This is just a basic output test for websocket callback.
 print(ws.loop)
 
+
 def ws_callback(update):
-    print(update)
+#     print(update)
+    dfup = update.to_tidfrow()
+    dfup.reset_index(inplace=True)
+    upd = dfup.to_dict( orient='list')
+    #upd["datetime"]= [dt.to_pydatetime() for dt in upd["datetime"]]
+    print(upd)
+    source.stream(upd)
+
 
 await ws.ohlc(["XBTEUR"], callback=ws_callback)
 
@@ -96,45 +106,7 @@ async def count(secs):
         #print('.', end='', flush=True)
         await asyncio.sleep(1)
 
-await count(10)
+await count(60)
 
-
-# +
-p = figure(plot_height=320, tools=TOOLS, x_axis_type="datetime", y_axis_location="right", sizing_mode="scale_width")
-# extra instructions to follow the end of the x range
-p.x_range.follow = "end"
-# p.x_range.follow_interval = 100
-p.x_range.range_padding = 0
-
-# use a ColumnDataSource to get the stream method (on top of existing panda dataframe)
-source = ColumnDataSource(source)
-print(source)
-
-set_trace()
-
-#draw the same plot as before
-p.segment(x0='datetime', y0='low', x1='datetime', y1='high', line_width=1, color='black', source=source)
-
-inc = source.open < source.close
-dec = source.close < source.open
-w = source.index[1] - source.index[0]  # width is one index step
-
-p.vbar(x=source.index[inc],width=w, bottom=source.open[inc], top=source.close[inc], fill_color="#D5E1DD", line_color="black")
-p.vbar(x=source.index[dec],width=w, top=source.open[dec], bottom=source.close[dec], fill_color="#F2583E", line_color="black")
-
-p.line(x='datetime', y='vwap', line_width=2, color='navy', source=source)
-
-show(p)
-
-
-
-def ws_callback(update):
-    print(update)
-    source.stream(update)
-
-    
-await ws.ohlc(["XBTEUR"], callback=ws_callback)
-
-
-await count(10)
+#TODO : some way to close the ohlc subscription to keep it in one cell...
 

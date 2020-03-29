@@ -10,6 +10,8 @@ from asyncio import InvalidStateError, CancelledError
 
 import typing
 import wrapt
+from aiokraken.websockets.schemas.unsubscribe import Unsubscribe, UnsubscribeSchema
+
 from aiokraken.websockets.schemas.pingpong import PingSchema
 
 from aiokraken import RestClient
@@ -188,6 +190,22 @@ class WssClient:
 
         await ws.send_str(strdata)
 
+    async def unsubscribe(self, unsubdata: Unsubscribe, connection_name='main'):
+        """ stops a subscription """
+        while connection_name not in self.connections:
+            await asyncio.sleep(0.1)
+
+        ws = self.connections[connection_name]
+        schema = UnsubscribeSchema()
+        strdata = schema.dumps(unsubdata)
+
+        # TODO : generate a schema based on what we expect ?
+        # self._expected_event["subscriptionStatus"] += SubscriptionStatus()
+
+        await ws.send_str(strdata)
+
+    # TODO : maybe we need contextmanagers here to cleanly unsubscribe after use...
+
     async def ticker(self, pairs: typing.List[typing.Union[str, AssetPair]], callback: typing.Callable):
         """ subscribe to the ticker update stream.
         if the returned wrapper is not used, the message will still be parsed,
@@ -208,6 +226,8 @@ class WssClient:
         """
         # we need to depend on restclient for usability
         pairs = [(await self.restclient.assetpairs)[p] if isinstance(p, str) else p for p in pairs] if pairs else []
+
+        # TODO : store subscription status to avoid duplication and keep track for cleanup later...
 
         # TODO : expect subscription status
         subs_data = self.api.ohlc(pairs=pairs, interval=interval, callback=callback)
