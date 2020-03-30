@@ -31,40 +31,6 @@ from aiokraken.websockets.schemas.systemstatus import SystemStatusSchema, System
 # TODO : careful, it seems that exceptions are not forwarded to the top process
 #  but somehow get lost into the event loop... needs investigation...
 
-@dataclass(frozen=True)
-class InFlightResponse:
-    """ class holding data for an expected response, eventually in-flight."""
-
-    request: typing.Union[SubscribeOne]  # semantically idempotent
-    # seems to be useless since we can always determine it from the "event" member
-    # expected: BaseSchema                 # the expected response format
-
-
-
-class ResponseTracker(MutableMapping):
-    """ class acting as a container for inflight responses """
-
-    def __init__(self, *args: InFlightResponse):
-        self.impl = set(args)
-
-    def __getitem__(self, item: typing.Union[int, SubscribeOne]):
-        if isinstance(item, int):   # matching reqid usecase (TODO : explicit named type ?)
-            return set(ifr for ifr in self.impl if ifr.request.reqid == item)
-        elif isinstance(item, SubscribeOne):   # matching request data usecase
-            return set(ifr for ifr in self.impl if ifr.request == item)
-
-    def __setitem__(self, key: SubscribeOne, value: BaseSchema):
-        self.impl.add(InFlightResponse(request=key))
-
-    def __delitem__(self, key):
-        self.impl.remove(InFlightResponse(request=key))
-
-    def __iter__(self):
-        return iter(self.impl)
-
-    def __len__(self):
-        return len(self.impl)
-
 
 class WSAPI:
     """
@@ -83,7 +49,7 @@ class WSAPI:
         # three things possible when getting a response
 
         # temporary storage for in-flight requests
-        self._response_tracker = ResponseTracker()
+        self._response_tracker = set()
 
         # we need to add a callback
         self._callbacks = dict()
@@ -125,11 +91,14 @@ class WSAPI:
 
                 request = None
                 for r in self._response_tracker:  # pick the first match subscription match
-                    if r.request.pair == pair and r.request.subscription.name == subname:
-                        request = r.request
+                    if r.pair == pair and r.subscription.name == subname:
+                        request = r
                         break
 
-                assert request is not None, f" request has not been identified for {message}"
+                if request is None:
+                    # This can happen if the request was requested multiple times,
+                    # but was already processed as part of a ealier reponse
+                    return  # => early return
 
                 if data.status == 'subscribed':
                     # setting up parsers for data
@@ -142,19 +111,24 @@ class WSAPI:
                     else:
                         raise NotImplementedError("unknown channel name. please add it to the code...")
 
-                    # creating channel with registered callback
-                    chan = Channel(channel_id=data.channel_id,
-                                   channel_name=data.channel_name,
-                                   subscribe_request=request,
-                                   schema=channel_schema,
-                                   pair=data.pair,
-                                   callbacks=self._callbacks[request])
-                    print(f"Channel created: {chan}")
-                    # assigning channel to this api.
-                    self._channels[data.channel_id] = chan
+                    if data.channel_id not in self._channels:
+                        # creating channel with registered callback
+                        chan = Channel(channel_id=data.channel_id,
+                                       channel_name=data.channel_name,
+                                       subscribe_request=request,  # TODO: probably subscription is better here ?
+                                       schema=channel_schema,
+                                       pair=data.pair,
+                                       callbacks=self._callbacks[request])
+                        print(f"Channel created: {chan}")
+                        # assigning channel to this api.
+                        self._channels[data.channel_id] = chan
+                    else:
+                        # Nothing to do here, multiple identical requests were sent and received the same channel...
+                        pass  # side-effect: only the first message in the channel will be duplicated
+                        # TODO : channel does NOT guarantee unicity of a message.
 
                     # We reached this part: our inflight reponse has landed.
-                    self._response_tracker.pop(request)
+                    self._response_tracker.remove(request)
 
                 elif data.status == 'unsubscribed':
                     raise NotImplementedError  # TODO
@@ -183,8 +157,8 @@ class WSAPI:
                     c.callbacks.append(callback)
                 return  # return early with no request to be made
             else:
-                # prepare the expected set of responses and schemas for this request
-                self._response_tracker[s] = SubscriptionStatusSchema()
+                # adding inflight response
+                self._response_tracker.add(s)
 
                 # request to get a new subscription and create a chan
                 self._callbacks.setdefault(s, [])
@@ -207,8 +181,8 @@ class WSAPI:
                     c.callbacks.append(callback)
                 return  # return early with no request to be made
             else:
-                # prepare the expected set of responses and schemas for this request
-                self._response_tracker[s] = SubscriptionStatusSchema()
+                # adding inflight response
+                self._response_tracker.add(s)
 
                 # request to get a new subscription and create a chan
                 self._callbacks.setdefault(s, [])

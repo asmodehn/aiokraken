@@ -202,6 +202,8 @@ class WssClient:
 
         await self.subscribe(subs_data, connection_name="main")
 
+        #TODO : what to return here ? something that can "hold the subscription" and manage the unsubscribe when needed...
+
     async def ohlc(self, pairs: typing.List[typing.Union[str, AssetPair]], callback: typing.Callable, interval: int = 1):
         """ subscribe to the ticker update stream.
         if the returned wrapper is not used, the message will still be parsed,
@@ -220,6 +222,7 @@ class WssClient:
         await self.subscribe(subs_data, connection_name="main")
         # else: we already subscribe to it, we just need to add a callback.
 
+        #TODO : what to return here ? something that can "hold the subscription" and manage the unsubscribe when needed...
 
 if __name__ == '__main__':
 
@@ -231,11 +234,16 @@ if __name__ == '__main__':
     def ohlc_update(message):
         print(f'ohlc update: {message}')
 
+    def ohlc_update2(message):
+        print(f'ohlc update BIS: {message}')
+
 
     async def subsetup(pairs):
         # this will validate the pairs via the rest client
         await wss_kraken.ticker(pairs=pairs, callback=ticker_update)
+        # mutiple subscribe with different callbacks => only one channel with two callbacks
         await wss_kraken.ohlc(pairs=pairs, callback=ohlc_update)
+        await wss_kraken.ohlc(pairs=pairs, callback=ohlc_update2)
 
 
     @asyncio.coroutine

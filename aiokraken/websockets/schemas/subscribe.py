@@ -22,7 +22,7 @@ class SubscribeOne:
     # TODO : use pair with proper type
 
     # not part of hash or equality (for equality between two Subscribe instance/requests)
-    reqid: typing.Optional[int] = field(default=None)
+    reqid: typing.Optional[int] = field(default=None, compare=False)  # reqid does not matter in subscribe requests.
 
 
 @dataclass(frozen=True)

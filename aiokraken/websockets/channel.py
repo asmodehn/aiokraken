@@ -15,11 +15,17 @@ from aiokraken.rest.schemas.base import BaseSchema
 
 @dataclass()
 class Channel:
+    """
+    A channel, calls its callback when a message is received.
+    IMPORTANT : the same message CAN be received multiple times for various reason.
+    Unicity of the message semantics is up to the message data structure itself
+    """
     channel_id: int
     channel_name: str
     pair: str   # Important : given kraken WS API design, it seems we have one pair per channel
                 # BUT one can subscribe to multiple pairs at once...
 
+    # We store a reference to the request that created this channel (for potential reuse)
     subscribe_request: Subscribe = field(repr=False)
 
     schema: BaseSchema
