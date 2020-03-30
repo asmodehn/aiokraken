@@ -16,10 +16,38 @@ class Subscription:
 
 
 @dataclass(frozen=True)
+class SubscribeOne:
+    subscription: Subscription
+    pair: str
+    # TODO : use pair with proper type
+
+    # not part of hash or equality (for equality between two Subscribe instance/requests)
+    reqid: typing.Optional[int] = field(default=None)
+
+
+@dataclass(frozen=True)
 class Subscribe:
     subscription: Subscription
-    pair: typing.List[str]  # TODO : use pair with proper type
-    reqid: typing.Optional[int] = field(default=None)
+    pair: typing.FrozenSet[str]
+    # TODO : use pair with proper type
+
+    # not part of hash or equality (for equality between two Subscribe instance/requests)
+    reqid: typing.Optional[int] = field(default=None, hash=False)
+
+    # need an __init__ here to transform an iterable (pairs) into a frozenset for hashing as a dict key
+    def __init__(self, subscription, pair: typing.Iterable, reqid = None):
+        object.__setattr__(self, "subscription", subscription)
+        object.__setattr__(self, "pair", frozenset(pair))
+        object.__setattr__(self, "reqid", reqid)
+
+    def __contains__(self, item: SubscribeOne):
+        return item.reqid == self.reqid and item.subscription == self.subscription and item.pair in self.pair
+
+    def __iter__(self):
+        return (SubscribeOne(subscription=self.subscription, pair=p, reqid=self.reqid) for p in self.pair)
+
+    def __len__(self):
+        return len(self.pair)
 
 
 class SubscriptionSchema(BaseSchema):

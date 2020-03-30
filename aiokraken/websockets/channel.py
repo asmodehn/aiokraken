@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 
 import typing
 
+from aiokraken.websockets.schemas.subscribe import Subscribe
+
 from aiokraken.rest.exceptions import AIOKrakenSchemaValidationException
 
 from aiokraken.rest.schemas.base import BaseSchema
@@ -15,7 +17,10 @@ from aiokraken.rest.schemas.base import BaseSchema
 class Channel:
     channel_id: int
     channel_name: str
-    pair: str
+    pair: str   # Important : given kraken WS API design, it seems we have one pair per channel
+                # BUT one can subscribe to multiple pairs at once...
+
+    subscribe_request: Subscribe = field(repr=False)
 
     schema: BaseSchema
     callbacks: list = field(default_factory=list)

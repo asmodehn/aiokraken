@@ -26,14 +26,17 @@ class OHLCUpdate:
 
     def to_tidfrow(self):  # Goal : retrieved an indexed dataframe , suitable for appending to timeindexedDF
         datadict = dataclasses.asdict(self)
-        assert datadict["time"] < datadict["etime"]  # to break if it is not the case...
-        datadict.pop("etime")
+        assert datadict["time"] < datadict["etime"]  # to break early if it is not the case...
+        datadict.pop("time")  # we don't actually care about the accurate time here
 
-        datadict['datetime'] = pd.to_datetime(datadict['time'], utc=True, unit='s')
-        datadict.pop('time')
+        datadict['datetime'] = pd.to_datetime(datadict['etime'], utc=True, unit='s')
+        datadict.pop('etime')
 
         df = pd.DataFrame(datadict, index=[0])
         df.set_index('datetime', inplace=True)
+
+        # for r in df.itertuples():
+        #     print(r)
 
         return df
 

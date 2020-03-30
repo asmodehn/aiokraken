@@ -1,5 +1,5 @@
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import typing
 
@@ -16,6 +16,9 @@ class SubscriptionStatus:
     pair: str
     status: str
     subscription: Subscription
+
+    # not part of hash or equality (for equality between two Subscribe instance/requests)
+    reqid: typing.Optional[int] = field(default=None, hash=False)
 
 
 class SubscriptionStatusSchema(BaseSchema):

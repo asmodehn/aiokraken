@@ -47,13 +47,14 @@ class WssClient:
 
         #  We need to pass the loop to hook it up to any potentially preexisting loop
         self.loop = loop if loop is not None else asyncio.get_event_loop()
-        self.api = api if api is not None else WSAPI()
+
+        # TODO : probably need to support multiple callbacks:
+        #  add the client ones to the one passed via optional WSAPI instance
+        self.api = api if api is not None else WSAPI(heartbeat_cb=self._heartbeat, systemStatus_cb=self._systemStatus)
 
         self.restclient = restclient if restclient is not None else RestClient()
         # we need a rest client to get proper assets and pairs
         # TODO : there should only ever be ONE restclient... for the whole python process => simplifiable
-
-        self.reqid = 1
 
         self.connections = {}
         self.connections_status = dict()
@@ -90,31 +91,8 @@ class WssClient:
 
                         # to avoid flying blind we first need to parse json into python
                         data = json.loads(msg.data)
-                        # TODO : move this interface details into WSAPI (IN PROGRESS)
-                        if isinstance(data, list):
-                            self.api(data)
 
-                        elif isinstance(data, dict):
-                            # special cases
-                            # TODO : LOG everything, somewhere...  and document how to display it...
-                            if data.get('event') == 'systemStatus':
-                                sysst = SystemStatusSchema().load(data)
-                                self.api.systemStatus(sysst)
-                                self.connections_status[connection_name] = sysst
-                            elif data.get('event') == 'heartbeat':
-                                self._heartbeat()
-                            elif data.get('event') == 'subscriptionStatus':
-                                subst = SubscriptionStatusSchema().load(data)
-                                # this will create a channel in WSAPI
-                                self.api.subscriptionStatus(subst)
-                            else:
-
-                                self.api(data)
-
-                        else:
-
-                            print(data)
-                            raise RuntimeWarning(f"Unexpected message data ! : {data}")
+                        callback(data)
 
                     elif msg.type == aiohttp.WSMsgType.ERROR:
                         LOGGER.error(f'{msg}')
@@ -130,7 +108,7 @@ class WssClient:
         # there will be no subscriptions though...
         except aiohttp.ClientConnectionError:
             await asyncio.sleep(5)
-            print(" !!! RUnning client interrupted, restarting...")
+            print(" !!! Running client interrupted, restarting...")
             self._runtask = self.loop.create_task(
                 self(callback=self.api, connection_name=connection_name, connection_env=connection_env)
             )
@@ -145,16 +123,21 @@ class WssClient:
         if self._runtask:  # we can stop the running task if this instance disappears
             self._runtask.cancel()
 
-    def _heartbeat(self):
+    def _heartbeat(self, msg):
         # TODO : something that will shout when heartbeat doesnt arrive on time...
         # This is supposed to help manage connections
         pass
 
+    def _systemStatus(self, msg):
+        # TODO : something that will shout when heartbeat doesnt arrive on time...
+        # This is supposed to help manage connections
+        pass
+
+
     async def ping(self):
         print("PING")
         # TODO : expect pong
-        ping_data = self.api.ping(reqid=self.reqid, callback=self.pong)
-        self.reqid +=1
+        ping_data = self.api.ping(callback=self.pong)
 
         # TODO : better management of connections here...
         ws = self.connections["main"]
@@ -229,15 +212,18 @@ class WssClient:
 
         # TODO : store subscription status to avoid duplication and keep track for cleanup later...
 
-        # TODO : expect subscription status
         subs_data = self.api.ohlc(pairs=pairs, interval=interval, callback=callback)
 
+        # if self._subs.get((pairs, interval)) is None:
+
+        # TODO : expect subscription status
         await self.subscribe(subs_data, connection_name="main")
+        # else: we already subscribe to it, we just need to add a callback.
 
 
 if __name__ == '__main__':
 
-    wss_kraken = WssClient(api=WSAPI())
+    wss_kraken = WssClient()
 
     def ticker_update(message):
         print(f'ticker update: {message}')
@@ -255,7 +241,7 @@ if __name__ == '__main__':
     @asyncio.coroutine
     def ask_exit(sig_name):
         print("got signal %s: exit" % sig_name)
-        yield from asyncio.sleep(2.0)
+        yield from asyncio.sleep(1.0)
         asyncio.get_event_loop().stop()
 
     import signal
