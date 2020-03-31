@@ -83,12 +83,9 @@ def ohlc_widget(p):
 def ws_callback(update):
 #     print(update)
     dfup = update.to_tidfrow()
-    dfup.reset_index(inplace=True)
-    upd = dfup.to_dict( orient='list')
-    #upd["datetime"]= [dt.to_pydatetime() for dt in upd["datetime"]]
-    print(upd)
+    print(dfup.head)
     # finally scheduling for doc addition at next tick
-    doc.add_next_tick_callback(functools.partial(ohlc_widget_update, upd))
+    doc.add_next_tick_callback(functools.partial(ohlc_widget_update, dfup))
 
 
 async def ohlc_watcher():
@@ -107,7 +104,7 @@ async def ohlc_watcher():
     # finally scheduling for doc addition at next tick
     doc.add_next_tick_callback(functools.partial(ohlc_widget, p))
 
-    # adding websocket callback via decorator
+    # adding callback for this channel via decorator method
     ohlc_1m.callback(ws_callback)
 
 # chosing to integrate this task in the current running loop (and not another thread)

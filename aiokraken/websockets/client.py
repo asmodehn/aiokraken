@@ -224,6 +224,7 @@ class WssClient:
 
         #TODO : what to return here ? something that can "hold the subscription" and manage the unsubscribe when needed...
 
+
 if __name__ == '__main__':
 
     wss_kraken = WssClient()

@@ -120,17 +120,22 @@ class OHLC:
             print(e)
             raise  # To immediately explicitely catch it
 
-    def callback(self, user_cb):  #TODO
-        """ a decorator to be called asynchronously by an update of OHLC data """
+    def callback(self, user_cb):
+        """ a decorator to decorate a pydef be called asynchronously by an update of OHLC data """
         # design to allow wrapper based on user_cb nature (coroutine, pydef, etc.)
         @wrapt.decorator
-        def wrapper(instance, wrapped, args, kwargs):
-            return wrapped(args, **kwargs)
+        def wrapper(wrapped, instance, args, kwargs):
+            return wrapped(*args, **kwargs)
 
         wrp = wrapper(user_cb)
 
-        # register wrp as a callback for ohlc
-        ohlc_callback(wrp)
+        # we add a callback for this ohlc request data (relying on the wsclient to not store callbacks here)
+        self.wsclient.loop.create_task(  # TODO : create task or directly run_until_complete ?
+            # subscribe
+            self.wsclient.ohlc(pairs=[self.pair], callback=wrp)
+        )
+        # Note the wsclient is assumed optimized :
+        # the channel we already subscribe to will not need to be subscribed again...
 
         return wrp
 
