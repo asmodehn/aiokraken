@@ -57,7 +57,9 @@ class RestClient:
 
     def __init__(self, server = None, loop=None, protocol = "https://"):
         self.server = server or Server()
-        self.loop = loop if loop is not None else asyncio.get_event_loop()
+        if loop is None:
+            loop = asyncio.get_event_loop()  # TODO : fix this : will break on the second call ?!?!
+        self.loop = loop
 
         self.protocol = protocol
 
@@ -175,7 +177,7 @@ class RestClient:
         """ make assets request to kraken api"""
         if self._assets is None:  # we only need it once !
             req = self.server.assets(assets=assets)   # returns the request to be made for this API.)
-            # This request is special, because it will give us more informations about other possible requests.
+            # This request is special, because it will give us more information about other possible requests.
             resp = await self._get(request=req)
             self._assets = Assets(assets_as_dict=resp)
         return self._assets
@@ -185,7 +187,7 @@ class RestClient:
         """ make assetpairs request to kraken api"""
         if self._assetpairs is None:  # we only need it once !
             req = self.server.assetpair(pairs=pairs)   # returns the request to be made for this API.)
-            # This request is special, because it will give us more informations about other possible requests.
+            # This request is special, because it will give us more information about other possible requests.
             resp = await self._get(request=req)
             self._assetpairs = AssetPairs(assetpairs_as_dict=resp)
         return self._assetpairs
@@ -256,6 +258,11 @@ class RestClient:
     async def trades(self, start: datetime =None, end: datetime = None, offset = 0) -> typing.Tuple[typing.Dict[str, KTradeModel], int]:  # offset 0 or None ??
         """ make tradeshistory requests to kraken api"""
         # Note : here there is no filtering by assetpair from Kraken API, it needs to be managed one level up...
+        if end is None:
+            end = datetime.datetime.now()
+        if start is None:
+            start = end - datetime.timedelta(weeks=1)
+
         req = self.server.trades_history(start=int(start.timestamp()), end=int(end.timestamp()), offset = offset)
         trades_list, count = await self._post(request=req)
         return trades_list, count  # making multiple return explicit in interface
@@ -263,7 +270,22 @@ class RestClient:
     @private_limiter
     async def ledgers(self, asset: typing.Optional[typing.List[typing.Union[Asset, str]]], start: datetime =None, end: datetime = None, offset=0) -> typing.Tuple[typing.Dict[str, KLedgerInfo], int]:
         """ make ledgers requests to kraken api """
-        asset = [(await self.assets)[a] for a in asset]  # retrieve the proper asset instance
+
+        # cleaning up asset list
+        asset_proper = [a for a in asset if isinstance(a, Asset)]
+        if len(asset) > len(asset_proper):
+            # retrieving assets if necessary
+            cleanassets = await self.retrieve_assets()
+            asset_translated = [cleanassets[a] for a in asset if not isinstance(a, Asset)]
+            asset = asset_proper + asset_translated
+        else:
+            asset = asset_proper
+
+        if end is None:
+            end = datetime.datetime.now()
+        if start is None:
+            start = end - datetime.timedelta(weeks=1)
+
         req = self.server.ledgers(asset=asset, start=int(start.timestamp()), end=int(end.timestamp()), offset=offset)
         more_ledgers, count = await self._post(request=req)
         return more_ledgers, count  # making multiple return explicit in interface
