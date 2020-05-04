@@ -58,7 +58,12 @@ class RestClient:
     def __init__(self, server = None, loop=None, protocol = "https://"):
         self.server = server or Server()
         if loop is None:
-            loop = asyncio.get_event_loop()  # TODO : fix this : will break on the second call ?!?!
+            try:
+                loop = asyncio.get_event_loop()  # TODO : fix this : will break on the second call ?!?!
+            except RuntimeError as re:
+                # TODO : or a better policy ?? but maybe it depends on python version ??
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
         self.loop = loop
 
         self.protocol = protocol
@@ -74,6 +79,7 @@ class RestClient:
         self._assets = None
         self._assetpairs = None
 
+    # TODO : verify if actually useful ??
     @async_cached_property
     async def assets(self) -> typing.Union[Assets, typing.Coroutine[None, None, Assets]]:
         """ Async property, caching the retrieved Assets """
@@ -81,6 +87,7 @@ class RestClient:
         # but we want a cached property to be able to call this synchronously
         return await self.retrieve_assets()
 
+    # TODO : verify if actually useful ??
     @async_cached_property
     async def assetpairs(self) -> typing.Union[Assets, typing.Coroutine[None, None, Assets]]:
         """ Async property, caching the retrieved AssetPairs """
@@ -195,7 +202,15 @@ class RestClient:
     @public_limiter  # skippable because OHLC is not supposed to change very often, and changes should apper in later results.
     async def ohlc(self, pair: typing.Union[AssetPair, str], interval: KTimeFrameModel = KTimeFrameModel.one_minute) -> OHLC:  # TODO: make pair mandatory
         """ make ohlc request to kraken api"""
-        pair = (await self.assetpairs)[pair]
+
+        # cleaning up pair list
+        if isinstance(pair, AssetPair):
+            pair_proper = pair
+        else:
+            cleanpairs = await self.retrieve_assetpairs()
+            pair_proper = cleanpairs[pair]
+        pair = pair_proper
+
         # TODO : or maybe we should pass the assetpair from model, and let the api deal with it ??
         req = self.server.ohlc(pair=pair, interval=interval)   # returns the request to be made for this API.)
         resp = await self._get(request=req)
@@ -222,7 +237,17 @@ class RestClient:
     @public_limiter
     async def ticker(self, pairs: typing.Optional[typing.List[typing.Union[str, AssetPair]]]=None):  # TODO : model currency pair/'market' in ccxt (see crypy)
         """ make public requests to kraken api"""
-        pairs = [(await self.assetpairs)[p] for p in pairs] if pairs else []
+
+        # cleaning up pair list
+        pair_proper = [p for p in pairs if isinstance(p, AssetPair)]
+        if len(pairs) > len(pair_proper):
+            # retrieving assets if necessary
+            cleanpairs = await self.retrieve_assetpairs()
+            pair_translated = [cleanpairs[p] for p in pairs if not isinstance(p, Asset)]
+            pairs = pair_proper + pair_translated
+        else:
+            pairs = pair_proper
+
         req = self.server.ticker(pairs=pairs)   # returns the request to be made for this API.)
         return await self._get(request=req)
 

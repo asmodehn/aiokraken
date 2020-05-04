@@ -24,8 +24,8 @@ class Assets:
     Encapsulating dataclass implementation of asset data,
     and providing convenient functionalities.
 
-    The type is hte complete list of Asset (potential knowable on retrieval)
-    The instance is a subset of it.
+    The type is the complete list of Asset (potential knowable on retrieval)
+    The instance is a subset of it (the ones we already retrieved and know about)
     """
     @classmethod
     async def retrieve(cls, rest: RestClient = None, assets: typing.List[str] = None):
@@ -69,22 +69,23 @@ class Assets:
 
     async def balance(self, rest: RestClient):
         b = await rest.balance()
-        return {a: b[a] if a in b else
-                b[ad.altname] if ad.altname in b else
-                Decimal(0)
-                for a, ad in self._proxy.items()}  # TODO : balance type/namedtuple ?
+        return {a: b[a] if a in b else b[ad.altname]
+                for a, ad in self.items()
+                if a in b or ad.altname in b
+                }  # TODO : balance type/namedtuple ?
 
+    # TODO : maybe an access via getitem instead, indexing over time ??
     async def ledger(self, rest: RestClient, start: datetime =None, stop: datetime = None,):
         if rest is not None and (self._ledgers is None or start < self._ledgers.begin or stop > self._ledgers.end):
             # we retrieve all matching ledgerinfos... lazy on times ! # TODO : improve requesting only on unknown times
-            ledgerinfos, count = await rest.ledgers(asset=[v for v in self._proxy.values()], start=start, end=stop, offset=0)
+            ledgerinfos, count = await rest.ledgers(asset=[v for v in self.values()], start=start, end=stop, offset=0)
 
             # loop until we get *everything*
             # Note : if this is too much, leverage local storage (TODO ! - in relation with time... assume past data doesnt change)
             #  or refine filters (time, etc.)
             while len(ledgerinfos) < count:
                 # Note : here we recurse only one time. we need to recurse to respect ratelimit...
-                more_ledgers, count = await rest.ledgers(asset=[v for v in self._proxy.values()], start=start, end=stop, offset=len(ledgerinfos))
+                more_ledgers, count = await rest.ledgers(asset=[v for v in self.values()], start=start, end=stop, offset=len(ledgerinfos))
                 ledgerinfos.update(more_ledgers)
 
             ledgers = ledgerframe(ledger_as_dict=ledgerinfos)
@@ -97,6 +98,9 @@ class Assets:
         return self._ledgers
 
 
+    async def trades(self):
+        # TODO : this is just an access point for hte trades module (for private trades)...
+        raise NotImplementedError
 
 
 if __name__ == '__main__':
