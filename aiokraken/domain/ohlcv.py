@@ -16,70 +16,69 @@ class OHLCV:
     """
     Class/Type to represent a multi-resolution OHLC.
     The type represents the complete retrievable ohlc over "all time, ever".
-    An instance is a slice of it (on time axis), by default covering now and bit before.
+    An instance is a slice of it (on time axis), by default covering now and "a bit" (720 intervals) before.
     """
 
     _model: typing.Dict[KTimeFrameModel, OHLCModel]
 
-    def __init__(self, pair: AssetPair, rest: RestClient=None):
+    @classmethod
+    async def retrieve(cls, pair: AssetPair, rest: RestClient = None, intervals : typing.List[KTimeFrameModel] = None):
+
+        if rest is None:
+            rest = RestClient()
+
+        if intervals is None:
+            intervals = [i for i in KTimeFrameModel]
+
+        multitf = dict()
+
+        for i in intervals:
+            new_ohlc = await rest.ohlc(pair=pair, interval=i)
+            multitf.setdefault(i, new_ohlc)
+
+        return cls(pair=pair, rest=rest, multitf=multitf)
+
+    def __init__(self, pair: AssetPair, rest: RestClient, multitf: typing.Dict[KTimeFrameModel, OHLCModel]):
         self.rest = rest if rest is not None else RestClient()
-        # Note : the RestClient will take care of managing the asyncio loop
+
         self.pair = pair
 
-        self._model = dict()
+        self._model = multitf
 
     @property
     def days_15(self):
-        # TODO : update only if needed...
-        self.rest.loop.run_until_complete(self(interval=KTimeFrameModel.fifteen_days))
         return self._model[KTimeFrameModel.fifteen_days]
 
     @property
     def days_7(self):
-        # TODO : update only if needed...
-        self.rest.loop.run_until_complete(self(interval=KTimeFrameModel.seven_days))
         return self._model[KTimeFrameModel.seven_days]
 
     @property
     def hours_24(self):
-        # TODO : update only if needed...
-        self.rest.loop.run_until_complete(self(interval=KTimeFrameModel.twenty_four_hours))
         return self._model[KTimeFrameModel.twenty_four_hours]
 
     @property
     def hours_4(self):
-        # TODO : update only if needed...
-        self.rest.loop.run_until_complete(self(interval=KTimeFrameModel.four_hours))
         return self._model[KTimeFrameModel.four_hours]
 
     @property
     def minutes_60(self):
-        # TODO : update only if needed...
-        self.rest.loop.run_until_complete(self(interval=KTimeFrameModel.sixty_minutes))
         return self._model[KTimeFrameModel.sixty_minutes]
 
     @property
     def minutes_30(self):
-        # TODO : update only if needed...
-        self.rest.loop.run_until_complete(self(interval=KTimeFrameModel.thirty_minutes))
         return self._model[KTimeFrameModel.thirty_minutes]
 
     @property
     def minutes_15(self):
-        # TODO : update only if needed...
-        self.rest.loop.run_until_complete(self(interval=KTimeFrameModel.fifteen_minutes))
         return self._model[KTimeFrameModel.fifteen_minutes]
 
     @property
     def minutes_5(self):
-        # TODO : update only if needed...
-        self.rest.loop.run_until_complete(self(interval=KTimeFrameModel.five_minutes))
         return self._model[KTimeFrameModel.five_minutes]
 
     @property
     def minute(self):
-        # TODO : update only if needed...
-        self.rest.loop.run_until_complete(self(interval=KTimeFrameModel.one_minute))
         return self._model[KTimeFrameModel.one_minute]
 
     async def __call__(self, interval: KTimeFrameModel = KTimeFrameModel.fifteen_days,):
@@ -92,21 +91,39 @@ class OHLCV:
 
         return self
 
+    def __getitem__(self, item):
+        return self._model[item]
+
+    def __iter__(self):
+        return iter(self._model)
+
+
+    def fig(self):
+        # TODO : radio buttons to swithh between timeframes...
+        pass
+
     # TODO : extend to provide more ohlcv dataframes than the strict kraken API (via resampling from public trades history)
 
 
 if __name__ == '__main__':
 
     from aiokraken.domain.pairs import AssetPairs
-    XBTEUR = AssetPairs(["XBT/EUR"])
 
-    for p in XBTEUR.values():
-        ohlcv = OHLCV(pair=p)
+    from bokeh.plotting import output_file, save
 
-        print(ohlcv.days_15)
+    async def retrieve_pairs(pairs):
+        return await AssetPairs.retrieve(pairs=pairs)
 
-        print(ohlcv.minutes_5)
+    ap = asyncio.run(retrieve_pairs(["XBT/EUR", "ETH/EUR"]))
 
+    async def retrieve_ohlc(p, timeframe):
+        return await OHLCV.retrieve(pair=p, intervals=[timeframe])
 
-
+    for p in ap:
+        ohlcv = asyncio.run(retrieve_ohlc(p, KTimeFrameModel.one_day))
+        for tf in ohlcv:
+            print(ohlcv[tf])
+            f = ohlcv[tf].plot()
+            output_file(f"{p}_{tf}.html", mode='inline')
+            save(f)
 

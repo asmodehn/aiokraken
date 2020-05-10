@@ -38,7 +38,7 @@ typeclasses = "*"
 aioresponses = "*"
 mplfinance = "*"
 wrapt = "==1.12.2"
-bokeh = "*"
+bokeh = "==2.0.1"
 ipykernel = "*"
 async-property = "*"
 

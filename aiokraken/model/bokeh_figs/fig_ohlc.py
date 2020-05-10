@@ -8,7 +8,7 @@ from bokeh.plotting import figure, show
 TOOLS = "pan,wheel_zoom,box_zoom,reset,save"
 
 # Ref : https://github.com/bokeh/bokeh/tree/2.0.0/examples/app/ohlc
-
+# Another : https://stackoverflow.com/questions/41448431/plotting-a-candlestick-chart-with-custom-per-candlestick-individual-coloring
 
 def fig_ohlc(df: pandas.DataFrame, **kwargs):
 
@@ -20,7 +20,7 @@ def fig_ohlc(df: pandas.DataFrame, **kwargs):
 
     # use a ColumnDataSource to get the stream method (on top of existing panda dataframe)
     source = ColumnDataSource(df)
-    print(source)
+    # print(source)
 
     # set_trace()
 

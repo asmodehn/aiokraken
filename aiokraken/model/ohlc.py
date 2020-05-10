@@ -6,10 +6,14 @@ from collections import namedtuple
 import typing
 from decimal import Decimal
 
+import bokeh.plotting
+from aiokraken.model.bokeh_figs.fig_ohlc import fig_ohlc
+
 """ A common data structure for OHLC based on pandas """
 from datetime import datetime, timezone
 
 import pandas as pd
+import pandas_ta as ta
 import pandas.util
 # CAREFUL to what we are doing
 pd.set_option('mode.chained_assignment', 'raise')
@@ -24,6 +28,8 @@ from aiokraken.utils.timeindexeddataframe import TimeindexedDataframe
 
 class OHLC(TimeindexedDataframe):
 
+    figure: bokeh.plotting.Figure
+
     def __init__(self, data: pd.DataFrame, last: typing.Union[datetime, int]):
         # if no datetime column => create it from time
         if 'time' in data and 'datetime' not in data:
@@ -37,6 +43,7 @@ class OHLC(TimeindexedDataframe):
         # reorder columns for readability
         self.dataframe = self.dataframe[["open", "high", "low", "close", "vwap", "volume", "count"]]
 
+        # TODO : FIX : sometimes index is duplicated (happens for XTZ on begining of kraken timeseries)
         if not isinstance(last, datetime):
             # attempt conversion from timestamp
             self.last = datetime.fromtimestamp(last, tz = timezone.utc)
@@ -57,6 +64,8 @@ class OHLC(TimeindexedDataframe):
         # TODO : vwap at 0 can happen and should be corrected... => midpoint (open+close / 2) just in case open and close were different.
 
         self.dataframe.volume = pd.to_numeric(self.dataframe.volume)
+
+        self.figure = fig_ohlc(self.dataframe)
 
     # TODO : we should probably provide "simple"/explicit interface to useful property of the dataframe ???
 
@@ -87,6 +96,20 @@ class OHLC(TimeindexedDataframe):
     @property
     def volume(self) -> Decimal:
         return self.dataframe['volume'].sum()
+
+    @property
+    def ta(self):
+        return self.dataframe.ta
+
+
+    def ema(self, length):
+
+        ema = self.dataframe.ta.ema(length=length)
+        # add ema onto the graph
+
+        self.figure.line(x=ema.index, y=ema.values,  line_width=1, color='navy', legend_label=f"EMA {length}")
+
+        return ema
 
     def __hash__(self):
         return super(OHLC, self).__hash__()
