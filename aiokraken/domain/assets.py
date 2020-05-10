@@ -30,8 +30,9 @@ class Assets:
     @classmethod
     async def retrieve(cls, rest: RestClient = None, assets: typing.List[str] = None):
         rest = RestClient() if rest is None else rest
-        cls._assets = await rest.retrieve_assets(assets=assets)
-        return cls._assets
+        # retrieve all and filter later, since str is likely not the kraken name...
+        assetsmap = await rest.retrieve_assets()
+        return cls(assets=assetsmap, filter=assets)
 
     _assets: typing.ClassVar[AssetsMapping]
 
@@ -39,15 +40,11 @@ class Assets:
 
     _ledgers: LedgerFrame = None
 
-    def __new__(cls, rest: RestClient=None, assets = None):
-        if not hasattr(cls, "_assets"):
-            # on first instance, trigger the classwide retrieval
-            asyncio.run(cls.retrieve(rest=rest))
-
-        return super(Assets, cls).__new__(cls)
-
-    def __init__(self, rest: RestClient=None, assets = None):
-        self._proxy = MappingProxyType({n: d for n, d in self._assets.items() if n in assets or d.altname in assets})
+    def __init__(self, assets: AssetsMapping, filter):
+        self._proxy = MappingProxyType({n: d
+                                        for n, d in assets.items()
+                                        if n in filter
+                                        or d.altname in filter})
 
     def __repr__(self):
         return repr(self._proxy)
@@ -64,8 +61,14 @@ class Assets:
     def __len__(self):
         return len(self._proxy)
 
-    def __getattr__(self, item):  # to delegate copy(), geT(), items(), keys(), values() to mappingproxy
-        return getattr(self._proxy, item)
+    def keys(self):
+        return self._proxy.keys()
+
+    def values(self):
+        return self._proxy.values()
+
+    def items(self):
+        return self._proxy.items()
 
     async def balance(self, rest: RestClient):
         b = await rest.balance()
@@ -79,6 +82,7 @@ class Assets:
         if rest is not None and (self._ledgers is None or start < self._ledgers.begin or stop > self._ledgers.end):
             # we retrieve all matching ledgerinfos... lazy on times ! # TODO : improve requesting only on unknown times
             ledgerinfos, count = await rest.ledgers(asset=[v for v in self.values()], start=start, end=stop, offset=0)
+            # TODO : maybe separate in different module (similar to ohlcv for pairs)
 
             # loop until we get *everything*
             # Note : if this is too much, leverage local storage (TODO ! - in relation with time... assume past data doesnt change)
@@ -112,7 +116,10 @@ if __name__ == '__main__':
     rest = RestClient(server=Server(key=keystruct.get('key'),
                                     secret=keystruct.get('secret')))
 
-    EUR_XBT_XTZ = Assets(rest=rest, assets=["EUR", "XBT", "XTZ"])
+    async def retrieval(assets):
+        return await Assets.retrieve(rest = rest, assets=assets)
+
+    EUR_XBT_XTZ = asyncio.run(retrieval(assets=["EUR", "XBT", "XTZ"]))
 
     # now we are talking about EUR or XBT or XTZ...
 
@@ -120,7 +127,6 @@ if __name__ == '__main__':
 
     async def balance():
         print(await EUR_XBT_XTZ.balance(rest=rest))
-
 
     async def ledgers():
         now = datetime.now()
