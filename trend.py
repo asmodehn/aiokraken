@@ -54,62 +54,18 @@ def trend_analysis(p: AssetPairModel, o: OHLCModel):
     #     # bearish
     #     print(f'{pair} bearish !')
 
-    output_file(f"trend_{p}.html", mode='inline')
-    save(o.layout)
-
     return gradema[-1], gradmacd[-1]
 
+def correction_analysis(p: AssetPairModel, o: OHLCModel):
+    # doing fidx computation and get correction
+    efi = o.efi()
+    gradefi = np.gradient(efi)
 
+    obv = o.obv()
+    gradobv = np.gradient(obv)
 
+    return gradefi[-1], gradobv[-1]
 
-# def trend_detect(pairs, rest = None):
-#
-#     rest = rest if rest is None else RestClient(server=Server())
-#
-#     # now looping on the pairs on the long timeframe
-#
-#     for pair, ohlcv in pairs.ohlcv(rest=rest).items():
-#
-#         # 1 determine trend (with a trend indicator, maybe MAs taylor expand, new high/new lows, etc.) over some period of time...
-#
-#         h4 = ohlcv.hours_4
-#         # p = h4.plot()  # bokeh internal plot
-#
-#         h4d = h4.describe()
-#         # TODO : CAREFUL with vwap at 0 sometimes !
-#         print(h4d.mean()['close'])
-#         print(h4d.std()['close'])
-#         # TODO : check that std allows enough volatility to cover fees...
-#
-#         h4ema_6 = ohlcv.hours_4.ta.ema(length=6, offset=0)
-#         h4ema_6_closegrad = np.gradient(h4ema_6)
-#         # TODO : refine this !
-#         if h4ema_6_closegrad[-1] > 0:
-#             # bullish
-#             print(f'{pair} bullish !')
-#         else:
-#             # bearish
-#             print(f'{pair} bearish !')
-#
-#         # p = h4ema_6.plot()  # pandas matplotlib -> tkinter
-#
-#         # print(h4ema_6.describe())
-#         # trend as int : taylor expand and  avg over a few timestamps...
-#
-#         # TODO
-#
-#         trend = Trend(pair=pair, ohlcv=ohlcv, trend=h4ema_6_closegrad[-1], target=None, forbid_buy=False, forbid_sell=False)
-#
-#         # 2 determine potential price target (usable if leverage >= 2 - always case when using positions - usually advantageous on intraday)
-#
-#         # TODO HOW ??
-#
-#
-#         # 3 use impulse system to limit mistakes (ex: MA up + MACD up => do not sell)
-#
-#         # TODO
-#
-#         find_correction(trend)
 
 
 if __name__ == '__main__':
@@ -133,15 +89,35 @@ if __name__ == '__main__':
     for p in pairs:
         po = asyncio.run(ohlc_retrieval(p, KTimeFrameModel.one_day))
         # TODO : use atr from ohlc class
-        atrdata = po[KTimeFrameModel.one_day].atr(length=7)  # checking volitility during a week.
+        atrdata = po[KTimeFrameModel.one_day].atr(length=7)  # checking volatility during a week.
         acceptable_atr = 0.01 * po[KTimeFrameModel.one_day].close  # 1% of last closing price (today? yesterday?)
         if atrdata[-1] > acceptable_atr:  # ignored otherwise
             ohlcv[p] = po
 
     print(ohlcv)
 
+    # TODO : Idea : heiken-hashi... to minimize noise...
+
+    emagrad = dict()
+    macdgrad = dict()
+    efigrad = dict()
+    obvgrad = dict()
     for p, o in ohlcv.items():
-        result_ema, result_macd = trend_analysis(p, o[KTimeFrameModel.one_day])
-        print(f"{p} trend : EMA {result_ema} MACD {result_macd}")
+        emagrad[p], macdgrad[p] = trend_analysis(p, o[KTimeFrameModel.one_day])
+        print(f"{p} trend : EMA {emagrad[p]} MACD {macdgrad[p]}")
+
+        asyncio.run(o(interval=KTimeFrameModel.one_hour))
+        efigrad[p], obvgrad[p] = correction_analysis(p, o[KTimeFrameModel.one_hour])
+
+        print(f"{p} correction : EFI {efigrad[p]} OBV {obvgrad[p]}")
+
+        # TODO : impulse system ?
+
+        # CAREFUL : RuntimeError: Models must be owned by only a single document, Line(id='1284', ...) is already in a doc
+        output_file(f"trend_{p}.html", mode='inline')
+        # putting different timeframes side by side...
+        save(row(o[KTimeFrameModel.one_day].layout, o[KTimeFrameModel.one_hour].layout))
+
+
 
 

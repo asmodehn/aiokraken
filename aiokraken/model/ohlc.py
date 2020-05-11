@@ -69,7 +69,7 @@ class OHLC(TimeindexedDataframe):
         self.dataframe.volume = pd.to_numeric(self.dataframe.volume)
 
         # TODO : visible range depending on timeframe chosen...
-        self.layout = column(fig_ohlc(self.dataframe, x_range=(self.dataframe.index[-180], self.dataframe.index[-1])))
+        self.layout = column(fig_ohlc(self.dataframe, x_range=(self.dataframe.index[-max(180, len(self.dataframe.index))], self.dataframe.index[-1])))
 
     # TODO : we should probably provide "simple"/explicit interface to useful property of the dataframe ???
 
@@ -129,9 +129,8 @@ class OHLC(TimeindexedDataframe):
                       sizing_mode="scale_width", )
         atrp.line(x=atrdata.index, y=atrdata.values, color='red')
 
-        # TODO : how to insert into existing layout ??
         # Note : we want to link x_axis, but not y_axis...
-        self.layout = column(*self.layout.children, atrp)  #Trying
+        self.layout = column(*self.layout.children, atrp)
 
         return atrdata
 
@@ -148,11 +147,37 @@ class OHLC(TimeindexedDataframe):
         p2.segment(x0=macddata.index, y0=0, x1=macddata.index, y1=macddata.MACDH_6_12_9, line_width=6, color='black',
                    alpha=0.5)
 
-        self.layout = column(*self.layout.children, p2)  #Trying
-        # TODO : we integrate layout it into the class ?
+        self.layout = column(*self.layout.children, p2)
 
         return macddata
 
+    def efi(self, length=None):
+        # TODO : default values that make sense depending on timeframe..
+        efidata = self.dataframe.ta.efi(length=length)
+
+        efip = figure(plot_height=120, tools='xpan,xwheel_zoom,xbox_zoom,reset',
+                      x_range=self.layout.children[0].x_range, x_axis_type="datetime",
+                      y_axis_location="right",
+                      sizing_mode="scale_width", )
+        efip.line(x=efidata.index, y=efidata.values, color='red')
+
+        # Note : we want to link x_axis, but not y_axis...
+        self.layout = column(*self.layout.children, efip)
+        return efidata
+
+    def obv(self):
+        obvdata = self.dataframe.ta.obv()
+
+        obvp = figure(plot_height=120, tools='xpan,xwheel_zoom,xbox_zoom,reset',
+                      x_range=self.layout.children[0].x_range, x_axis_type="datetime",
+                      y_axis_location="right",
+                      sizing_mode="scale_width", )
+        obvp.line(x=obvdata.index, y=obvdata.values, color='red')
+
+        # Note : we want to link x_axis, but not y_axis...
+        self.layout = column(*self.layout.children, obvp)
+
+        return obvdata
 
     def __hash__(self):
         return super(OHLC, self).__hash__()
