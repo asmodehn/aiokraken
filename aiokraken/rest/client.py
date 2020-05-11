@@ -55,6 +55,7 @@ public_limiter = calllimiter(ratelimit=datetime.timedelta(seconds=3))
 
 class RestClient:
 
+    # TODO : better async design... maybe session building as part of theclass, or maybe no class ???
     def __init__(self, server = None, loop=None, protocol = "https://"):
         self.server = server or Server()
         if loop is None:
@@ -89,7 +90,7 @@ class RestClient:
 
     # TODO : verify if actually useful ??
     @async_cached_property
-    async def assetpairs(self) -> typing.Union[Assets, typing.Coroutine[None, None, Assets]]:
+    async def assetpairs(self) -> typing.Union[AssetPairs, typing.Coroutine[None, None, AssetPairs]]:
         """ Async property, caching the retrieved AssetPairs """
         # this will store retrieved data into self._assetpairs
         # but we want a cached property to be able to call this synchronously
@@ -190,7 +191,7 @@ class RestClient:
         return self._assets
 
     @public_limiter
-    async def retrieve_assetpairs(self, pairs: typing.Optional[typing.List[typing.Union[AssetPair, str]]]=None):
+    async def retrieve_assetpairs(self, pairs: typing.Optional[typing.List[typing.Union[AssetPair, str]]]=None) -> AssetPairs:
         """ make assetpairs request to kraken api"""
         if self._assetpairs is None:  # we only need it once !
             req = self.server.assetpair(pairs=pairs)   # returns the request to be made for this API.)

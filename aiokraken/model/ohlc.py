@@ -7,6 +7,9 @@ import typing
 from decimal import Decimal
 
 import bokeh.plotting
+from bokeh.layouts import column
+from bokeh.plotting import figure
+
 from aiokraken.model.bokeh_figs.fig_ohlc import fig_ohlc
 
 """ A common data structure for OHLC based on pandas """
@@ -28,7 +31,7 @@ from aiokraken.utils.timeindexeddataframe import TimeindexedDataframe
 
 class OHLC(TimeindexedDataframe):
 
-    figure: bokeh.plotting.Figure
+    layout: bokeh.layouts.LayoutDOM
 
     def __init__(self, data: pd.DataFrame, last: typing.Union[datetime, int]):
         # if no datetime column => create it from time
@@ -65,7 +68,8 @@ class OHLC(TimeindexedDataframe):
 
         self.dataframe.volume = pd.to_numeric(self.dataframe.volume)
 
-        self.figure = fig_ohlc(self.dataframe)
+        # TODO : visible range depending on timeframe chosen...
+        self.layout = column(fig_ohlc(self.dataframe, x_range=(self.dataframe.index[-180], self.dataframe.index[-1])))
 
     # TODO : we should probably provide "simple"/explicit interface to useful property of the dataframe ???
 
@@ -102,14 +106,53 @@ class OHLC(TimeindexedDataframe):
         return self.dataframe.ta
 
 
-    def ema(self, length):
+    def ema(self, length) -> TimeindexedDataframe:
 
-        ema = self.dataframe.ta.ema(length=length)
+        # TODO : default values that make sense depending on timeframe...
+        emadata = self.dataframe.ta.ema(length=length)
         # add ema onto the graph
 
-        self.figure.line(x=ema.index, y=ema.values,  line_width=1, color='navy', legend_label=f"EMA {length}")
+        self.layout.children[0].line(x=emadata.index, y=emadata.values, line_width=1, color='navy', legend_label=f"EMA {length}")
+        # implicitely inserting in existing plot
 
-        return ema
+        return emadata
+
+    def atr(self, length):
+        """ layout if the layout where we want to insert our plot"""
+
+        # TODO : default values that make sense depending on timeframe...
+        atrdata = self.dataframe.ta.atr(length=length)
+
+        atrp = figure(plot_height=120, tools='xpan,xwheel_zoom,xbox_zoom,reset',
+                      x_range=self.layout.children[0].x_range, x_axis_type="datetime",
+                      y_axis_location="right",
+                      sizing_mode="scale_width", )
+        atrp.line(x=atrdata.index, y=atrdata.values, color='red')
+
+        # TODO : how to insert into existing layout ??
+        # Note : we want to link x_axis, but not y_axis...
+        self.layout = column(*self.layout.children, atrp)  #Trying
+
+        return atrdata
+
+
+    def macd(self, fast=None, slow=None, signal=None, offset=None):
+        # TODO : default values that make sense depending on timeframe...
+        macddata = self.dataframe.ta.macd(fast=fast, slow=slow, signal=signal, offset=offset)
+
+        p2 = figure(plot_height=250, tools="xpan,xwheel_zoom,xbox_zoom,reset",
+                    x_range=self.layout.children[0].x_range, x_axis_type="datetime",
+                    y_axis_location="right", )
+        p2.line(x=macddata.index, y=macddata.MACD_6_12_9, color='red')
+        p2.line(x=macddata.index, y=macddata.MACDS_6_12_9, color='blue')
+        p2.segment(x0=macddata.index, y0=0, x1=macddata.index, y1=macddata.MACDH_6_12_9, line_width=6, color='black',
+                   alpha=0.5)
+
+        self.layout = column(*self.layout.children, p2)  #Trying
+        # TODO : we integrate layout it into the class ?
+
+        return macddata
+
 
     def __hash__(self):
         return super(OHLC, self).__hash__()

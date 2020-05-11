@@ -35,17 +35,19 @@ class Assets(Mapping):
     def __str__(self):
         return str(self.impl)
 
+    def __contains__(self, item):
+        #  We need the list of markets to validate pair string passed in the request
+        return (item in self.impl or
+                item in {p.altname for n, p in self.impl.items()})
+
     def __getitem__(self, item: str):
         #  We need the list of markets to validate pair string passed in the request
         try:
             asset = self.impl[item]
         except KeyError as ke:
             altname_map = {p.altname: p for n, p in self.impl.items()}
-            # wsname_map = {p.wsname: p for n, p in self.impl.items()}
             if item in altname_map.keys():
                 asset = altname_map[item]  # get the proper type.
-            # elif item in wsname_map.keys():
-            #     asset = wsname_map[item]  # get the proper type.
             else:
                 raise ke  # TODO also mention addressable via alternative names...
                 # RuntimeError(f"{item} not in {[k for k in self.impl.keys()]} nor {altname_map.keys()}")

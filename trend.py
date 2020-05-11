@@ -36,26 +36,15 @@ from aiokraken.rest import RestClient
     # TODO : goal : (structured) log all these somehow to identify buggy/useless trades or missed opportunities
 
 
-def atr(ohlcv: OHLCModel, length):
-
-    dups = ohlcv.index.duplicated()
-    if dups.any():  # TODO : clean OHLCV data instead...
-        raise RuntimeError(f"Duplicated data in OHLCV : {dups}")
-
-    atrdata = ohlcv.ta.atr(length=length)
-
-    atrp = figure(plot_height=120, tools='pan', x_axis_type="datetime", y_axis_location="right",
-               sizing_mode="scale_width",)
-
-    atrp.line(x=atrdata.index, y=atrdata.values, color='red')
-
-    return atrdata, atrp
-
-
 def trend_analysis(p: AssetPairModel, o: OHLCModel):
     # doing ema computation to get trend
     ema = o.ema(length=6)
     gradema = np.gradient(ema)
+
+    # doing macd computation
+    macddata = o.macd(fast=6, slow=12)
+    gradmacd = np.gradient(macddata.MACDH_6_12_9)
+
 
     # # TODO : refine this !
     # if h4ema_6_closegrad[-1] > 0:
@@ -65,14 +54,10 @@ def trend_analysis(p: AssetPairModel, o: OHLCModel):
     #     # bearish
     #     print(f'{pair} bearish !')
 
-    report = column(
-        o.figure,
-    )
-
     output_file(f"trend_{p}.html", mode='inline')
-    save(report)
+    save(o.layout)
 
-    return gradema[-1]
+    return gradema[-1], gradmacd[-1]
 
 
 
@@ -147,7 +132,8 @@ if __name__ == '__main__':
     ohlcv = dict()
     for p in pairs:
         po = asyncio.run(ohlc_retrieval(p, KTimeFrameModel.one_day))
-        atrdata, atrp = atr(po[KTimeFrameModel.one_day], length=7)  # checking volitility during a week.
+        # TODO : use atr from ohlc class
+        atrdata = po[KTimeFrameModel.one_day].atr(length=7)  # checking volitility during a week.
         acceptable_atr = 0.01 * po[KTimeFrameModel.one_day].close  # 1% of last closing price (today? yesterday?)
         if atrdata[-1] > acceptable_atr:  # ignored otherwise
             ohlcv[p] = po
@@ -155,7 +141,7 @@ if __name__ == '__main__':
     print(ohlcv)
 
     for p, o in ohlcv.items():
-        result = trend_analysis(p, o[KTimeFrameModel.one_day])
-        print(f"{p} trend : {result}")
+        result_ema, result_macd = trend_analysis(p, o[KTimeFrameModel.one_day])
+        print(f"{p} trend : EMA {result_ema} MACD {result_macd}")
 
 
