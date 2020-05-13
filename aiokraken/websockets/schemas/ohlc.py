@@ -16,12 +16,12 @@ from aiokraken.model.ohlc import OHLC
 class OHLCUpdate:
     time: float  # Time, seconds since epoch
     etime: float  # End timestamp of the interval
-    open: Decimal  # Open price at midnight UTC
-    high: Decimal  # Intraday high price
-    low: Decimal  # Intraday low price
-    close: Decimal  # Closing price at midnight UTC
-    vwap: Decimal  # Volume weighted average price
-    volume: Decimal  # Accumulated volume today
+    open: float  #Decimal  # Open price at midnight UTC
+    high: float  # Decimal  # Intraday high price
+    low: float  #Decimal  # Intraday low price
+    close: float  #Decimal  # Closing price at midnight UTC
+    vwap: float  #Decimal  # Volume weighted average price
+    volume: float  #Decimal  # Accumulated volume today
     count: int  # Number of trades today
 
     def to_tidfrow(self):  # Goal : retrieved an indexed dataframe , suitable for appending to timeindexedDF
@@ -59,12 +59,12 @@ class OHLCUpdateSchema(BaseSchema):
     """
     time = fields.Float()  # Time as float or decimal ? will float precision always be enough ?
     etime = fields.Float()
-    open = fields.Decimal(as_string=True)
-    high = fields.Decimal(as_string=True)
-    low = fields.Decimal(as_string=True)
-    close = fields.Decimal(as_string=True)
-    vwap = fields.Decimal(as_string=True)
-    volume = fields.Decimal(as_string=True)
+    open = fields.Float()  #Decimal(as_string=True)
+    high = fields.Float()  #Decimal(as_string=True)
+    low = fields.Float()  #Decimal(as_string=True)
+    close = fields.Float()  # Decimal(as_string=True)
+    vwap = fields.Float()  #Decimal(as_string=True)
+    volume = fields.Float()  #Decimal(as_string=True)
     count = fields.Integer()
 
     @post_load

@@ -73,7 +73,7 @@ class OHLC:
 
         self.restclient = restclient or RestClient()  # default restclient is possible here, but only usable for public requests...
 
-        self.loop = loop if loop is not None else asyncio.get_event_loop()
+        self.loop = loop if loop is not None else asyncio.get_event_loop()   # TODO : use restclient loop ??
         self.wsclient = wsclient if wsclient is not None else WssClient(loop=self.loop)
         # defaults to have a websocket client
 
@@ -126,6 +126,8 @@ class OHLC:
         @wrapt.decorator
         def wrapper(wrapped, instance, args, kwargs):
             return wrapped(*args, **kwargs)
+
+        # TODO : should we throttle the callback to respect timeframe (and not get spammed by each message) ?
 
         wrp = wrapper(user_cb)
 
@@ -265,6 +267,11 @@ if __name__ == '__main__':
     # ohlc data can be global (one per market*timeframe only)
     ohlc_1m = OHLC(pair='ETHEUR', timeframe=KTimeFrameModel.one_minute, restclient=rest)
 
+    @ohlc_1m.callback
+    def ws_update(*args, **kwargs):
+        print(args)
+        print(kwargs)
+
     loop = asyncio.get_event_loop()
 
     async def ohlc_update_watcher():
@@ -282,18 +289,18 @@ if __name__ == '__main__':
         for k in ohlc_1m:
             print(f" - {k}")
 
-        assert len(ohlc_1m) == 720, f"from: {ohlc_1m.begin} to: {ohlc_1m.end} -> {len(ohlc_1m)} values"
+        # assert len(ohlc_1m) == 720, f"from: {ohlc_1m.begin} to: {ohlc_1m.end} -> {len(ohlc_1m)} values"
         # ema has been updated
-        assert len(emas_1m) == 720, f"EMA: {len(emas_1m)} values"
+        # assert len(emas_1m) == 720, f"EMA: {len(emas_1m)} values"
 
         print("Waiting 6 more minute to attempt retrieving more ohlc data - via websockets - and stitch them...")
         for mins in range(1, 6):
             await asyncio.sleep(60)  # need await to not block other async tasks
             print(f" - {ohlc_1m.model[:-1]}")
 
-        assert len(ohlc_1m) == 727, f"from: {ohlc_1m.begin} to: {ohlc_1m.end} -> {len(ohlc_1m)} values"
+        # assert len(ohlc_1m) == 727, f"from: {ohlc_1m.begin} to: {ohlc_1m.end} -> {len(ohlc_1m)} values"
         # ema has been updated
-        assert len(emas_1m) == 727, f"EMA: {len(emas_1m)} values"
+        # assert len(emas_1m) == 727, f"EMA: {len(emas_1m)} values"
 
         # TODO : another REST update should fit with already gathered data
 

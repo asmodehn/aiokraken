@@ -21,6 +21,12 @@ class SubscriptionStatus:
     reqid: typing.Optional[int] = field(default=None, hash=False)
 
 
+@dataclass(frozen=True)
+class SubscriptionStatusError:
+    status: str
+    error_message: str
+
+
 class SubscriptionStatusSchema(BaseSchema):
     """
     >>> s= SubscriptionStatusSchema()
@@ -33,17 +39,25 @@ class SubscriptionStatusSchema(BaseSchema):
     ... })
     KAsset(altname='ALTNAME', aclass='ACLASS', decimals=42, display_decimals=7)
     """
+    # one of these
     channel_id = fields.Integer(data_key="channelID")
+    error_message = fields.String(data_key="errorMessage", required=False)
+    # we model error message as being optional on schema but changing datatype upon instantiation.
+
     channel_name = fields.String(data_key="channelName")
     event = fields.Constant("subscriptionStatus")
     pair = fields.String()
-    status = fields.String()  #TODO : enum ?
+    status = fields.String()  # TODO : enum ? don't forget error.
     subscription = fields.Nested(SubscriptionSchema())
 
     @post_load
     def build_model(self, data, **kwargs):
         data.pop('event')  # not needed any longer
-        a = SubscriptionStatus(**data)
+
+        if data['status'] == 'error':
+            a = SubscriptionStatusError(**data)
+        else:
+            a = SubscriptionStatus(**data)
         return a
 
 
