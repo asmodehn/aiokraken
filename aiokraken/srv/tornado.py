@@ -4,7 +4,6 @@ import tornado.ioloop
 import tornado.web
 
 from bokeh.server.server import Server
-from aiokraken.gui_bokeh.gui_ohlc import bkapp
 
 # class MainHandler(tornado.web.RequestHandler):
 #     def get(self):
@@ -22,7 +21,7 @@ async def display_date():
         print(datetime.datetime.now())
         await asyncio.sleep(1)
 
-async def start_tornado(bkapp = bkapp):
+def start_tornado(bkapp):
     # Server will take current runnin asyncio loop as his own.
     server = Server({'/': bkapp})  # iolopp must remain to none, num_procs must be default (1)
     server.start()
