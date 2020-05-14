@@ -8,9 +8,11 @@ from datetime import datetime, timezone
 
 import bokeh.layouts
 import wrapt
+
+from aiokraken.domain.layouts.ohlcv import OHLCVLayout
 from aiokraken.websockets.client import WssClient
 from bokeh.io import output_file
-from bokeh.models import CustomJS
+from bokeh.models import CustomJS, LayoutDOM
 
 from aiokraken.model.assetpair import AssetPair
 
@@ -42,6 +44,8 @@ class OHLCV:
 
         self._model = {tf: OHLCModel(pair=pair, timeframe=tf) for tf in KTimeFrameModel}
 
+        self._layouts = list()
+
     def __getitem__(self, item):
 
         # TODO pick closest timeframe
@@ -57,38 +61,14 @@ class OHLCV:
     def __iter__(self):
         return iter(self._model)
 
-    def fig(self):
-        # TODO : buttons to switch between timeframes...
+    def layout(self, doc=None) -> LayoutDOM:  # Note : doc is needed for updates
 
-        from bokeh.models import RadioButtonGroup
+        # we only draw the timeframe that we have !
+        present_tf = {tf: ohlc for tf, ohlc in self._model.items() if ohlc.model}
 
-        tfl = [KTimeFrameModel.one_day, KTimeFrameModel.one_hour, KTimeFrameModel.one_minute]
-
-        radio_button_group = RadioButtonGroup(
-            # TMP : only three main TF for now...
-            labels=[tf.name for tf in tfl], active=0)
-
-        # Note This will trigger data retrieval.
-        plts = [self[tf].plot() for tf in tfl]
-
-        callback = CustomJS(args=dict(dayref=plts[0],
-                                      hourref=plts[1],
-                                      minuteref=plts[2]), code="""
-            var dayref_ok = dayref;
-            var hourref_ok = hourref;
-            var minuteref_ok = minuteref;
-        """)
-
-        radio_button_group.js_on_change('value', callback)
-
-        self.layout = bokeh.layouts.column(#radio_button_group, BUGGY TODO: FIXIT
-                                           bokeh.layouts.row(
-                                               plts[0],
-                                               plts[1],
-                                               plts[2],
-                                           ))
-
-        return self.layout
+        p = OHLCVLayout(present_tf, doc=doc)
+        self._layouts.append(p)
+        return p._layout
 
     # TODO : extend to provide more ohlcv dataframes than the strict kraken API (via resampling from public trades history)
 
@@ -106,7 +86,11 @@ if __name__ == '__main__':
 
     for p in ap:
         ohlcv = OHLCV(pair=p, rest=RestClient())
-        f = ohlcv.fig()
+
+        for tf in [KTimeFrameModel.one_day, KTimeFrameModel.one_hour, KTimeFrameModel.one_minute]:
+            asyncio.run(ohlcv[tf]())
+
+        f = ohlcv.layout()
         output_file(f"{p}.html", mode='inline')
         save(f)
 
