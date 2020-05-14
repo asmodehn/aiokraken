@@ -4,12 +4,19 @@ this is only useful for OHLCV and therefore it is a special case, for practicali
 """
 import asyncio
 import typing
+from datetime import datetime, timezone
+
+import bokeh.layouts
+import wrapt
+from aiokraken.websockets.client import WssClient
+from bokeh.io import output_file
+from bokeh.models import CustomJS
 
 from aiokraken.model.assetpair import AssetPair
 
 from aiokraken.rest import RestClient
 from aiokraken.model.timeframe import KTimeFrameModel
-from aiokraken.model.ohlc import OHLC as OHLCModel
+from aiokraken.domain.models.ohlc import OHLC as OHLCModel
 
 
 class OHLCV:
@@ -19,88 +26,69 @@ class OHLCV:
     An instance is a slice of it (on time axis), by default covering now and "a bit" (720 intervals) before.
     """
 
+    layout: bokeh.layouts.LayoutDOM
+
     _model: typing.Dict[KTimeFrameModel, OHLCModel]
 
-    @classmethod
-    async def retrieve(cls, pair: AssetPair, rest: RestClient = None, intervals : typing.List[KTimeFrameModel] = None):
+    def __init__(self, pair: AssetPair, rest: RestClient, wsclient = None, loop = None):
 
-        if rest is None:
-            rest = RestClient()
-
-        if intervals is None:
-            intervals = [i for i in KTimeFrameModel]
-
-        multitf = dict()
-
-        for i in intervals:
-            new_ohlc = await rest.ohlc(pair=pair, interval=i)
-            multitf.setdefault(i, new_ohlc)
-
-        return cls(pair=pair, rest=rest, multitf=multitf)
-
-    def __init__(self, pair: AssetPair, rest: RestClient, multitf: typing.Dict[KTimeFrameModel, OHLCModel]):
         self.rest = rest if rest is not None else RestClient()
+
+        self.loop = loop if loop is not None else asyncio.get_event_loop()   # TODO : use restclient loop ??
+        self.wsclient = wsclient if wsclient is not None else WssClient(loop=self.loop)
+        # TODO : get rid of these before : we are in ONE process, ONE thread => one client and one loop.
 
         self.pair = pair
 
-        self._model = multitf
-
-    @property
-    def days_15(self):
-        return self._model[KTimeFrameModel.fifteen_days]
-
-    @property
-    def days_7(self):
-        return self._model[KTimeFrameModel.seven_days]
-
-    @property
-    def hours_24(self):
-        return self._model[KTimeFrameModel.twenty_four_hours]
-
-    @property
-    def hours_4(self):
-        return self._model[KTimeFrameModel.four_hours]
-
-    @property
-    def minutes_60(self):
-        return self._model[KTimeFrameModel.sixty_minutes]
-
-    @property
-    def minutes_30(self):
-        return self._model[KTimeFrameModel.thirty_minutes]
-
-    @property
-    def minutes_15(self):
-        return self._model[KTimeFrameModel.fifteen_minutes]
-
-    @property
-    def minutes_5(self):
-        return self._model[KTimeFrameModel.five_minutes]
-
-    @property
-    def minute(self):
-        return self._model[KTimeFrameModel.one_minute]
-
-    async def __call__(self, interval: KTimeFrameModel = KTimeFrameModel.fifteen_days,):
-
-        new_ohlc = await self.rest.ohlc(pair=self.pair, interval=interval)
-
-        self._model.setdefault(interval, new_ohlc)
-        if interval in self._model:
-            self._model[interval].stitch(new_ohlc)
-
-        return self
+        self._model = {tf: OHLCModel(pair=pair, timeframe=tf) for tf in KTimeFrameModel}
 
     def __getitem__(self, item):
-        return self._model[item]
+
+        # TODO pick closest timeframe
+        # TODO  resample from it
+
+        # to make sure we have uptodate & linked data...
+        # TODO : replicate this design : allow both sync and async calls
+        if self.loop.is_running():
+            return self.loop.create_task(self._model[item]())
+        else:
+            return self.loop.run_until_complete(self._model[item]())
 
     def __iter__(self):
         return iter(self._model)
 
-
     def fig(self):
-        # TODO : radio buttons to swithh between timeframes...
-        pass
+        # TODO : buttons to switch between timeframes...
+
+        from bokeh.models import RadioButtonGroup
+
+        tfl = [KTimeFrameModel.one_day, KTimeFrameModel.one_hour, KTimeFrameModel.one_minute]
+
+        radio_button_group = RadioButtonGroup(
+            # TMP : only three main TF for now...
+            labels=[tf.name for tf in tfl], active=0)
+
+        # Note This will trigger data retrieval.
+        plts = [self[tf].plot() for tf in tfl]
+
+        callback = CustomJS(args=dict(dayref=plts[0],
+                                      hourref=plts[1],
+                                      minuteref=plts[2]), code="""
+            var dayref_ok = dayref;
+            var hourref_ok = hourref;
+            var minuteref_ok = minuteref;
+        """)
+
+        radio_button_group.js_on_change('value', callback)
+
+        self.layout = bokeh.layouts.column(#radio_button_group, BUGGY TODO: FIXIT
+                                           bokeh.layouts.row(
+                                               plts[0],
+                                               plts[1],
+                                               plts[2],
+                                           ))
+
+        return self.layout
 
     # TODO : extend to provide more ohlcv dataframes than the strict kraken API (via resampling from public trades history)
 
@@ -116,14 +104,9 @@ if __name__ == '__main__':
 
     ap = asyncio.run(retrieve_pairs(["XBT/EUR", "ETH/EUR"]))
 
-    async def retrieve_ohlc(p, timeframe):
-        return await OHLCV.retrieve(pair=p, intervals=[timeframe])
-
     for p in ap:
-        ohlcv = asyncio.run(retrieve_ohlc(p, KTimeFrameModel.one_day))
-        for tf in ohlcv:
-            print(ohlcv[tf])
-            f = ohlcv[tf].plot()
-            output_file(f"{p}_{tf}.html", mode='inline')
-            save(f)
+        ohlcv = OHLCV(pair=p, rest=RestClient())
+        f = ohlcv.fig()
+        output_file(f"{p}.html", mode='inline')
+        save(f)
 

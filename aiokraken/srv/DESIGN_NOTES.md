@@ -5,7 +5,7 @@
 
 # CURRENTLY
 - keep only one user (config at startup)
-- keep one simple app, just find a way to connect it with aiokraken async tasks for data updates.
+- keep one simple app, with a way to connect it with aiokraken async tasks for data updates.
 - keep tornado as server, tightly integrating with aiohttp might be overly tricky.
 
 # LATER 

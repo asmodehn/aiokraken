@@ -1,7 +1,9 @@
 from __future__ import annotations
 import asyncio
 import dataclasses
-from collections import namedtuple
+import functools
+import os
+from collections import namedtuple, deque
 from datetime import timedelta, datetime, timezone
 
 import typing
@@ -9,6 +11,11 @@ from decimal import Decimal
 
 import pandas as pd
 import wrapt
+from aiokraken.domain.models.plots.ohlc import OHLCPlot
+from bokeh.layouts import row
+from bokeh.models import ColumnDataSource
+from bokeh.plotting import figure, Figure
+from bokeh.themes import Theme
 
 from aiokraken.websockets.client import WssClient
 
@@ -82,6 +89,8 @@ class OHLC:
         self.model = None  # Need async call : raii is not doable here...
         self.indicators = dict()
 
+        self._plots = list()
+
     @property
     def begin(self) -> datetime:
         return self.model.begin
@@ -112,13 +121,14 @@ class OHLC:
 
     # TODO : use the decorator for wss callback here !
     def _update(self, ohlc_update: OHLCUpdate):
-        try:
-            append_data = ohlc_update.to_tidfrow()
-            self.model.append(append_data)
-            # TODO : indicators update... and more
-        except Exception as e:
-            print(e)
-            raise  # To immediately explicitely catch it
+        append_data = ohlc_update.to_tidfrow()
+
+        # updating  our dataframe on network message recv
+        self.model.append(append_data)
+        # TODO : indicators update... and more
+
+        for p in self._plots:
+            p(append_data)  # update plot
 
     def callback(self, user_cb):
         """ a decorator to decorate a pydef be called asynchronously by an update of OHLC data """
@@ -168,7 +178,10 @@ class OHLC:
         if self.wsclient is not None:
             # TODO : prevent redundant subscription ?
             await self.wsclient.ohlc(pairs=[self.pair], callback=self._update)
-
+            #TODO : maybe subscription should not be done here at all ??
+            # we -sometimes- need only one subscription : the shortest timeframe used...
+            # BUT it should NOT be implicit here
+            #      => REALLY ?? WHY NOT ??
         return self
 
     def __repr__(self):
@@ -200,6 +213,11 @@ class OHLC:
         else:
             return 0
 
+    def plot(self, doc=None) -> Figure:  # Note : doc is needed for updates
+        p = OHLCPlot(self.model.dataframe, doc=doc)
+        self._plots.append(p)
+        return p._figure
+
     def pivot(self, before: typing.Union[datetime, timedelta], now: datetime= datetime.now(tz=timezone.utc)) -> Pivot:
         if isinstance(before, timedelta):
             before = now - before
@@ -230,18 +248,29 @@ class OHLC:
 
         return Pivot(pivot=pivot, R1=R1, R2=R2, R3=R3, S1=S1, S2=S2, S3=S3)
 
-    def ema(self, name: str, length: int, offset: int = 0, adjust: bool = False) -> OHLC:
-        # the self updating object
-        ema = EMA(name=name, length=length, offset=offset, adjust=adjust)
-        if 'ema' in self.indicators:
-            self.indicators['ema'] = self.indicators['ema'] * ema  # merging EMAs in one dataframe !
-        else:
-            self.indicators['ema'] = ema
+    # def ema(self, name: str, length: int, offset: int = 0, adjust: bool = False) -> OHLC:
+    #     # the self updating object
+    #     ema = EMA(name=name, length=length, offset=offset, adjust=adjust)
+    #     if 'ema' in self.indicators:
+    #         self.indicators['ema'] = self.indicators['ema'] * ema  # merging EMAs in one dataframe !
+    #     else:
+    #         self.indicators['ema'] = ema
+    #
+    #     if self.model:  # Immediately calling on ohlc if possible => TODO : improve design ?
+    #         self.indicators['ema'] = self.indicators['ema'](self.model)
+    #
+    #     return self  # to allow chaining methods. (no point returning the ema created, it is stored already)
 
-        if self.model:  # Immediately calling on ohlc if possible => TODO : improve design ?
-            self.indicators['ema'] = self.indicators['ema'](self.model)
+    def ema(self, length) -> pd.Series:
 
-        return self  # to allow chaining methods. (no point returning the ema created, it is stored already)
+        # TODO : default values that make sense depending on timeframe...
+        emadata = self.dataframe.ta.ema(length=length)
+        # add ema onto the graph
+
+        self.layout.children[0].line(x=emadata.index, y=emadata.values, line_width=1, color='navy', legend_label=f"EMA {length}")
+        # implicitely inserting in existing plot
+
+        return emadata
 
     # TODO : Since we have indicators here (totally dependent on ohlc), we probably also want signals...
 
@@ -277,11 +306,11 @@ if __name__ == '__main__':
     async def ohlc_update_watcher():
         # we need an async def here to allow "pausing" in the flow (await), and wait for ohlc updates
 
-        # Here we register and retrieve an indicator on ohlc data.
-        # It will be automagically updated when we update ohlc.
-        emas_1m = ohlc_1m.ema(name="EMA_12", length=12)
-        # Note these two should merge...
-        ohlc_1m.ema(name="EMA_26", length=26)
+        # # Here we register and retrieve an indicator on ohlc data.
+        # # It will be automagically updated when we update ohlc.
+        # emas_1m = ohlc_1m.ema(name="EMA_12", length=12)
+        # # Note these two should merge...
+        # ohlc_1m.ema(name="EMA_26", length=26)
 
         assert len(ohlc_1m) == 0
 
