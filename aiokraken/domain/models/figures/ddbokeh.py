@@ -8,9 +8,9 @@ from collections import namedtuple
 import pandas
 import typing
 from bokeh.document import Document
-from bokeh.layouts import column
-from bokeh.models import ColumnDataSource, Plot
+from bokeh.layouts import column, row
 from bokeh.plotting import Figure
+from bokeh.models import ColumnDataSource, GlyphRenderer, Plot, DataTable, TableColumn, DateFormatter
 from bokeh.util.serialization import convert_datetime_array, convert_datetime_type
 from bokeh.document import without_document_lock
 
@@ -18,13 +18,54 @@ from bokeh.document import without_document_lock
 DDLink = namedtuple("DDLink", ["source", "doc"])
 
 
-class DDModel:  # rename to source TODO
+class DDSharedDataSource:
 
     _data: pandas.DataFrame
     _process: typing.List[typing.Callable]
 
-    _links: typing.Set[DDLink]  # TODO that link is likely hidden in the plot somewhere...
-    _rendered_datasources: typing.List[ColumnDataSource] #TODO : replace links with this... document is a property of datasource
+    _rendered_datasources: typing.List[ColumnDataSource]
+    # REMINDER : document is a property of bokeh's datasource
+
+    def _stream(self, streamable):
+        try:
+            if streamable.any(axis='columns').any():
+                # TODO: log stream detected properly
+                print(f"Stream update: \n{streamable}")
+
+                # streamable = streamable.reset_index().to_dict('series')
+                # to prevent ValueError: Must stream updates to all existing columns (missing: level_0)
+                # streamable['index'] = convert_datetime_array(streamable['index'].to_numpy())
+                # to prevent error on timestamp
+                for r in self._rendered_datasources:  # TODO : link is gone, document is inside the rendered source...
+                    if r.document is not None:
+                        r.document.add_next_tick_callback(
+                            lambda: r.stream(streamable),  # stream delta values first
+                        )
+
+        except Exception as e:
+            print(e)  # log it and keep going, the data will be replace in datasource anyway.
+
+    def _patch(self, patchable):
+
+        try:
+            if patchable.any(axis='columns').any():
+                # TODO: log patch detected properly
+                print(f"Patch update: \n{patchable}")
+
+                # to avoid bug where series are iterated as list without index
+                # TypeError: cannot unpack non-iterable int object
+                patches = dict()
+                # Note : seems we need the integer index for patch, not the timestamp integer...
+                for col, pseries in patchable.reset_index(drop=True).items():
+                    patches[col] = [t for t in pseries.items()]
+                for r in self._rendered_datasources:
+                    if r.document is not None:
+                        r.document.add_next_tick_callback(
+                            # full upate of previously instantiated sources
+                            lambda: r.patch(patches)
+                        )
+        except Exception as e:
+            print(e)  # log it and keep going, the data will be replace in datasource anyway.
 
     @property
     def data(self):
@@ -33,19 +74,12 @@ class DDModel:  # rename to source TODO
     @data.setter
     def data(self, new_data):
 
-        if True: # Debug HACK
-            # The quick and simple way
-            self._data = new_data
-            for rds in self._rendered_datasources:
-                rds.document.add_next_tick_callback(
-                    lambda: setattr(rds, 'data', new_data)
-                )
-            return
+        assert new_data.index.is_unique  # To be sure we keep unique index... (Set semantics for simplicity)
 
-        # The long and winding road...
-
-        appended_index = new_data.index.difference(self._data.index)
-        patched_index = new_data.index.intersection(self._data.index)
+        # Attempting to discover appends and patches based on index...
+        data_index = self._data.index
+        appended_index = new_data.index.difference(data_index)
+        patched_index = new_data.index.intersection(data_index)
 
         available_patches = new_data.loc[patched_index]
 
@@ -53,136 +87,80 @@ class DDModel:  # rename to source TODO
         if available_patches.any(axis='columns').any():
             # only patch data differences
             patchfilter = available_patches.isin(self._data)
-            patchable = available_patches.loc[(~patchfilter.all(axis='columns')).index]
+            patchable_indices = (~patchfilter.all(axis='columns')).index
+            patchable = available_patches.loc[patchable_indices]
 
-            if self._debug:
-                print(f"Patch update: \n{patchable}")
-
-            if patchable.any(axis='columns').any():
-                # to avoid bug where series are iterated as list without index
-                # TypeError: cannot unpack non-iterable int object
-                patches = dict()
-                for col, pseries in patchable.to_dict('series').items():
-                    # we need to convert timestamp index to int (!?!?) in the patch before sending...
-                    patches[col] = [(int(convert_datetime_type(i)), v) for i, v in pseries.iteritems()]
-                for l in self._links:
-                    # l.doc.add_next_tick_callback(
-                        # full upate of previously instantiated sources
-                        # lambda: l.source.patch(patches) #TODO : review this : explicit pathc needed or not ??
-                        # TODO : FIX : ValueError: Out-of bounds index (1589734548783) in patch for column: random1
-
-                        # lambda: setattr(l.source, 'data', new_data)
-                        # TODO : FIX RuntimeError: _pending_writes should be non-None when we have a document lock, and we should have the lock when the document changes
-                    # )
-                    pass
+            self._patch(patchable)
 
         streamable = new_data.loc[appended_index]
 
-        if self._debug:
-            print(f"Stream update: \n{streamable}")
+        self._stream(streamable)
 
-        if streamable.any(axis='columns').any():
-            # streamable = streamable.reset_index().to_dict('series')
-            # to prevent ValueError: Must stream updates to all existing columns (missing: level_0)
-            # streamable['index'] = convert_datetime_array(streamable['index'].to_numpy())
-            # to prevent error on timestamp
-            for l in self._links:
-                l.doc.add_next_tick_callback(
-                    lambda: l.source.stream(streamable),  # stream delta values first
+        # Replace data here and in existing datasources.
+        # This will trigger update of simple view, like datatable.
+        # BUT it will NOT trigger redraw of the various plots, we rely on stream or patch for that.
+        self._data = new_data
+        for rds in self._rendered_datasources:
+            if rds.document is not None:
+                rds.document.add_next_tick_callback(
+                    lambda: setattr(rds, 'data', new_data)
                 )
 
-        self._data = new_data
+    @property
+    def table(self):
+        """ Simplest model to visually help debug interactive update.
+            This does NOT require us to call stream or patch.
+        """
+        # Note : Since the Datatable is managed by bokeh directly for dynamic updates,
+        # we do not need to register our datasource in this case
+        ds = ColumnDataSource(data=self._data, name=f"{self._name}_tableview")
+
+        # TODO: BUG ? somehow adding datatable's data source prevent patches to happen propery on plot ??
+        # self._rendered_datasources.append(ds)
+
+        dt = DataTable(source=ds, columns=[
+                                              TableColumn(field="index", title="index",
+                                                          formatter=DateFormatter(format="%m/%d/%Y %H:%M:%S"))] + [
+                                              TableColumn(field=n, title=n) for n in self.data.columns if
+                                              n != "index"
+                                          ],
+              width=320, height=480)
+        return dt
+
+    def line(self, fig, y="random1", color="blue", legend_label="lineview"):
+        # Debug renderer
+        return fig.line(x="index", y=y, color=color, source=self(name=f"{self._name}_as_{legend_label}"), legend_label=legend_label)
+
+    # TODO: multilines... various figures visualization + customization...
+    # def plot(self, palette=None):
+    #     fig = Figure(title="Random Test", plot_height=480,
+    #            tools='pan, xwheel_zoom, reset',
+    #            toolbar_location="left", y_axis_location="right",
+    #            x_axis_type='datetime', sizing_mode="scale_width")
+    #
+    #     palette = Spectral11[0:numlines] if palette is None else palette
+    #
+    #     fig.multi_line(x="index", y=c, color=, source = self(name=f"{self._name}[{c}]"), legend_label=c)
 
     """ class representing one viewplot - potentially rendered in multiple documents """
-    def __init__(self, data: pandas.DataFrame, debug=True):
+    def __init__(self, data: pandas.DataFrame, name:str, debug=True):
         self._debug = debug
+        self._name = name
         self._data = data
         self._links = set()
         self._rendered_datasources = list()
         # a set here is fine, it is never included in the bokeh document
 
-    def __call__(self, doc: Document):
+    def __call__(self, name=None) -> ColumnDataSource:
         # we need to rest the index just before rendering to bokeh
         # it is useful for stream and patches computation
-        src = ColumnDataSource(data=self._data)
+        src = ColumnDataSource(data=self._data, name=self._name if name is None else name)  # Note: name is mostly for debugging help
 
         self._rendered_datasources.append(src)
+        # TODO : how to prune this list ? shall we ever ?
+        # note that _detach_document seems to be called properly by bokeh and datasource's document is set to None.
 
-        self._links.add(DDLink(doc=doc, source=src))
-        # TODO : how to prune this set ?
         return src  # return datasource for use by the view
-
-
-class DDLine:  # TODO : make more of these
-
-    _source: DDModel
-
-    # shortcut to data
-    @property
-    def source(self):
-        return self._source
-
-    @source.setter
-    def source(self, new_source):
-        self._source = new_source
-
-    def __init__(self, source: DDModel, x, y, **line_kwargs):
-
-        assert x in (['index'] + source.data.columns.to_list())
-        assert y in (['index'] + source.data.columns.to_list())
-
-        self._source = source
-
-        self.plot_kwargs = line_kwargs
-
-    def __call__(self, doc: Document, fig: Figure):
-        bkh_source = self._source(doc=doc)
-        fig.line(**self.plot_kwargs, source=bkh_source)
-
-
-class DDFigure:  #  TODO: inherit from DDModel as well ??
-    # TODO Maybe after we can manage a dataframe cleanly :
-    #  categorical product of dataframe is a categorical product of plots...
-    #  Wether a new figure is needed is determined by column type (and unit compatibility - see pint)
-    """
-    A class used as interface to bokeh Figure class.
-    """
-
-    # TODO : support complex operations on the dataframe
-    #  to implement visual feedback on compute...
-
-    def __init__(self,  **figure_kwargs):
-
-        self._figure_kwargs = figure_kwargs
-
-        self._ddplots = dict()
-
-    def view(self, doc: Document):  # TODO : in a __call__
-        # delegate to bokeh only when needed (figure cannot be in multiple docs)
-        fig = Figure(**self._figure_kwargs)
-
-        # do all the necessary plotting and save the datasources
-        for n, plot in self._ddplots.items():
-            plot(doc=doc, fig=fig)
-
-        return fig
-
-    def __getitem__(self, item) -> DDModel:
-        return self._ddplots[item]
-
-    def __setitem__(self, key, value: DDModel):
-        self._ddplots[key] = value
-
-    def line(self, source: DDModel, plotname: str, legend: bool = True, **extrakwargs):
-
-        plot = DDLine(source=source,
-                      name=plotname,
-                    legend_label= plotname if legend else None,
-                    x = "index",
-                    **extrakwargs)
-
-        self._ddplots[plotname]= plot
-        return plot
 
 
 if __name__ == '__main__':
@@ -196,22 +174,11 @@ if __name__ == '__main__':
     # Note : This is "created" before a document output is known
     # and before a request is sent to the server
     start = datetime.now()
-    ddsource1 = DDModel(pandas.DataFrame(data=[random.randint(-10, 10), random.randint(-10, 10)], columns=["random1"],
-                                         index=[start, start+timedelta(milliseconds=1)]))
-    ddsource2 = DDModel(pandas.DataFrame(data=[random.randint(-10, 10), random.randint(-10, 10)], columns=["random2"],
-                                         index=[start, start+timedelta(milliseconds=1)]))
-    # Note we add some initial data to have bokeh center the plot properly on hte time axis TODO : fix it !
-
-    # views are setup in advance as well
-
-    # Note : This is "created" before a document output is known and before a request is sent to the server
-    view = DDFigure(title="Random Test", plot_height=480,
-                    tools='xpan, xwheel_zoom, reset',
-                    toolbar_location="left", y_axis_location="right",
-                    x_axis_type='datetime', sizing_mode="scale_width")
-
-    plot1 = view.line(source=ddsource1, plotname="Random1", y="random1", color="blue")
-    plot2 = view.line(source=ddsource2, plotname="Random2", y="random2", color="red")
+    ddsource1 = DDSharedDataSource(name="ddsource1", data=pandas.DataFrame(data=[random.randint(-10, 10), random.randint(-10, 10)], columns=["random1"],
+                                                    index=[start, start+timedelta(milliseconds=1)]))
+    ddsource2 = DDSharedDataSource(name="ddsource2", data=pandas.DataFrame(data=[random.randint(-10, 10), random.randint(-10, 10)], columns=["random2"],
+                                                    index=[start, start+timedelta(milliseconds=1)]))
+    # Note we add some initial data to have bokeh center the plot properly on the time axis TODO : fix it !
 
     # Producer as a background task
     async def compute_random(m, M):
@@ -223,7 +190,7 @@ if __name__ == '__main__':
 
             # push FULL data updates !
             # Note some derivative computation may require more than you think
-            plot1.source.data = pandas.DataFrame(
+            ddsource1.data = pandas.DataFrame(
                 columns=["random1"],
                 data = {
                     "random1": [
@@ -234,27 +201,30 @@ if __name__ == '__main__':
             )
 
             # add extra data points will NOT trigger dynamic updates
-            plot2.source.data.loc[now] = random.randint(m, M)
+            ddsource2.data.loc[now] = random.randint(m, M)
 
             await asyncio.sleep(1)
 
     def test_page(doc):
         # Debug Figure
-        debug_fig = Figure(**view._figure_kwargs)
-        # simple bokeh style
-        source1 = ColumnDataSource(ddsource1.data)
-        source2 = ColumnDataSource(ddsource2.data)
-        # dynamic datasource as simply as possible
-        p1 = debug_fig.line(x="index", y="random1", color="blue", source=source1)
-        p2 = debug_fig.line(x="index", y="random2", color="red", source=source2)
+        debug_fig = Figure(title="Random Test", plot_height=480,
+                        tools='pan, xwheel_zoom, reset',
+                        toolbar_location="left", y_axis_location="right",
+                        x_axis_type='datetime', sizing_mode="scale_width")
 
-        dynfig = view.view(doc=doc)
+        # dynamic datasource plots as simply as possible
+        ddsource1.line(fig=debug_fig, y="random1", color="blue", legend_label="Debug1")
+        # plot1 = debug_fig.line(x="index", y="random1", color="blue", source=ds1, legend_label="Debug1")
+        plot2 = debug_fig.line(x="index", y="random2", color="red", source=ddsource2("debug_static_line2"), legend_label="Debug2")
+
+        # import inspect
+        # for d, b in zip(dir(dynfig), dir(debug_fig)):
+        #     if getattr(dynfig,d) != getattr(debug_fig,b) and not inspect.ismethod(getattr(dynfig,d) ):
+        #         print(f"{d} : { getattr(dynfig,d)} != {getattr(debug_fig,b)}")
+
         doc.add_root(
-            column(
-                dynfig,
                 # to help compare / visually debug
-                debug_fig
-            )
+                row(debug_fig, ddsource1.table, ddsource2.table)
         )
         # doc.theme = Theme(filename=os.path.join(os.path.dirname(__file__), "theme.yaml"))
 
@@ -262,8 +232,9 @@ if __name__ == '__main__':
         doc.add_periodic_callback(
             lambda: (
                 # replacing data in datasource directly trigger simple dynamic update in plots.
-                setattr(source1,'data', ddsource1.data),
-                setattr(source2,'data', ddsource2.data)
+                # setattr(ds1, 'data', ddsource1.data),
+                # This is mandatory because the data update is not detected by the livedatasource
+                # setattr(plot2.data_source, 'data', ddsource2.data)
             ),
             period_milliseconds=1000
         )
@@ -280,7 +251,7 @@ if __name__ == '__main__':
         server = start_tornado(bkapp=test_page)
         # Note : the bkapp is run for each request to the url...
 
-        # bg task...
+        # bg async task...
         asyncio.create_task(compute_random(-10, 10))
 
         print('Serving Bokeh application on http://localhost:5006/')
