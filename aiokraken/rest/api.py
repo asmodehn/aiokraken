@@ -10,6 +10,7 @@ from aiokraken.model.timeframe import KTimeFrameModel
 
 from aiokraken.rest.payloads import TickerPayloadSchema, AssetPayloadSchema, AssetPairPayloadSchema
 from aiokraken.rest.schemas.kclosedorder import ClosedOrdersResponseSchema
+from .schemas.websockettoken import KWebSocketTokenResponseSchema
 
 if not __package__:
     __package__ = 'aiokraken.rest'
@@ -362,6 +363,12 @@ class Server:
                                                       ))
                                     )
 
+    def websocket_token(self):
+        return self.private.request('GetWebSocketsToken',
+                                    expected=Response(status=200,
+                                                      schema=PayloadSchema(
+                                                          result_schema=KWebSocketTokenResponseSchema()
+                                                      )))
 
 # API DEFINITION - TODO
 

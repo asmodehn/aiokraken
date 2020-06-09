@@ -316,6 +316,12 @@ class RestClient:
         more_ledgers, count = await self._post(request=req)
         return more_ledgers, count  # making multiple return explicit in interface
 
+    @private_limiter
+    async def websockets_token(self):
+        req = self.server.websocket_token()
+        token = await self._post(request=req)
+        return token
+
 
 if __name__ == '__main__':
 
