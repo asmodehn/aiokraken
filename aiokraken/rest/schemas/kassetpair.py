@@ -86,6 +86,8 @@ class KAssetPairSchema(BaseSchema):
     margin_call= fields.Integer()  # margin call level
     margin_stop= fields.Integer()  # stop-out/liquidation margin level
 
+    ordermin=fields.Decimal()  # RECENT addition : TODO TESTING !
+
     @post_load
     def build_model(self, data, **kwargs):
         a = AssetPair(altname= data.get('altname'),

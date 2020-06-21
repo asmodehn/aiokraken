@@ -7,6 +7,10 @@ from dataclasses import dataclass
 import aiohttp
 import typing
 
+from async_property import async_property
+
+from aiokraken.websockets.common.exceptions import AIOKrakenWebSocketError
+from aiokraken.websockets.common.session import unified_session_context
 from aiokraken.websockets.schemas.unsubscribe import Unsubscribe, UnsubscribeSchema
 
 from aiokraken.websockets.schemas.subscribe import Subscribe, SubscribeSchema
@@ -14,20 +18,6 @@ from aiokraken.websockets.schemas.subscribe import Subscribe, SubscribeSchema
 from aiokraken.utils import get_kraken_logger
 
 LOGGER = get_kraken_logger(__name__)
-
-connections = {}
-connections_status = dict()  # TODO : maybe dict is not useful ??
-
-
-headers = {
-    'User-Agent': 'aiokraken'
-}
-
-# One and only one per process, ie per module (instantiated in interpreter)
-session: typing.Optional[aiohttp.ClientSession] = None
-
-from aiokraken.websockets.common.onsignal import onsignal
-# this should have monkey patched asyncio eventloop ...
 
 
 class WssConnection:  # instance per URL !
@@ -37,68 +27,57 @@ class WssConnection:  # instance per URL !
     # the whole point of this class : track subscriptions by connection...
     subscribed: typing.List[Subscribe]
 
-    @staticmethod
-    async def session_cleanup(sig=None):
-        global session
-        if sig:
-            print(f"signal {sig} caught !")
-        print("Closing aiohttp session...")
-        # Note : this will close connections
-        if session is not None:
-            await session.close()
-            session = None
-
-    @staticmethod
-    async def session_create():  # async because a running loop is needed !
-        global session  # TODO : global session or connection attribute ?
-        if session is None:
-            # Note : async loop must already be running here.
-            session = aiohttp.ClientSession(headers=headers, raise_for_status=True)
-            # adding signal handler to close the loop on int/term signal
-            session._loop.onsignal('SIGINT', 'SIGTERM')(WssConnection.session_cleanup)
-
     def __init__(self, websocket_url):
         self.websocket_url = websocket_url
         self.connection = None
         self._handlers = dict()
 
-    def __call__(self, wsmsgtype: aiohttp.WSMsgType):
-        def decorator(handler):
-            # pattern matching on aiohttp.WSMsgType
-            self._handlers.setdefault(wsmsgtype, [])
-            self._handlers[wsmsgtype].append(handler)
-            return handler
-        return decorator
+    async def __call__(self, data) -> None:
+        # sending data (async)
+        while self.connection is None:
+            await asyncio.sleep(0.2)  # busy wait until we are connected ( by consuming messages)
+        await self.connection.send_str(data)
 
     async def __aiter__(self):
+        # receiving data (async)
         # TODO : add static counter to count reentrency and fail before too deep recursion...
-        await self.session_create()
 
-        # TODO : handle connection/websocket errors here
-        #  to provide sticky connection (and linearization of messages for a given protocol)...
-        try:
-            async with session.ws_connect(self.websocket_url) as conn:
-                self.connection = conn
-                async for msg in self.connection:  # REF:https://docs.kraken.com/websockets/#info
-                    if msg.type == aiohttp.WSMsgType.TEXT and msg.type in self._handlers:
-                        for h in self._handlers[aiohttp.WSMsgType.TEXT]:
-                            h(msg.data)
-                    elif msg.type == aiohttp.WSMsgType.ERROR and msg.type in self._handlers:
-                        for h in self._handlers[aiohttp.WSMsgType.ERROR]:
-                            h(msg.data)
-                    else:  # unhandled/unknown type
-                        yield msg.data
+        async with unified_session_context() as session:
 
-        except aiohttp.ClientConnectionError as cce:
-            print(f" {cce} !!! Running client interrupted, restarting...")
-            await asyncio.sleep(2)
+            # TODO : handle connection/websocket errors here
+            #  to provide sticky connection (and linearization of messages for a given protocol)...
+            try:
+                # Reconnect reference : https://github.com/aaugustin/websockets/issues/414
+                async with session.ws_connect(self.websocket_url) as conn:
+                    self.connection = conn
 
-            # recurse here to maintain connection in *same control flow*.
-            async for m in self.__aiter__():
-                yield m
+                    async for msg in self.connection:  # REF:https://docs.kraken.com/websockets/#info
 
-            # TODO: save subscriptions and resubscribe automatically...
+                        if msg.type == aiohttp.WSMsgType.ERROR:
+                            # we manage errors via exceptions (as usual in python),
+                            # but careful about eventloop exception handling...
+                            raise AIOKrakenWebSocketError(msg.data)
+                        elif msg.type == aiohttp.WSMsgType.TEXT:
+                            # pattern match on the value of an enum...
+                            yield msg.data
+                        else:  # unhandled/unknown type
+                            # TODO : implement websocket management stuff here
+                            raise NotImplementedError(msg)
 
+            # TODO Handle all websocket / aiohttp connection issues here.
+            #  Protocol, ie WsMsgType.ERROR will be handled in client code.
+            except aiohttp.ClientConnectionError as cce:
+                print(f" {cce} !!! Running client interrupted, restarting...")
+                await asyncio.sleep(2)
+
+                # recurse here to maintain connection in *same control flow*.
+                async for m in self.__aiter__():
+                    yield m
+
+                # TODO: save subscriptions and resubscribe automatically...
+            except Exception as e:
+                print(e)
+                raise
 
     # async def __call__(self, on_text=None, on_error=None, on_other=None):
     #     await self.session_create()
@@ -146,76 +125,35 @@ class WssConnection:  # instance per URL !
     #
     #     self.connection = None
 
-    # TODO : subscribe with @property interface ?? or __getitem__ ?
-    async def subscribe(self, subdata: Subscribe):
-        """ add new subscription """
-        schema = SubscribeSchema()
-        strdata = schema.dumps(subdata)
-
-        # TODO : generate a schema based on what we expect ?
-        # self._expected_event["subscriptionStatus"] += SubscriptionStatus()
-
-        await self.connection.send_str(strdata)
-
-    async def unsubscribe(self, unsubdata: Unsubscribe):
-        """ stops a subscription """
-        schema = UnsubscribeSchema()
-        strdata = schema.dumps(unsubdata)
-
-        # TODO : generate a schema based on what we expect ?
-        # self._expected_event["subscriptionStatus"] += SubscriptionStatus()
-
-        await self.connection.send_str(strdata)
-
-    def __del__(self):
-        # if reference disappear, we want to close it !
-        if self.connection is not None:
-            asyncio.get_running_loop().call_soon(self.connection.close)
-
 
 if __name__ == '__main__':
-
-    # Note this should be *sync*, cf sans-io
-    def message_cb(msg):
-        print(f"message_cb: {msg}")
-
-    # Note this should be *sync*, cf sans-io
-    def error_cb(msg):
-        print(f"error_cb: {msg}")
 
     async def main():
         try:
             ws = WssConnection(websocket_url="wss://beta-ws.kraken.com")
-            ws(aiohttp.WSMsgType.TEXT)(message_cb)
-            ws(aiohttp.WSMsgType.ERROR)(error_cb)
 
             async for msg in ws:
-                # non-handled/unknown messages only
-                print(f'{msg}')
-                print(f'{msg.type}')
-                print(f'{msg.data}')
+                print(f"message_cb: {msg}")
 
-            # TODO : handle protocol errors here...
-        except aiohttp.ClientConnectionError as cce:
-            print(cce)
+        except Exception as exc:
+            print(exc)
 
     async def mainbis():
         try:
             ws = WssConnection(websocket_url="wss://beta-ws-auth.kraken.com")
-            ws(aiohttp.WSMsgType.TEXT)(message_cb)
-            ws(aiohttp.WSMsgType.ERROR)(error_cb)
 
             async for msg in ws:
-                # non-handled/unknown messages only
-                print(f'{msg}')
-                print(f'{msg.type}')
-                print(f'{msg.data}')
+                print(f"Message Data: {msg}")
 
-            # TODO : handle protocol errors here...
-        except aiohttp.ClientConnectionError as cce:
-            print(cce)
+        except Exception as exc:
+            raise exc
 
     async def sched():
-        await asyncio.gather(main(), mainbis())
+        await asyncio.gather(main(),
+                             mainbis(),
+                             )
 
-    asyncio.run(sched())
+    try:
+        asyncio.run(sched(), debug=True)
+    except KeyboardInterrupt as ki:
+        print("Done.")
