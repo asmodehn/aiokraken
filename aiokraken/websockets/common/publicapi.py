@@ -239,7 +239,7 @@ public_connection = WssConnection(websocket_url="wss://beta-ws.kraken.com")
 
 general_api = API(public_connection)
 
-reqid = 1
+reqid = 0
 
 
 async def ticker(pairs: typing.List[typing.Union[AssetPair, str]], restclient = None):
@@ -285,13 +285,19 @@ if __name__ == '__main__':
     client = RestClient()
     xtz_eur_pair = "XTZ/EUR"
     eth_eur_pair = "ETH/EUR"
+    xbt_eur_pair = "XBT/EUR"
 
-    print(f"Ticker for {xtz_eur_pair}") # and {eth_eur_pair}")
+    print(f"Ticker for {xtz_eur_pair} and {eth_eur_pair}")
 
-    async def tkr_connect():
-        async for msg in ticker([xtz_eur_pair], restclient=client):
-        # async for msg in ticker([xtz_eur_pair, eth_eur_pair], restclient=client):
-            print(f"ticker message: {msg}")
+    async def tkr_connect1():
+        # async for msg in ticker([xtz_eur_pair], restclient=client):
+        async for msg in ticker([xtz_eur_pair, eth_eur_pair], restclient=client):
+            print(f"wss ==> ticker xtz eth: {msg}")
+
+    async def tkr_connect2():
+        # async for msg in ticker([xtz_eur_pair], restclient=client):
+        async for msg in ticker([xbt_eur_pair, xtz_eur_pair], restclient=client):
+            print(f"wss ==> ticker xbt xtz: {msg}")
 
     # TODO : second ticker, with partially different pair list...
 
@@ -301,7 +307,8 @@ if __name__ == '__main__':
 
     async def sched():
         await asyncio.gather(
-            tkr_connect(),
+            tkr_connect1(),
+            tkr_connect2(),  # Note how xtz messages only should be duplicated in output...
             other()
         )
 

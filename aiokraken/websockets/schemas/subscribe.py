@@ -12,7 +12,7 @@ class Subscription:
     name: str  # TODO : maybe change into enum ??
     interval: typing.Optional[int] = field(default=None)  # needs ot be empty sometimes (fi ticker)
     depth: typing.Optional[int] = field(default=None)  # needs ot be empty sometimes (fi ticker)
-    token: typing.Optional[str] = field(default="")  # for private data endpoints only
+    token: typing.Optional[str] = field(default=None)  # for private data endpoints only, empty otherwise
 
 
 @dataclass(frozen=True)
@@ -35,9 +35,9 @@ class Subscribe:
     reqid: typing.Optional[int] = field(default=None, hash=False)
 
     # need an __init__ here to transform an iterable (pairs) into a frozenset for hashing as a dict key
-    def __init__(self, subscription, pair: typing.Iterable, reqid = None):
+    def __init__(self, subscription, pair: typing.Optional[typing.Iterable] = None, reqid = None):
         object.__setattr__(self, "subscription", subscription)
-        object.__setattr__(self, "pair", frozenset(pair))
+        object.__setattr__(self, "pair", frozenset(pair) if pair is not None else frozenset())
         object.__setattr__(self, "reqid", reqid)
 
     def __contains__(self, item: SubscribeOne):
@@ -45,6 +45,13 @@ class Subscribe:
 
     def __iter__(self):
         return (SubscribeOne(subscription=self.subscription, pair=p, reqid=self.reqid) for p in self.pair)
+
+    # TODO : do we really need both ? probably not...
+
+    def __getitem__(self, item):
+        if item not in self.pair:
+            raise KeyError(item)
+        return SubscribeOne(subscription=self.subscription, pair=item, reqid=self.reqid)
 
     def __len__(self):
         return len(self.pair)

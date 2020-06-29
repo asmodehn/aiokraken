@@ -58,12 +58,12 @@ class TickerWS:
     def __call__(self, pairname):  # for late naming
         newdata = asdict(self)
         newdata.update({'pairname': pairname})
-        return Ticker(**newdata)
+        return TickerWS(**newdata)
 
     def __repr__(self):
-        # TODO : refine...
-        return f"ask {self.ask.lot_volume} @ {self.ask.price} - bid {self.bid.lot_volume} @ {self.bid.price}"\
-               f"today's open {self.todays_opening} high {self.high.today} low {self.low.today} close {self.last_trade_closed} volume {self.volume}"\
+        # TODO : refine... andc ompare with REST model
+        return f"{self.pairname}: ask {self.ask.lot_volume} @ {self.ask.price} - bid {self.bid.lot_volume} @ {self.bid.price}\n"\
+               f"today's open {self.todays_opening} high {self.high.today} low {self.low.today} close {self.last_trade_closed} volume {self.volume}\n"\
                f"{self.number_of_trades.today} trades @ vol_avg_price {self.volume_weighted_average_price.today}\n"
 
 

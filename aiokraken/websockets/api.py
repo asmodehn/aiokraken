@@ -5,7 +5,7 @@ import asyncio
 import inspect
 
 import typing
-from collections import Mapping, MutableMapping
+from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
 
 from aiokraken.rest.schemas.base import BaseSchema
@@ -197,7 +197,40 @@ class WSAPI:
                 self._callbacks[s].append(callback)
                 # callback by subscription data, waiting for channel open message...
 
-            return subdata
+        return subdata
+
+    def trades(self, callback: typing.Callable, token: typing.Optional[str]) -> typing.Optional[Subscribe]:
+        self.reqid += 1  # leveraging reqid to recognize response
+
+        if token is None:  # TODO : is this  agood idea ? how about two different APIs ?
+            # TODO : subscribe to get all trades
+            raise NotImplementedError
+        else:
+            # only get my own trades
+
+            print(f"Subscribing to ownTrades")
+            subdata = Subscribe(subscription=Subscription(name="ownTrades", token="bob"),
+                                reqid=self.reqid)
+
+        # Because one request can potentially trigger multiple responses
+        for s in subdata:
+            # Beware: channel matching with subscription is relying on SubscribeOne equality!
+            chans = {c.subscribe_request: c for id, c in self._channels.items() if c.subscribe_request == s}
+            if chans:
+                for c in chans.values():
+                    # just add callback to existing channel
+                    c.callbacks.append(callback)
+                return  # return early with no request to be made
+            else:
+                # adding inflight response
+                self._response_tracker.add(s)
+
+                # request to get a new subscription and create a chan
+                self._callbacks.setdefault(s, [])
+                self._callbacks[s].append(callback)
+                # callback by subscription data, waiting for channel open message...
+
+        return subdata
 
 
 if __name__ == '__main__':

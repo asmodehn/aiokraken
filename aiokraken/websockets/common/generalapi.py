@@ -7,8 +7,7 @@ from typing import Callable
 import aiohttp
 import typing
 
-from aiokraken.websockets.common.channel import Channel
-from aiokraken.websockets.common.substream import SubStream
+from aiokraken.websockets.common.channel import Channel, PairChannelId
 
 from aiokraken.websockets.schemas.unsubscribe import Unsubscribe, UnsubscribeSchema
 
@@ -40,7 +39,16 @@ class KrakenEvent(Enum):
 class API:  # 1 instance per connection
 
     _future_channels: typing.Dict[SubscribeOne, asyncio.Future]
-    _substreams: typing.Dict[int, typing.List[SubStream]]
+    _substreams: typing.Dict[int, typing.List[Channel]]
+
+    # because we need to have only one schema instance that we can reuse multiple times
+    ticker_schema = TickerWSSchema()
+    ohlcupdate_schema = OHLCUpdateSchema()
+    subscribe_schema = SubscribeSchema()
+
+    heartbeat_schema = HeartbeatSchema()
+    systemstatus_schema = SystemStatusSchema()
+    subscriptionstatus_schema = SubscriptionStatusSchema()
 
     def __init__(self, connect):
         self.connect = connect
@@ -178,9 +186,9 @@ class API:  # 1 instance per connection
 
                 # TODO: base this on channel name or on subscription data ?
                 if data.channel_name == "ticker":
-                    channel_schema = TickerWSSchema()
+                    channel_schema = self.ticker_schema
                 elif data.channel_name.startswith("ohlc"):  # name depends also on interval !
-                    channel_schema = OHLCUpdateSchema()
+                    channel_schema = self.ohlcupdate_schema
                 else:
                     raise NotImplementedError("unknown channel name. please add it to the code...")
 
@@ -189,10 +197,9 @@ class API:  # 1 instance per connection
                 if data.channel_id not in self._substreams:
 
                     # creating channel
-                    chan = Channel(channel_id=data.channel_id,
+                    chan = Channel(pairs_channel_ids=PairChannelId(pair=data.pair, channel_id=data.channel_id),
                                    channel_name=data.channel_name,
-                                   schema=channel_schema,
-                                   pair=data.pair)
+                                   schema=channel_schema)
                     print(f"Channel created: {chan}")
 
                     # We reached this part: our inflight reponse has landed.
@@ -201,7 +208,7 @@ class API:  # 1 instance per connection
                     # assigning substream to this channel_id. This is done in subscribe,
                     # but we should at least assign one here to be immediately ready to receive messages
                     self._substreams.setdefault(data.channel_id, list())
-                    self._substreams[data.channel_id].append(SubStream(channels={chan}))
+                    self._substreams[data.channel_id].append(chan)
 
                 else:
                     # Nothing to do here, multiple identical requests were sent and received the same channel...
@@ -226,46 +233,54 @@ class API:  # 1 instance per connection
         except Exception as exc:
             raise exc
 
-    async def subscribe(self, subdata: Subscribe) -> SubStream:
+    async def subscribe(self, subdata: Subscribe) -> Channel:
         #  a simple request response API, unblocking.
         """ add new subscription and return a substream, ready to be used as an async iterator """
-        schema = SubscribeSchema()
 
         # Because one request can potentially trigger multiple responses
         # Beware: channel matching with subscription is relying on SubscribeOne equality!
-        chans = {reqone: f for reqone, f in self._future_channels.items() if f.done and reqone in subdata}
+        # check which pair we should subscribe to (not already subscribed)
+        needs_subscribe = set(s for s in subdata if s not in self._future_channels)
+        # TODO : simpler code here for equivalent result ?
+        if needs_subscribe:
 
-        for s in subdata:
-            if s not in chans:
+            for s in needs_subscribe:
                 # creating one future channel for each missing pair...
                 future_channel = asyncio.get_running_loop().create_future()
                 self._future_channels[s] = future_channel
-            # else:
-            #     for req, c in chans.items():
-            #         if c.channel_id
-            #     self._substreams[c.channel_id].append(c)
-        strdata = schema.dumps(subdata)
 
-        # TODO : generate a schema based on what we expect ?
-        # self._expected_event["subscriptionStatus"] += SubscriptionStatus()
+            # only subscribe to the subset we need
+            strdata = self.subscribe_schema.dumps(
+                Subscribe(subscription=subdata.subscription,
+                          pair=set(ns.pair for ns in needs_subscribe),
+                          reqid = subdata.reqid)
+            )
 
-        await self.connect(strdata)
+            await self.connect(strdata)
 
-        # assigning substream to this channel_id.
-        substream = SubStream(channels=set())
-        for s in subdata:
-            channel = await self._future_channels[s]
-            # aggregating into substream
-            for ss in self._substreams[channel.channel_id]:
-                substream = substream + ss
+        # waiting for all established channels
+        chans = {s: await self._future_channels[s] for s in subdata}
 
-        for cid in substream.channel_ids:
-            self._substreams[cid].append(substream)
+        # Now building channel/stream to return...
 
-        # TODO : merging substreams with different channel_ids...
-        #  => need to register itself into the api's substreams ??
+        subchan_name = set(chan.channel_name for chan in chans.values())
+        subchan_schema = set(chan.schema for chan in chans.values())
 
-        return substream
+        assert len(subchan_name) == 1
+        assert len(subchan_schema) == 1
+
+        assert len(set(chan.schema for chan in chans.values())) == 1
+        # Creating channel
+        aggregate_channel = Channel(pairs_channel_ids={pcid for chan in chans.values() for pcid in chan.pairs_channel_ids},
+                                    channel_name= next(iter(subchan_name)),
+                                    schema= next(iter(subchan_schema)),
+                                    )
+
+        # This created a new queue that we need to add to the list for each channel_id
+        for cid in aggregate_channel.channel_ids:
+            self._substreams[cid].append(aggregate_channel)
+
+        return aggregate_channel
 
     async def unsubscribe(self, unsubdata: Unsubscribe):
         #  a simple request response API, unblocking.
@@ -278,7 +293,6 @@ class API:  # 1 instance per connection
         # self._expected_event["subscriptionStatus"] += SubscriptionStatus()
 
         await self.connect.send_str(strdata)
-
 
     async def __aiter__(self):
 
@@ -307,21 +321,18 @@ class API:  # 1 instance per connection
                     for m in matching:  # potentially duplicating message to make sure all receive it
                         # we need to verify the match on other criteria
                         if message[2] in m.channel_name and message[3] in m.pairs:
-                            await m(message[1])
+                            await m(message[3], message[1])
 
             elif isinstance(message, dict):
                 # We can always attempt a match on "event" string and decide on the response schema from it.
-                if message.get("event") == "heartbeat":
-                    schema = HeartbeatSchema()
-                    data = schema.load(message)
+                if message.get("event") == "heartbeat":  # TODO : these as async generator methods to have a more transparent API for the user.
+                    data = self.heartbeat_schema.load(message)
                     self._heartbeat_cb(data)
                 elif message.get("event") == "systemStatus":
-                    schema = SystemStatusSchema()
-                    data = schema.load(message)
+                    data = self.systemstatus_schema.load(message)
                     self._systemstatus_cb(data)
                 elif message.get("event") == "subscriptionStatus":
-                    schema = SubscriptionStatusSchema()
-                    data = schema.load(message)
+                    data = self.subscriptionstatus_schema.load(message)
                     self._subscriptionstatus_cb(data)
                 else:
                     # unknown message type

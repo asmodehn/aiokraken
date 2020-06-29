@@ -15,21 +15,102 @@ from aiokraken.rest.exceptions import AIOKrakenSchemaValidationException
 from aiokraken.rest.schemas.base import BaseSchema
 
 
-@dataclass(frozen=True)
+PairChannelId = typing.NamedTuple("PairChannelId", [("pair", AssetPair), ("channel_id", int)])
+
+
+@dataclass(frozen=True, init=False)
 class Channel:
     """
-    A channel, calls its callback when a message is received.
+    A channel, called when a message is received.
+    Behaves as a stream, enqueueing messages until iteration is performed to consume them.
 
-    IMPORTANT : the same message CAN be received multiple times for various reason.
-    Unicity of the message semantics is up to the message data structure itself
-
+    Note : this can assemble a set of kraken channel ids in order to linearize their messages
+     in only one async generator, based on subscription request.
     """
-    channel_id: int
-    channel_name: str
-    pair: str   # Important : given kraken WS API design, it seems we have one pair per channel
-                # BUT one can subscribe to multiple pairs at once...
+    pairs_channel_ids: typing.Set[PairChannelId]
+    # Important : given kraken WS API design, we have one pair per channel
+    # BUT one user can subscribe to multiple pairs at once, and needs to aggregate channels here.
 
+    @property
+    def pairs(self):
+        return set(p for p, cid in self.pairs_channel_ids)
+
+    @property
+    def channel_ids(self):
+        return set(cid for p, cid in self.pairs_channel_ids)
+
+    channel_name: str
     schema: BaseSchema
+
+    queue: asyncio.Queue = field(hash=False)
+
+    def __init__(self,
+                 pairs_channel_ids: typing.Union[PairChannelId, typing.Set[PairChannelId]],
+                 channel_name: str,
+                 schema: BaseSchema,
+                 ):
+        object.__setattr__(self, 'pairs_channel_ids', pairs_channel_ids if isinstance(pairs_channel_ids, set) else {pairs_channel_ids})
+        # set() constructor is idempotent as function or unhashable as data !
+
+        object.__setattr__(self, 'channel_name', channel_name)
+        object.__setattr__(self, 'schema', schema)
+        object.__setattr__(self, 'queue', asyncio.Queue())
+
+    # SINK
+
+    async def __call__(self, pair, data) -> None:
+        try:  # also calling the parsed model to store the pair here as well...
+            parsed = self.schema.load(data)(pair)
+            await self.queue.put(parsed)
+        except AIOKrakenSchemaValidationException as aiosve:  # TODO : check if actually needed ?
+            if isinstance(data, list) and len(data) == len(self.schema.declared_fields):
+                data_dict = dict()
+                # attempt again by iterating on fields
+                for f, d in zip(self.schema.declared_fields.keys(), data):
+                    data_dict[f] = d
+                parsed = self.schema.load(data_dict)
+                await self.queue.put(parsed)
+
+    ## SOURCE
+
+    async def __aiter__(self):  # hints: -> typing.AsyncGenerator[yield, send, return] ????
+        while self.queue:
+            yield await self.queue.get()
+            self.queue.task_done()
+
+    ## container
+    # NOT NEEDED -> TODO get rid of it YAGNI.
+    # def __getitem__(self, item: AssetPair):
+    #
+    #     # TODO : various ways to get a sublist...
+    #     # Think containers...
+    #
+    #     if item in self.pairs:
+    #         for pcid in self.pairs_channel_ids:
+    #             if pcid.pair == item:
+    #                 return Channel(
+    #                     pairs_channel_ids=set(pcid),
+    #                     channel_name=self.channel_name,
+    #                     schema=self.schema,
+    #                 )
+    #         # TODO : what about the queue ??
+    #     else:
+    #         raise KeyError(f"{item} not in {self.pairs}")
+
+    # NOT NEEDED -> TODO get rid of it YAGNI.
+    # def __add__(self, other: Channel):  # TODO : mul ??
+    #     # immutable style => duplication of data
+    #
+    #     assert self.channel_name == other.channel_name == 1, "cannot merge substreams with different channel name"
+    #     assert self.schema == other.schema == 1, "cannot merge substream with different schema"
+    #
+    #     merged = Channel(
+    #         pairs_channel_ids=self.pairs_channel_ids | other.pairs_channel_ids,
+    #         channel_name=self.channel_name,
+    #         schema=self.schema,
+    #     )
+    #
+    #     return merged
 
 
 if __name__ == '__main__':
