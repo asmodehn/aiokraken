@@ -251,34 +251,53 @@ async def ticker(pairs: typing.List[typing.Union[AssetPair, str]], restclient = 
     reqid += 1  # leveraging reqid to recognize response
     subdata = Subscribe(pair =[p.wsname for p in pairs], subscription=Subscription(name="ticker"), reqid=reqid)
 
-    async def decorator(callback: typing.Callable) -> typing.Callable:
+    # Note : queue is maybe more internal / lowlevel, keeping the linearity of data. BETTER FIT here when subscribing !
+    #        callback implies possible multiplicity (many callbacks => duplication of data).
 
-        await general_api.subscribe(subdata, callback=callback)
+    msgqueue = await general_api.subscribe(subdata)
 
-        return callback
+    async for msg in msgqueue:
+        yield msg
 
-    return decorator
 
+# async def ohlc(self, pairs: typing.List[typing.Union[str, AssetPair]], callback: typing.Callable, interval: int = 1):
+#     """ subscribe to the ticker update stream.
+#     if the returned wrapper is not used, the message will still be parsed,
+#     until the appropriate wrapper (stored in _callbacks) is called.
+#     """
+#     # we need to depend on restclient for usability
+#     pairs = [(await self.restclient.assetpairs)[p] if isinstance(p, str) else p for p in pairs] if pairs else []
+#
+#     # TODO : store subscription status to avoid duplication and keep track for cleanup later...
+#
+#     subs_data = self.api.ohlc(pairs=pairs, interval=interval, callback=callback)
+#
+#     # if self._subs.get((pairs, interval)) is None:
+#
+#     # TODO : expect subscription status
+#     await self.subscribe(subs_data, connection_name="main")
+#     # else: we already subscribe to it, we just need to add a callback.
+#
+#     #TODO : what to return here ? something that can "hold the subscription" and manage the unsubscribe when needed...
 
 if __name__ == '__main__':
     from aiokraken.rest.client import RestClient
     client = RestClient()
-    pair = "XTZ/EUR"
+    xtz_eur_pair = "XTZ/EUR"
+    eth_eur_pair = "ETH/EUR"
 
-    print(f"Ticker for {pair}")
-
-
-    def handler(tkr_msg):
-        print(f"ticker message: {tkr_msg}")
+    print(f"Ticker for {xtz_eur_pair}") # and {eth_eur_pair}")
 
     async def tkr_connect():
-        dec = await ticker([pair], restclient=client)
-        await dec(handler)
+        async for msg in ticker([xtz_eur_pair], restclient=client):
+        # async for msg in ticker([xtz_eur_pair, eth_eur_pair], restclient=client):
+            print(f"ticker message: {msg}")
+
+    # TODO : second ticker, with partially different pair list...
 
     async def other():
         async for msg in general_api:  # required to consume messages...
             print(f"Another message: {msg}")
-
 
     async def sched():
         await asyncio.gather(

@@ -1,16 +1,18 @@
 import asyncio
 import json
+from asyncio import Future
 from enum import Enum
 from typing import Callable
 
 import aiohttp
 import typing
 
+from aiokraken.websockets.common.channel import Channel
+from aiokraken.websockets.common.substream import SubStream
+
 from aiokraken.websockets.schemas.unsubscribe import Unsubscribe, UnsubscribeSchema
 
-from aiokraken.websockets.schemas.subscribe import Subscribe, SubscribeSchema
-
-from aiokraken.websockets.channel import Channel
+from aiokraken.websockets.schemas.subscribe import Subscribe, SubscribeOne, SubscribeSchema
 
 from aiokraken.websockets.schemas.ohlc import OHLCUpdateSchema
 
@@ -37,6 +39,9 @@ class KrakenEvent(Enum):
 
 class API:  # 1 instance per connection
 
+    _future_channels: typing.Dict[SubscribeOne, asyncio.Future]
+    _substreams: typing.Dict[int, typing.List[SubStream]]
+
     def __init__(self, connect):
         self.connect = connect
 
@@ -45,13 +50,11 @@ class API:  # 1 instance per connection
         # three things possible when getting a response
 
         # temporary storage for in-flight requests
-        self._response_tracker = set()
-
-        # we need to add a callback
-        self._callbacks = dict()
+        # : typing.Dict
+        self._future_channels = dict()
 
         # we have a channel already setup
-        self._channels = dict()
+        self._substreams = dict()
 
 
     # def _text_dispatch(self, message):
@@ -156,15 +159,14 @@ class API:  # 1 instance per connection
         else:  # normal case
             # based on docs https://docs.kraken.com/websockets/#message-subscriptionStatus
             # we know here we will have:
-            pair = data.pair  # the pair
+            pair = data.pair  # the pair (always unique here)
             subname = data.subscription.name  # the subscription name
             # others interesting  are optional (reqid...)
 
             request = None
-            for r in self._response_tracker:  # pick the first match subscription match
-                if r.pair == pair and r.subscription.name == subname:
+            for r in self._future_channels:  # pick the first match subscription match
+                if r.subscription.name == subname and pair in r.pair:  # because merging is on pairs...
                     request = r
-                    break
 
             if request is None:
                 # This can happen if the request was requested multiple times,
@@ -182,24 +184,29 @@ class API:  # 1 instance per connection
                 else:
                     raise NotImplementedError("unknown channel name. please add it to the code...")
 
-                if data.channel_id not in self._channels:
-                    # creating channel with registered callback
+                # retrieve potentially existing channelq for this id
+
+                if data.channel_id not in self._substreams:
+
+                    # creating channel
                     chan = Channel(channel_id=data.channel_id,
                                    channel_name=data.channel_name,
-                                   subscribe_request=request,  # TODO: probably subscription is better here ?
                                    schema=channel_schema,
-                                   pair=data.pair,
-                                   callbacks=self._callbacks[request])
+                                   pair=data.pair)
                     print(f"Channel created: {chan}")
-                    # assigning channel to this api.
-                    self._channels[data.channel_id] = chan
+
+                    # We reached this part: our inflight reponse has landed.
+                    self._future_channels[request].set_result(chan)
+
+                    # assigning substream to this channel_id. This is done in subscribe,
+                    # but we should at least assign one here to be immediately ready to receive messages
+                    self._substreams.setdefault(data.channel_id, list())
+                    self._substreams[data.channel_id].append(SubStream(channels={chan}))
+
                 else:
                     # Nothing to do here, multiple identical requests were sent and received the same channel...
                     pass  # side-effect: only the first message in the channel will be duplicated
                     # TODO : channel does NOT guarantee unicity of a message.
-
-                # We reached this part: our inflight reponse has landed.
-                self._response_tracker.remove(request)
 
             elif data.status == 'unsubscribed':
                 raise NotImplementedError  # TODO
@@ -219,35 +226,46 @@ class API:  # 1 instance per connection
         except Exception as exc:
             raise exc
 
-    async def subscribe(self, subdata: Subscribe, callback: Callable):
+    async def subscribe(self, subdata: Subscribe) -> SubStream:
         #  a simple request response API, unblocking.
-        """ add new subscription """
+        """ add new subscription and return a substream, ready to be used as an async iterator """
         schema = SubscribeSchema()
 
         # Because one request can potentially trigger multiple responses
+        # Beware: channel matching with subscription is relying on SubscribeOne equality!
+        chans = {reqone: f for reqone, f in self._future_channels.items() if f.done and reqone in subdata}
+
         for s in subdata:
-            # Beware: channel matching with subscription is relying on SubscribeOne equality!
-            chans = {c.subscribe_request: c for id, c in self._channels.items() if c.subscribe_request == s}
-            if chans:
-                for c in chans.values():
-                    # just add callback to existing channel
-                    c.callbacks.append(callback)
-                return  # return early with no request to be made
-            else:
-                # adding inflight response
-                self._response_tracker.add(s)
-
-                # request to get a new subscription and create a chan
-                self._callbacks.setdefault(s, [])
-                self._callbacks[s].append(callback)
-                # callback by subscription data, waiting for channel open message...
-
+            if s not in chans:
+                # creating one future channel for each missing pair...
+                future_channel = asyncio.get_running_loop().create_future()
+                self._future_channels[s] = future_channel
+            # else:
+            #     for req, c in chans.items():
+            #         if c.channel_id
+            #     self._substreams[c.channel_id].append(c)
         strdata = schema.dumps(subdata)
 
         # TODO : generate a schema based on what we expect ?
         # self._expected_event["subscriptionStatus"] += SubscriptionStatus()
 
         await self.connect(strdata)
+
+        # assigning substream to this channel_id.
+        substream = SubStream(channels=set())
+        for s in subdata:
+            channel = await self._future_channels[s]
+            # aggregating into substream
+            for ss in self._substreams[channel.channel_id]:
+                substream = substream + ss
+
+        for cid in substream.channel_ids:
+            self._substreams[cid].append(substream)
+
+        # TODO : merging substreams with different channel_ids...
+        #  => need to register itself into the api's substreams ??
+
+        return substream
 
     async def unsubscribe(self, unsubdata: Unsubscribe):
         #  a simple request response API, unblocking.
@@ -276,13 +294,21 @@ class API:  # 1 instance per connection
 
             # only receiving unknowns here but mandatory to pull data...
             if isinstance(message, list):
-                current = self._channels[message[0]]  # matching by channel id
 
-                # we need to verify the match on other criteria
-                if current.channel_name == message[2] and current.pair == message[3]:
-                    current(message[1])
+                chan_id = message[0]
+
+                matching = None
+                if chan_id in self._substreams:
+                    matching = self._substreams[message[0]]  # matching by channel id
+                # TODO : maybe leverage marshmallow for channel/msg matching ??
+                if not matching:
+                    raise RuntimeWarning(f"WARNING !! Message not transmitted to channel: {message}")
                 else:
-                    raise RuntimeWarning(f"message not transmitted to channel: {message}")
+                    for m in matching:  # potentially duplicating message to make sure all receive it
+                        # we need to verify the match on other criteria
+                        if message[2] in m.channel_name and message[3] in m.pairs:
+                            await m(message[1])
+
             elif isinstance(message, dict):
                 # We can always attempt a match on "event" string and decide on the response schema from it.
                 if message.get("event") == "heartbeat":
