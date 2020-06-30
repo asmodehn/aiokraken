@@ -59,17 +59,10 @@ class Channel:
     # SINK
 
     async def __call__(self, pair, data) -> None:
-        try:  # also calling the parsed model to store the pair here as well...
-            parsed = self.schema.load(data)(pair)
-            await self.queue.put(parsed)
-        except AIOKrakenSchemaValidationException as aiosve:  # TODO : check if actually needed ?
-            if isinstance(data, list) and len(data) == len(self.schema.declared_fields):
-                data_dict = dict()
-                # attempt again by iterating on fields
-                for f, d in zip(self.schema.declared_fields.keys(), data):
-                    data_dict[f] = d
-                parsed = self.schema.load(data_dict)
-                await self.queue.put(parsed)
+        # also calling the parsed model to store the pair here as well...
+        parsed = self.schema.load(data)(pair)
+        await self.queue.put(parsed)
+
 
     ## SOURCE
 

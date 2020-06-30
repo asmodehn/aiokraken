@@ -260,25 +260,23 @@ async def ticker(pairs: typing.List[typing.Union[AssetPair, str]], restclient = 
         yield msg
 
 
-# async def ohlc(self, pairs: typing.List[typing.Union[str, AssetPair]], callback: typing.Callable, interval: int = 1):
-#     """ subscribe to the ticker update stream.
-#     if the returned wrapper is not used, the message will still be parsed,
-#     until the appropriate wrapper (stored in _callbacks) is called.
-#     """
-#     # we need to depend on restclient for usability
-#     pairs = [(await self.restclient.assetpairs)[p] if isinstance(p, str) else p for p in pairs] if pairs else []
-#
-#     # TODO : store subscription status to avoid duplication and keep track for cleanup later...
-#
-#     subs_data = self.api.ohlc(pairs=pairs, interval=interval, callback=callback)
-#
-#     # if self._subs.get((pairs, interval)) is None:
-#
-#     # TODO : expect subscription status
-#     await self.subscribe(subs_data, connection_name="main")
-#     # else: we already subscribe to it, we just need to add a callback.
-#
-#     #TODO : what to return here ? something that can "hold the subscription" and manage the unsubscribe when needed...
+async def  ohlc(pairs: typing.List[typing.Union[AssetPair, str]], interval: int = 1, restclient=None):
+    global reqid, public_connection
+
+    # we need to depend on restclient for usability TODO : unicity : we just need to import it here...
+    pairs = [(await restclient.assetpairs)[p] if isinstance(p, str) else p for p in pairs] if pairs else []
+
+    reqid += 1  # leveraging reqid to recognize response
+    subdata = Subscribe(pair =[p.wsname for p in pairs], subscription=Subscription(name="ohlc", interval=interval), reqid=reqid)
+
+    # Note : queue is maybe more internal / lowlevel, keeping the linearity of data. BETTER FIT here when subscribing !
+    #        callback implies possible multiplicity (many callbacks => duplication of data).
+
+    msgqueue = await general_api.subscribe(subdata)
+
+    async for msg in msgqueue:
+        yield msg
+
 
 if __name__ == '__main__':
     from aiokraken.rest.client import RestClient
@@ -287,28 +285,45 @@ if __name__ == '__main__':
     eth_eur_pair = "ETH/EUR"
     xbt_eur_pair = "XBT/EUR"
 
-    print(f"Ticker for {xtz_eur_pair} and {eth_eur_pair}")
-
-    async def tkr_connect1():
-        # async for msg in ticker([xtz_eur_pair], restclient=client):
-        async for msg in ticker([xtz_eur_pair, eth_eur_pair], restclient=client):
-            print(f"wss ==> ticker xtz eth: {msg}")
-
-    async def tkr_connect2():
-        # async for msg in ticker([xtz_eur_pair], restclient=client):
-        async for msg in ticker([xbt_eur_pair, xtz_eur_pair], restclient=client):
-            print(f"wss ==> ticker xbt xtz: {msg}")
-
-    # TODO : second ticker, with partially different pair list...
+    # print(f"Ticker for {xtz_eur_pair} and {eth_eur_pair}")
+    #
+    # async def tkr_connect1():
+    #     # async for msg in ticker([xtz_eur_pair], restclient=client):
+    #     async for msg in ticker([xtz_eur_pair, eth_eur_pair], restclient=client):
+    #         print(f"wss ==> ticker xtz eth: {msg}")
+    #
+    # async def tkr_connect2():
+    #     # async for msg in ticker([xtz_eur_pair], restclient=client):
+    #     async for msg in ticker([xbt_eur_pair, xtz_eur_pair], restclient=client):
+    #         print(f"wss ==> ticker xbt xtz: {msg}")
 
     async def other():
         async for msg in general_api:  # required to consume messages...
             print(f"Another message: {msg}")
 
+    # async def sched():
+    #     await asyncio.gather(
+    #         tkr_connect1(),
+    #         tkr_connect2(),  # Note how xtz messages only should be duplicated in output...
+    #         other()
+    #     )
+
+    print(f"OHLC for {xtz_eur_pair} and {eth_eur_pair}")
+
+    async def ohlc_connect1():
+        # async for msg in ticker([xtz_eur_pair], restclient=client):
+        async for msg in ohlc([xtz_eur_pair, eth_eur_pair], restclient=client):
+            print(f"wss ==> ohlc xtz eth: {msg}")
+
+    async def ohlc_connect2():
+        # async for msg in ticker([xtz_eur_pair], restclient=client):
+        async for msg in ohlc([xbt_eur_pair, xtz_eur_pair], restclient=client):
+            print(f"wss ==> ohlc xbt xtz: {msg}")
+
     async def sched():
         await asyncio.gather(
-            tkr_connect1(),
-            tkr_connect2(),  # Note how xtz messages only should be duplicated in output...
+            ohlc_connect1(),
+            ohlc_connect2(),  # Note how xtz messages only should be duplicated in output...
             other()
         )
 

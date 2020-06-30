@@ -24,6 +24,13 @@ class OHLCUpdate:
     volume: float  #Decimal  # Accumulated volume today
     count: int  # Number of trades today
 
+    pairname: typing.Optional[str] = dataclasses.field(default=None)  # this will be set a bit after initialization
+
+    def __call__(self, pairname):  # for late naming of the pair (same design as tickerWS)
+        newdata = dataclasses.asdict(self)
+        newdata.update({'pairname': pairname})
+        return OHLCUpdate(**newdata)
+
     def to_tidfrow(self):  # Goal : retrieved an indexed dataframe , suitable for appending to timeindexedDF
         datadict = dataclasses.asdict(self)
         assert datadict["time"] < datadict["etime"]  # to break early if it is not the case...
@@ -66,6 +73,20 @@ class OHLCUpdateSchema(BaseSchema):
     vwap = fields.Float()  #Decimal(as_string=True)
     volume = fields.Float()  #Decimal(as_string=True)
     count = fields.Integer()
+
+    @pre_load
+    def parse_raw2dict(self, data, **kwargs):
+        return {
+            'time': data[0],
+            'etime': data[1],
+            'open': data[2],
+            'high': data[3],
+            'low': data[4],
+            'close': data[5],
+            'vwap': data[6],
+            'volume': data[7],
+            'count': data[8],
+        }
 
     @post_load
     def build_model(self, data, **kwargs):
