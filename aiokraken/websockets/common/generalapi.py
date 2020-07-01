@@ -7,6 +7,8 @@ from typing import Callable
 import aiohttp
 import typing
 
+from aiokraken.websockets.schemas.trade import TradeWSSchema
+
 from aiokraken.websockets.schemas.pingpong import PingSchema, PongSchema
 
 from aiokraken.websockets.common.channel import Channel, PairChannelId
@@ -46,6 +48,7 @@ class API:  # 1 instance per connection
     # because we need to have only one schema instance that we can reuse multiple times
     ticker_schema = TickerWSSchema()
     ohlcupdate_schema = OHLCUpdateSchema()
+    trade_schema = TradeWSSchema()
     subscribe_schema = SubscribeSchema()
 
     heartbeat_schema = HeartbeatSchema()
@@ -217,8 +220,10 @@ class API:  # 1 instance per connection
                     channel_schema = self.ticker_schema
                 elif data.channel_name.startswith("ohlc"):  # name depends also on interval !
                     channel_schema = self.ohlcupdate_schema
+                elif data.channel_name.startswith("trade"):
+                    channel_schema = self.trade_schema
                 else:
-                    raise NotImplementedError("unknown channel name. please add it to the code...")
+                    raise NotImplementedError(f"Unknown channel name '{data.channel_name}'. please add it to the code...")
 
                 # retrieve potentially existing channelq for this id
 
