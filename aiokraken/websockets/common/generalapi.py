@@ -7,7 +7,7 @@ from typing import Callable
 import aiohttp
 import typing
 
-from aiokraken.websockets.common.substream import SubStream
+from aiokraken.websockets.common.substream import PrivateSubStream, PublicSubStream
 from aiokraken.websockets.schemas.owntrades import ownTradeWSSchema
 
 from aiokraken.websockets.schemas.trade import TradeWSSchema
@@ -46,7 +46,7 @@ class KrakenEvent(Enum):
 class API:  # 1 instance per connection
 
     # storing a set of stream for each subscription name
-    _streams: typing.Dict[Subscribe, SubStream]
+    _streams: typing.Dict[Subscribe, typing.Union[PrivateSubStream,PublicSubStream]]
 
     # because we need to have only one schema instance that we can reuse multiple times
     subscribe_schema = SubscribeSchema()

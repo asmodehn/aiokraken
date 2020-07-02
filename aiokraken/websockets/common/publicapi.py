@@ -8,7 +8,7 @@ import typing
 from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
 
-from aiokraken.websockets.common.substream import SubStream
+from aiokraken.websockets.common.substream import PublicSubStream, PrivateSubStream
 from aiokraken.websockets.schemas.unsubscribe import Unsubscribe, UnsubscribeSchema
 
 from aiokraken.rest.schemas.base import BaseSchema
@@ -54,7 +54,7 @@ class PublicAPI(API):
 
         self._future_channels = dict()
 
-    async def subscribe(self, subdata: Subscribe) -> SubStream:
+    async def subscribe(self, subdata: Subscribe) -> PublicSubStream:
         #  a simple request response API, unblocking.
         """ add new subscription and return a substream, ready to be used as an async iterator """
 
@@ -66,9 +66,14 @@ class PublicAPI(API):
         available_pairs = set()
 
         # creating a dict to store a channel for each requested pair if needed
-        self._future_channels.setdefault(subdata.subscription.name, dict())
+        # CAREFUL with special naming...
+        if subdata.subscription.name == "ohlc":
+            subname = f"ohlc-{subdata.subscription.interval}"
+        else:
+            subname = subdata.subscription.name
+        self._future_channels.setdefault(subname, dict())
 
-        for pair in self._future_channels[subdata.subscription.name].keys():
+        for pair in self._future_channels[subname].keys():
             available_pairs.add(pair)
 
         subscribe_required_pairs = subdata.pair - available_pairs
@@ -76,7 +81,7 @@ class PublicAPI(API):
         if subscribe_required_pairs:
             # if we don't have a channel with this name and pair yet, we need to actually subscribe
             for p in subscribe_required_pairs:
-                self._future_channels[subdata.subscription.name][p] = asyncio.get_running_loop().create_future()
+                self._future_channels[subname][p] = asyncio.get_running_loop().create_future()
 
             # we use the exact same subdata here
             strdata = self.subscribe_schema.dumps(
@@ -88,7 +93,7 @@ class PublicAPI(API):
             await self.connect(strdata)
 
         # awaiting all channels and building the subscribe stream
-        stream = SubStream(* [await self._future_channels[subdata.subscription.name][p] for p in subdata.pair])
+        stream = PublicSubStream(* [await self._future_channels[subname][p] for p in subdata.pair])
 
         # storing the stream for this subscribe request
         self._streams[subdata] = stream
@@ -235,40 +240,40 @@ if __name__ == '__main__':
     #         other()
     #     )
 
-    # async def ohlc_connect1():
-    #     # async for msg in ticker([xtz_eur_pair], restclient=client):
-    #     async for msg in ohlc([xtz_eur_pair, eth_eur_pair], restclient=client):
-    #         print(f"wss ==> ohlc xtz eth: {msg}")
-    #
-    # async def ohlc_connect2():
-    #     async for msg in ohlc([xbt_eur_pair, xtz_eur_pair], restclient=client):
-    #         print(f"wss ==> ohlc xbt xtz: {msg}")
-    #
-    # async def sched():
-    #     print(f"OHLC for {xtz_eur_pair} and {eth_eur_pair}")
-    #     await asyncio.gather(
-    #         ohlc_connect1(),
-    #         ohlc_connect2(),  # Note how xtz messages only should be duplicated in output...
-    #         other()
-    #     )
-
-
-    async def trade_connect1():
+    async def ohlc_connect1():
         # async for msg in ticker([xtz_eur_pair], restclient=client):
-        async for msg in trade([xtz_eur_pair, eth_eur_pair], restclient=client):
-            print(f"wss ==> trade xtz eth: {msg}")
+        async for msg in ohlc([xtz_eur_pair, eth_eur_pair], restclient=client):
+            print(f"wss ==> ohlc xtz eth: {msg}")
 
-    async def trade_connect2():
-        async for msg in trade([xbt_eur_pair, xtz_eur_pair], restclient=client):
-            print(f"wss ==> trade xbt xtz: {msg}")
+    async def ohlc_connect2():
+        async for msg in ohlc([xbt_eur_pair, xtz_eur_pair], restclient=client):
+            print(f"wss ==> ohlc xbt xtz: {msg}")
 
     async def sched():
-        print(f"Trades for {xbt_eur_pair}, {xtz_eur_pair} and {eth_eur_pair}")
+        print(f"OHLC for {xtz_eur_pair} and {eth_eur_pair}")
         await asyncio.gather(
-            trade_connect1(),
-            trade_connect2(),  # Note how xtz messages only should be duplicated in output...
+            ohlc_connect1(),
+            ohlc_connect2(),  # Note how xtz messages only should be duplicated in output...
             other()
         )
+
+    #
+    # async def trade_connect1():
+    #     # async for msg in ticker([xtz_eur_pair], restclient=client):
+    #     async for msg in trade([xtz_eur_pair, eth_eur_pair], restclient=client):
+    #         print(f"wss ==> trade xtz eth: {msg}")
+    #
+    # async def trade_connect2():
+    #     async for msg in trade([xbt_eur_pair, xtz_eur_pair], restclient=client):
+    #         print(f"wss ==> trade xbt xtz: {msg}")
+    #
+    # async def sched():
+    #     print(f"Trades for {xbt_eur_pair}, {xtz_eur_pair} and {eth_eur_pair}")
+    #     await asyncio.gather(
+    #         trade_connect1(),
+    #         trade_connect2(),  # Note how xtz messages only should be duplicated in output...
+    #         other()
+    #     )
 
     asyncio.run(sched())
 

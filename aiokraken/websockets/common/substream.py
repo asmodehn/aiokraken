@@ -27,7 +27,7 @@ PairChannelId = typing.NamedTuple("PairChannelId", [("pair", AssetPair), ("chann
 
 
 @dataclass(frozen=True, init=False)
-class SubStream:
+class PublicSubStream:
     """
     A channel, called when a message is received.
     Behaves as a stream, enqueueing messages until iteration is performed to consume them.
@@ -93,6 +93,62 @@ class SubStream:
             # this is specific to public streams
             parsed_with_pair = parsed(pair)
             await self.queue.put(parsed_with_pair)
+        # otherwise nothing happens
+
+    ## SOURCE
+
+    async def __aiter__(self):  # hints: -> typing.AsyncGenerator[yield, send, return] ????
+        while self.queue:
+            yield await self.queue.get()
+            self.queue.task_done()
+
+
+@dataclass(frozen=True, init=False)
+class PrivateSubStream:
+    """
+    A channel, called when a message is received.
+    Behaves as a stream, enqueueing messages until iteration is performed to consume them.
+
+    Note : this can assemble a set of kraken channel ids in order to linearize their messages
+     in only one async generator, based on subscription request.
+    """
+
+    channel_name: str
+    schema: BaseSchema
+
+    queue: asyncio.Queue = field(hash=False)
+
+    def __init__(self,
+                 *channels
+                 ):
+
+        schema_set = {c.schema for c in channels}
+        name_set = {c.channel_name for c in channels}
+
+        # TODO : with types / schemas ?
+        assert len(schema_set) == 1
+        assert len(name_set) == 1
+
+        object.__setattr__(self, 'channel_name', next(iter(name_set)))
+        object.__setattr__(self, 'schema', next(iter(schema_set)))
+
+        object.__setattr__(self, 'queue', asyncio.Queue(maxsize=8))  # to quickly trigger exception if no consumer setup.
+
+    # SINK
+
+    async def __call__(self, message) -> None:
+
+        # structure of a message on a private channel:
+        # - https://docs.kraken.com/websockets-beta/#message-ownTrades
+        # - https://docs.kraken.com/websockets-beta/#message-openOrders
+
+        data = message[0]
+        channel = message[1]
+
+        if channel == self.channel_name:
+            # if data is a list, we parse one element at a time
+            parsed = self.schema.load(data, many=isinstance(data, list))
+            await self.queue.put(parsed)
         # otherwise nothing happens
 
     ## SOURCE
