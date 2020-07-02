@@ -2,42 +2,20 @@
 # NOTE : The API / Client couple here is DUAL to rest (because most of it is callback, not callforward)
 #  => the API is what the user should use directly (and not the client like for REST)
 import asyncio
-import inspect
-import types
-
 import typing
-from collections.abc import Mapping, MutableMapping
-from dataclasses import dataclass
 
-from aiokraken.websockets.common.substream import PrivateSubStream
+from aiokraken.websockets.substream import PrivateSubStream
 
-from aiokraken.websockets.common.channel import PrivateChannel, channel
-from aiokraken.websockets.schemas.unsubscribe import Unsubscribe, UnsubscribeSchema
+from aiokraken.websockets.channel import channel
+from aiokraken.websockets.schemas.unsubscribe import Unsubscribe
+from aiokraken.websockets.connections import WssConnection
+from aiokraken.websockets.generalapi import API
 
-from aiokraken.rest.schemas.base import BaseSchema
-from aiokraken.websockets.common.connections import WssConnection
-from aiokraken.websockets.common.generalapi import API
-
-from aiokraken.websockets.schemas.heartbeat import Heartbeat, HeartbeatSchema
-
-from aiokraken.model.tests.strats.st_assetpair import AssetPairStrategy
-from aiokraken.websockets.schemas.ohlc import OHLCUpdateSchema
-from aiokraken.websockets.schemas.pingpong import Ping
-
-from aiokraken.websockets.schemas.subscribe import Subscribe, Subscription, SubscribeOne
-
-from aiokraken.model.assetpair import AssetPair
-
-from aiokraken.websockets.schemas.ticker import TickerWS, TickerWSSchema
-
-from aiokraken.websockets.channel import Channel
-
+from aiokraken.websockets.schemas.subscribe import Subscribe, Subscription
 from aiokraken.websockets.schemas.subscriptionstatus import (
-    PrivateSubscriptionStatus,
     SubscriptionStatusError,
 )
 
-from aiokraken.websockets.schemas.systemstatus import SystemStatusSchema, SystemStatus
 
 # TODO : careful, it seems that exceptions are not forwarded to the top process
 #  but somehow get lost into the event loop... needs investigation...

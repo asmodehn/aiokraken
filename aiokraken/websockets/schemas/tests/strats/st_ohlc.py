@@ -13,7 +13,7 @@ def st_ohlcupdate(draw):
         low= draw(st.floats(allow_nan=False, allow_infinity=False)),
         close= draw(st.floats(allow_nan=False, allow_infinity=False)),
         vwap= draw(st.floats(allow_nan=False, allow_infinity=False)),
-        volume= draw(st.integers()),
+        volume= draw(st.floats(allow_nan=False, allow_infinity=False)),
         count= draw(st.integers())
     )
 

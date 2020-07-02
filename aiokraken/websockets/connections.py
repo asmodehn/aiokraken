@@ -7,13 +7,10 @@ from dataclasses import dataclass
 import aiohttp
 import typing
 
-from async_property import async_property
+from aiokraken.websockets.exceptions import AIOKrakenWebSocketError
+from aiokraken.websockets.session import unified_session_context
 
-from aiokraken.websockets.common.exceptions import AIOKrakenWebSocketError
-from aiokraken.websockets.common.session import unified_session_context
-from aiokraken.websockets.schemas.unsubscribe import Unsubscribe, UnsubscribeSchema
-
-from aiokraken.websockets.schemas.subscribe import Subscribe, SubscribeSchema
+from aiokraken.websockets.schemas.subscribe import Subscribe
 
 from aiokraken.utils import get_kraken_logger
 

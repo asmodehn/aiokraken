@@ -7,34 +7,25 @@ from typing import Callable
 import aiohttp
 import typing
 
-from aiokraken.websockets.common.substream import PrivateSubStream, PublicSubStream
-from aiokraken.websockets.schemas.owntrades import ownTradeWSSchema
-
-from aiokraken.websockets.schemas.trade import TradeWSSchema
+from aiokraken.websockets.substream import PrivateSubStream, PublicSubStream
 
 from aiokraken.websockets.schemas.pingpong import PingSchema, PongSchema
 
-from aiokraken.websockets.common.channel import PublicChannel, PrivateChannel, PairChannelId, channel
 
-from aiokraken.websockets.schemas.unsubscribe import Unsubscribe, UnsubscribeSchema
+from aiokraken.websockets.schemas.unsubscribe import UnsubscribeSchema
 
-from aiokraken.websockets.schemas.subscribe import Subscribe, SubscribeOne, SubscribeSchema
+from aiokraken.websockets.schemas.subscribe import Subscribe, SubscribeSchema
 
-from aiokraken.websockets.schemas.ohlc import OHLCUpdateSchema
-
-from aiokraken.websockets.schemas.ticker import TickerWSSchema
 
 from aiokraken.websockets.schemas.subscriptionstatus import (
-    PrivateSubscriptionStatus, PrivateSubscriptionStatusSchema, PublicSubscriptionStatusSchema,
-    SubscriptionStatusError,
-)
+    PrivateSubscriptionStatusSchema, PublicSubscriptionStatusSchema,
+    )
 
 from aiokraken.websockets.schemas.systemstatus import SystemStatus, SystemStatusSchema
 
 from aiokraken.websockets.schemas.heartbeat import Heartbeat, HeartbeatSchema
 
-from aiokraken.websockets.common.connections import WssConnection
-
+from aiokraken.websockets.connections import WssConnection
 
 
 class KrakenEvent(Enum):
