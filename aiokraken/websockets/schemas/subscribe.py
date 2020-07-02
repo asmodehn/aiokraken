@@ -2,7 +2,8 @@ from dataclasses import dataclass, field
 
 import typing
 
-from marshmallow import fields, post_load, post_dump, pre_load, pre_dump
+import marshmallow
+from marshmallow import fields, missing, post_load, post_dump, pre_load, pre_dump
 
 from aiokraken.rest.schemas.base import BaseSchema
 
@@ -18,7 +19,7 @@ class Subscription:
 @dataclass(frozen=True)
 class SubscribeOne:
     subscription: Subscription
-    pair: str
+    pair: typing.Optional[str] = field(default=None)  # pair or none if pair is not used for this subscription.
     # TODO : use pair with proper type
 
     # not part of hash or equality (for equality between two Subscribe instance/requests)
@@ -37,14 +38,20 @@ class Subscribe:
     # need an __init__ here to transform an iterable (pairs) into a frozenset for hashing as a dict key
     def __init__(self, subscription, pair: typing.Optional[typing.Iterable] = None, reqid = None):
         object.__setattr__(self, "subscription", subscription)
+        # Note : Not all subscription needs a pair or set of pairs. None means None.
         object.__setattr__(self, "pair", frozenset(pair) if pair is not None else frozenset())
         object.__setattr__(self, "reqid", reqid)
 
     def __contains__(self, item: SubscribeOne):
-        return item.reqid == self.reqid and item.subscription == self.subscription and item.pair in self.pair
+        return item.reqid == self.reqid and item.subscription == self.subscription and (
+                item.pair in self.pair or item.pair == self.pair == None
+        )
 
     def __iter__(self):
-        return (SubscribeOne(subscription=self.subscription, pair=p, reqid=self.reqid) for p in self.pair)
+        if self.pair:
+            return (SubscribeOne(subscription=self.subscription, pair=p, reqid=self.reqid) for p in self.pair)
+        # a dummy iterable... TODO : probably there is a cleaner solution...
+        return (SubscribeOne(subscription=self.subscription, pair=None, reqid=self.reqid) for a in [42])
 
     # TODO : do we really need both ? probably not...
 
@@ -99,6 +106,15 @@ class SubscribeSchema(BaseSchema):
         data.pop('event')  # not needed any longer
         a = Subscribe(**data)
         return a
+
+    @post_dump
+    def remove_pair(self, data, **kwargs):
+        # removing empty pair list from serialized value (avoid triggering API error)
+        if not data['pair']:
+            data.pop('pair')
+
+        return data
+
 
 
 if __name__ == '__main__':

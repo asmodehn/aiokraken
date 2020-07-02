@@ -6,6 +6,14 @@ from dataclasses import dataclass, field
 
 import typing
 
+from aiokraken.websockets.schemas.owntrades import ownTradeWSSchema
+
+from aiokraken.websockets.schemas.trade import TradeWSSchema
+
+from aiokraken.websockets.schemas.ohlc import OHLCUpdateSchema
+
+from aiokraken.websockets.schemas.ticker import TickerWSSchema
+
 from aiokraken.model.assetpair import AssetPair
 
 from aiokraken.websockets.schemas.subscribe import Subscribe
@@ -18,58 +26,40 @@ from aiokraken.rest.schemas.base import BaseSchema
 PairChannelId = typing.NamedTuple("PairChannelId", [("pair", AssetPair), ("channel_id", int)])
 
 
-@dataclass(frozen=True, init=False)
-class Channel:
-    """
-    A channel, called when a message is received.
-    Behaves as a stream, enqueueing messages until iteration is performed to consume them.
-
-    Note : this can assemble a set of kraken channel ids in order to linearize their messages
-     in only one async generator, based on subscription request.
-    """
-    pairs_channel_ids: typing.Set[PairChannelId]
-    # Important : given kraken WS API design, we have one pair per channel
-    # BUT one user can subscribe to multiple pairs at once, and needs to aggregate channels here.
-
-    @property
-    def pairs(self):
-        return set(p for p, cid in self.pairs_channel_ids)
-
-    @property
-    def channel_ids(self):
-        return set(cid for p, cid in self.pairs_channel_ids)
-
+@dataclass(frozen=True, init=True)
+class PublicChannel:
+    pair: str
+    id: int
     channel_name: str
     schema: BaseSchema
 
-    queue: asyncio.Queue = field(hash=False)
-
-    def __init__(self,
-                 pairs_channel_ids: typing.Union[PairChannelId, typing.Set[PairChannelId]],
-                 channel_name: str,
-                 schema: BaseSchema,
-                 ):
-        object.__setattr__(self, 'pairs_channel_ids', pairs_channel_ids if isinstance(pairs_channel_ids, set) else {pairs_channel_ids})
-        # set() constructor is idempotent as function or unhashable as data !
-
-        object.__setattr__(self, 'channel_name', channel_name)
-        object.__setattr__(self, 'schema', schema)
-        object.__setattr__(self, 'queue', asyncio.Queue())
-
-    # SINK
-
-    async def __call__(self, pair, data) -> None:
-        # also calling the parsed model to store the pair here as well...
-        parsed = self.schema.load(data)(pair)
-        await self.queue.put(parsed)
-
-
-    ## SOURCE
-
-    async def __aiter__(self):  # hints: -> typing.AsyncGenerator[yield, send, return] ????
-        while self.queue:
-            yield await self.queue.get()
-            self.queue.task_done()
+    # async def __call__(self, message) -> None:
+    #
+    #     # structure of a message on a public channel :
+    #     # - https://docs.kraken.com/websockets-beta/#message-ticker
+    #     # - https://docs.kraken.com/websockets-beta/#message-ohlc
+    #     # - https://docs.kraken.com/websockets-beta/#message-trade
+    #     # - https://docs.kraken.com/websockets-beta/#message-spread
+    #     # - https://docs.kraken.com/websockets-beta/#message-book
+    #
+    #     chan_id = message[0]
+    #     data = message[1]
+    #     channel = message[2]
+    #     pair = message[3]
+    #
+    #     if channel == self.channel_name and chan_id in self.channel_ids and pair in self.pairs:
+    #         # also calling the parsed model to store the pair here as well...
+    #         parsed = self.schema.load(data)(pair)
+    #         await self.queue.put(parsed)
+    #     # otherwise nothing happens
+    #
+    #
+    # ## SOURCE
+    #
+    # async def __aiter__(self):  # hints: -> typing.AsyncGenerator[yield, send, return] ????
+    #     while self.queue:
+    #         yield await self.queue.get()
+    #         self.queue.task_done()
 
     ## container
     # NOT NEEDED -> TODO get rid of it YAGNI.
@@ -104,6 +94,89 @@ class Channel:
     #     )
     #
     #     return merged
+
+@dataclass(frozen=True)
+class PrivateChannel:
+    """
+    A channel, called when a message is received.
+    Behaves as a stream, enqueueing messages until iteration is performed to consume them.
+
+    Note : this can assemble a set of kraken channel ids in order to linearize their messages
+     in only one async generator, based on subscription request.
+    """
+
+    channel_name: str
+    schema: BaseSchema
+
+    # queue: asyncio.Queue = field(hash=False)
+    #
+    # def __init__(self,
+    #              channel_name: str,
+    #              schema: BaseSchema,
+    #              ):
+    #
+    #     object.__setattr__(self, 'channel_name', channel_name)
+    #     object.__setattr__(self, 'schema', schema)
+    #     object.__setattr__(self, 'queue', asyncio.Queue(maxsize=8))  # to quickly trigger exception if no consumer setup
+
+    # # SINK
+    #
+    # async def __call__(self, message) -> None:
+    #
+    #     # structure of a message on a private channel:
+    #     # - https://docs.kraken.com/websockets-beta/#message-ownTrades
+    #     # - https://docs.kraken.com/websockets-beta/#message-openOrders
+    #     data = message[0]
+    #     channel = message[1]
+    #
+    #     if channel == self.channel_name:
+    #         # also calling the parsed model to store the pair here as well...
+    #         parsed = self.schema.load(data, many=isinstance(data, list))
+    #         await self.queue.put(parsed)
+    #     # otherwise nothing happens
+    #
+    # ## SOURCE
+    #
+    # async def __aiter__(self):  # hints: -> typing.AsyncGenerator[yield, send, return] ????
+    #     while self.queue:
+    #         yield await self.queue.get()
+    #         self.queue.task_done()
+
+
+_ticker_schema = TickerWSSchema()
+_ohlcupdate_schema = OHLCUpdateSchema()
+_trade_schema = TradeWSSchema()
+_owntrades_schema = ownTradeWSSchema()
+
+
+def channel(name: str, pair = None, id = None):
+    """ Create channel instances to manage streams of data from a kraken publisher.
+    """
+    if name == "ticker":
+        chan = PublicChannel(pair=pair,
+                             id=id,
+                             channel_name=name,
+                             schema=_ticker_schema)
+
+    elif name.startswith("ohlc"):  # name depends also on interval !
+        chan = PublicChannel(pair=pair,
+                             id=id,
+                             channel_name=name,
+                             schema=_ohlcupdate_schema)
+
+    elif name.startswith("trade"):
+        chan = PublicChannel(pair=pair,
+                             id=id,
+                             channel_name=name,
+                             schema=_trade_schema)
+
+    elif name.startswith("ownTrades"):
+        chan = PrivateChannel(channel_name=name,
+                              schema=_owntrades_schema)
+    else:
+        raise NotImplementedError(f"Unknown channel name '{name}'. please add it to the code...")
+
+    return chan
 
 
 if __name__ == '__main__':
