@@ -9,12 +9,10 @@ from datetime import datetime, timezone
 import bokeh.layouts
 import wrapt
 
-from aiokraken.domain.layouts.ohlcv import OHLCVLayout
-from aiokraken.websockets.client import WssClient
 from bokeh.io import output_file
 from bokeh.models import CustomJS, LayoutDOM
 
-from aiokraken.model.assetpair import AssetPair
+from aiokraken.domain.pairs import AssetPairs
 
 from aiokraken.rest import RestClient
 from aiokraken.model.timeframe import KTimeFrameModel
@@ -28,23 +26,30 @@ class OHLCV:
     An instance is a slice of it (on time axis), by default covering now and "a bit" (720 intervals) before.
     """
 
-    layout: bokeh.layouts.LayoutDOM
+    # layout: bokeh.layouts.LayoutDOM
 
     _model: typing.Dict[KTimeFrameModel, OHLCModel]
 
-    def __init__(self, pair: AssetPair, rest: RestClient, wsclient = None, loop = None):
+    @classmethod
+    async def retrieve(cls, pairs: AssetPairs, tfl: typing.List[KTimeFrameModel], rest: RestClient, loop = None):
+
+        ohlcd = {tf: await OHLCModel.retrieve(pairs=pairs, timeframe=tf, restclient=rest) for tf in tfl}
+
+        return cls(pairs=pairs, ohlc_dict=ohlcd, rest=rest, loop=loop)
+
+    def __init__(self, pairs: AssetPairs, ohlc_dict: typing.Dict[KTimeFrameModel, OHLCModel], rest: RestClient, loop = None):
 
         self.rest = rest if rest is not None else RestClient()
 
         self.loop = loop if loop is not None else asyncio.get_event_loop()   # TODO : use restclient loop ??
-        self.wsclient = wsclient if wsclient is not None else WssClient(loop=self.loop)
+
         # TODO : get rid of these before : we are in ONE process, ONE thread => one client and one loop.
 
-        self.pair = pair
+        self.pairs = pairs
 
-        self._model = {tf: OHLCModel(pair=pair, timeframe=tf) for tf in KTimeFrameModel}
+        self._model = ohlc_dict
 
-        self._layouts = list()
+        # self._layouts = list()
 
     def __getitem__(self, item):
 
@@ -53,22 +58,26 @@ class OHLCV:
 
         # to make sure we have uptodate & linked data...
         # TODO : replicate this design : allow both sync and async calls
-        if self.loop.is_running():
-            return self.loop.create_task(self._model[item]())
-        else:
-            return self.loop.run_until_complete(self._model[item]())
+        return self._model[item]
 
     def __iter__(self):
         return iter(self._model)
 
-    def layout(self, doc=None) -> LayoutDOM:  # Note : doc is needed for updates
+    async def __aiter__(self):
+        # asynchronous iterator, to look forward the updates on this ohlc
+        # TODO : this is where we setup websocket and forward any relevant message to the user...
+        raise NotImplementedError
 
-        # we only draw the timeframe that we have !
-        present_tf = {tf: ohlc for tf, ohlc in self._model.items() if ohlc.model}
 
-        p = OHLCVLayout(present_tf, doc=doc)
-        self._layouts.append(p)
-        return p._layout
+    # TODO : maybe the whole graphical output part should be in a separate (sub)package
+    # def layout(self, doc=None) -> LayoutDOM:  # Note : doc is needed for updates
+    #
+    #     # we only draw the timeframe that we have !
+    #     present_tf = {tf: ohlc for tf, ohlc in self._model.items() if ohlc.model}
+    #
+    #     p = OHLCVLayout(present_tf, doc=doc)
+    #     self._layouts.append(p)
+    #     return p._layout
 
     # TODO : extend to provide more ohlcv dataframes than the strict kraken API (via resampling from public trades history)
 
@@ -84,13 +93,24 @@ if __name__ == '__main__':
 
     ap = asyncio.run(retrieve_pairs(["XBT/EUR", "ETH/EUR"]))
 
-    for p in ap:
-        ohlcv = OHLCV(pair=p, rest=RestClient())
+    async def retrieve_ohlc(pairs, tfl):
+        return await OHLCV.retrieve(pairs=pairs, tfl=tfl, rest=RestClient())
 
-        for tf in [KTimeFrameModel.one_day, KTimeFrameModel.one_hour, KTimeFrameModel.one_minute]:
-            asyncio.run(ohlcv[tf]())
+    ohlcv = asyncio.run(retrieve_ohlc(pairs=ap, tfl=[KTimeFrameModel.one_day, KTimeFrameModel.one_hour, KTimeFrameModel.one_minute]))
 
-        f = ohlcv.layout()
-        output_file(f"{p}.html", mode='inline')
-        save(f)
+    # # defining indicators we want to use (before outputting report !)
+    # ohlcv[KTimeFrameModel.one_day].ema(length=7)
+    # ohlcv[KTimeFrameModel.one_hour].ema(length=24)
+    # ohlcv[KTimeFrameModel.one_minute].ema(length=60)
+
+    print("DAILY:")
+    print(ohlcv[KTimeFrameModel.one_day])
+    print("HOURLY:")
+    print(ohlcv[KTimeFrameModel.one_hour])
+    print("MINUTELY:")
+    print(ohlcv[KTimeFrameModel.one_minute])
+
+    # f = ohlcv.layout()
+    # output_file(f"{p}.html", mode='inline')
+    # save(f)
 

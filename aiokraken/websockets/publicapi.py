@@ -134,6 +134,18 @@ _publicapi = PublicAPI(public_connection)
 
 reqid = 0
 
+msgpull_task = None
+
+
+def msgpull():
+    """ Runs a unique background task to receive messages, even if not explicitly requested by the user"""
+    async def unknown():
+        async for msg in _publicapi:  # required to consume messages...
+            print(f"Unknown message: {msg}")  # TODO : probaby onto some error log somehow...
+
+    if msgpull_task is None:
+        asyncio.get_running_loop().create_task(unknown())
+
 
 async def ticker(pairs: typing.List[typing.Union[AssetPair, str]], restclient = None):
     global reqid, public_connection
@@ -147,13 +159,15 @@ async def ticker(pairs: typing.List[typing.Union[AssetPair, str]], restclient = 
     # Note : queue is maybe more internal / lowlevel, keeping the linearity of data. BETTER FIT here when subscribing !
     #        callback implies possible multiplicity (many callbacks => duplication of data).
 
+    msgpull()
+
     msgqueue = await _publicapi.subscribe(subdata)
 
     async for msg in msgqueue:
         yield msg
 
 
-async def  ohlc(pairs: typing.List[typing.Union[AssetPair, str]], interval: int = 1, restclient=None):
+async def ohlc(pairs: typing.List[typing.Union[AssetPair, str]], interval: int = 1, restclient=None):
     global reqid, public_connection
 
     # we need to depend on restclient for usability TODO : unicity : we just need to import it here...
@@ -165,7 +179,10 @@ async def  ohlc(pairs: typing.List[typing.Union[AssetPair, str]], interval: int 
     # Note : queue is maybe more internal / lowlevel, keeping the linearity of data. BETTER FIT here when subscribing !
     #        callback implies possible multiplicity (many callbacks => duplication of data).
 
+    msgpull()
+
     msgqueue = await _publicapi.subscribe(subdata)
+    # TODO : we need some log here, alike the REST request produce logs on the console...
 
     async for msg in msgqueue:
         yield msg
@@ -182,6 +199,8 @@ async def trade(pairs: typing.List[typing.Union[AssetPair, str]], restclient=Non
 
     # Note : queue is maybe more internal / lowlevel, keeping the linearity of data. BETTER FIT here when subscribing !
     #        callback implies possible multiplicity (many callbacks => duplication of data).
+
+    msgpull()
 
     msgqueue = await _publicapi.subscribe(subdata)
 
@@ -203,10 +222,6 @@ if __name__ == '__main__':
     eth_eur_pair = "ETH/EUR"
     xbt_eur_pair = "XBT/EUR"
 
-    async def other():
-        async for msg in _publicapi:  # required to consume messages...
-            print(f"Another message: {msg}")
-
     #
     # async def tkr_connect1():
     #     # async for msg in ticker([xtz_eur_pair], restclient=client):
@@ -222,7 +237,6 @@ if __name__ == '__main__':
     #     await asyncio.gather(
     #         tkr_connect1(),
     #         tkr_connect2(),  # Note how xtz messages only should be duplicated in output...
-    #         other()
     #     )
 
     async def ohlc_connect1():
@@ -239,7 +253,6 @@ if __name__ == '__main__':
         await asyncio.gather(
             ohlc_connect1(),
             ohlc_connect2(),  # Note how xtz messages only should be duplicated in output...
-            other()
         )
 
     #
@@ -257,7 +270,6 @@ if __name__ == '__main__':
     #     await asyncio.gather(
     #         trade_connect1(),
     #         trade_connect2(),  # Note how xtz messages only should be duplicated in output...
-    #         other()
     #     )
 
     asyncio.run(sched())
