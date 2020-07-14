@@ -5,8 +5,6 @@ import typing
 from decimal import Decimal
 from types import MappingProxyType
 
-from aiokraken.websockets.client import WssClient
-
 from aiokraken.rest import RestClient
 
 
@@ -14,7 +12,6 @@ import asyncio
 from aiokraken.rest.client import RestClient
 from aiokraken.rest.api import Server
 from aiokraken.config import load_api_keyfile
-from framable import FramableMeta
 from aiokraken.model.ledgerframe import LedgerFrame, ledgerframe
 from aiokraken.rest.assets import Assets as AssetsMapping
 
@@ -40,11 +37,14 @@ class Assets:
 
     _ledgers: LedgerFrame = None
 
-    def __init__(self, assets: AssetsMapping, filter):
-        self._proxy = MappingProxyType({n: d
-                                        for n, d in assets.items()
-                                        if n in filter
-                                        or d.altname in filter})
+    def __init__(self, assets: AssetsMapping, filter=None):
+        if filter is not None:
+            self._proxy = MappingProxyType({n: d
+                                            for n, d in assets.items()
+                                            if n in filter or d.altname in filter
+                                            })
+        else:
+            self._proxy = MappingProxyType(assets)
 
     def __repr__(self):
         return repr(self._proxy)
@@ -101,7 +101,6 @@ class Assets:
         # we keep aggregating in place on the same object
         return self._ledgers
 
-
     async def trades(self):
         # TODO : this is just an access point for hte trades module (for private trades)...
         raise NotImplementedError
@@ -130,32 +129,10 @@ if __name__ == '__main__':
 
     async def ledgers():
         now = datetime.now()
-        print(await EUR_XBT_XTZ.ledger(rest=rest, start= now - timedelta(weeks=1), stop= now))
+        print(await EUR_XBT_XTZ.ledger(rest=rest, start=now - timedelta(weeks=1), stop=now))
 
     asyncio.run(balance())
 
     asyncio.run(ledgers())
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
