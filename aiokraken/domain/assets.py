@@ -31,11 +31,7 @@ class Assets:
         assetsmap = await rest.retrieve_assets()
         return cls(assets=assetsmap, filter=assets)
 
-    _assets: typing.ClassVar[AssetsMapping]
-
     _proxy: MappingProxyType
-
-    _ledgers: LedgerFrame = None
 
     def __init__(self, assets: AssetsMapping, filter=None):
         if filter is not None:

@@ -7,10 +7,9 @@ import typing
 from decimal import Decimal
 
 import bokeh.plotting
+from aiokraken.model.timeframe import KTimeFrameModel
 from bokeh.layouts import column
 from bokeh.plotting import figure
-
-from aiokraken.model.bokeh_figs.fig_ohlc import fig_ohlc
 
 """ A common data structure for OHLC based on pandas """
 from datetime import datetime, timezone
@@ -68,8 +67,12 @@ class OHLC(TimeindexedDataframe):
 
         self.dataframe.volume = pd.to_numeric(self.dataframe.volume)
 
-        # TODO : visible range depending on timeframe chosen...
-        self.layout = column(fig_ohlc(self.dataframe, x_range=(self.dataframe.index[-max(180, len(self.dataframe.index))], self.dataframe.index[-1])))
+        # TODO : get rid of this, now handled in domain.models...
+        # self.layout = column(fig_ohlc(self.dataframe,
+        #                               title=f"OHLC timeframe {self.dataframe.index[-1] - self.dataframe.index[-2]}",
+        #                               x_range=(self.dataframe.index[-max(180, len(self.dataframe.index))],
+        #                                        self.dataframe.index[-1])
+        #                               ))
 
     # TODO : we should probably provide "simple"/explicit interface to useful property of the dataframe ???
 
@@ -102,10 +105,16 @@ class OHLC(TimeindexedDataframe):
         return self.dataframe['volume'].sum()
 
     @property
+    def timeframe(self):
+        # deducting timeframe from last interval
+        return KTimeFrameModel.from_timedelta(self.dataframe.index[-1].to_pydatetime() - self.dataframe.index[-2].to_pydatetime())
+
+    @property
     def ta(self):
         return self.dataframe.ta
 
-
+    # These don't seem useful in here any longer (since we have the ta property, and they are only about plotting)
+    #TODO : move indicators to domain.models.indicators
     def ema(self, length) -> TimeindexedDataframe:
 
         # TODO : default values that make sense depending on timeframe...
@@ -123,7 +132,8 @@ class OHLC(TimeindexedDataframe):
         # TODO : default values that make sense depending on timeframe...
         atrdata = self.dataframe.ta.atr(length=length)
 
-        atrp = figure(plot_height=120, tools='xpan,xwheel_zoom,xbox_zoom,reset',
+        atrp = figure(plot_height=120, tools='xpan,xwheel_zoom', toolbar_location="left", active_drag="xpan", active_scroll="xwheel_zoom",
+                      title="Average True Range",
                       x_range=self.layout.children[0].x_range, x_axis_type="datetime",
                       y_axis_location="right",
                       sizing_mode="scale_width", )
@@ -134,12 +144,12 @@ class OHLC(TimeindexedDataframe):
 
         return atrdata
 
-
     def macd(self, fast=None, slow=None, signal=None, offset=None):
         # TODO : default values that make sense depending on timeframe...
         macddata = self.dataframe.ta.macd(fast=fast, slow=slow, signal=signal, offset=offset)
 
-        p2 = figure(plot_height=250, tools="xpan,xwheel_zoom,xbox_zoom,reset",
+        p2 = figure(plot_height=250, tools="xpan,xwheel_zoom", toolbar_location="left", active_drag="xpan", active_scroll="xwheel_zoom",
+                      title="MACD",
                     x_range=self.layout.children[0].x_range, x_axis_type="datetime",
                     y_axis_location="right", )
         p2.line(x=macddata.index, y=macddata.MACD_6_12_9, color='red')
@@ -155,7 +165,8 @@ class OHLC(TimeindexedDataframe):
         # TODO : default values that make sense depending on timeframe..
         efidata = self.dataframe.ta.efi(length=length)
 
-        efip = figure(plot_height=120, tools='xpan,xwheel_zoom,xbox_zoom,reset',
+        efip = figure(plot_height=120, tools='xpan,xwheel_zoom', toolbar_location="left", active_drag="xpan", active_scroll="xwheel_zoom",
+                      title="Elder's Force Index",
                       x_range=self.layout.children[0].x_range, x_axis_type="datetime",
                       y_axis_location="right",
                       sizing_mode="scale_width", )
@@ -168,16 +179,35 @@ class OHLC(TimeindexedDataframe):
     def obv(self):
         obvdata = self.dataframe.ta.obv()
 
-        obvp = figure(plot_height=120, tools='xpan,xwheel_zoom,xbox_zoom,reset',
+        obvp = figure(plot_height=120, tools='xpan,xwheel_zoom', toolbar_location="left", active_drag="xpan", active_scroll="xwheel_zoom",
+                      title="OBV",
                       x_range=self.layout.children[0].x_range, x_axis_type="datetime",
                       y_axis_location="right",
-                      sizing_mode="scale_width", )
+                      sizing_mode="scale_width")
         obvp.line(x=obvdata.index, y=obvdata.values, color='red')
 
         # Note : we want to link x_axis, but not y_axis...
         self.layout = column(*self.layout.children, obvp)
 
         return obvdata
+
+    def stoch(self):
+
+        stochdata = self.dataframe.ta.stoch()
+
+        stochp = figure(plot_height=120, tools='xpan,xwheel_zoom', toolbar_location="left", active_drag="xpan", active_scroll="xwheel_zoom",
+                      title="Stochastic Oscillator",
+                      x_range=self.layout.children[0].x_range, x_axis_type="datetime",
+                      y_axis_location="right",
+                      sizing_mode="scale_width")
+
+        stochp.line(x=stochdata.index, y=stochdata.STOCH_3, color='red')
+        stochp.line(x=stochdata.index, y=stochdata.STOCH_5, color='blue')
+
+        # Note : we want to link x_axis, but not y_axis...
+        self.layout = column(*self.layout.children, stochp)
+
+        return stochdata
 
     def __hash__(self):
         return super(OHLC, self).__hash__()

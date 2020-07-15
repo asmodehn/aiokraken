@@ -35,7 +35,8 @@ async def test_assets_balance(keyfile):
     assert b["ADA"] == 55
     assert b["XTZ"] == Decimal("0.00000005")
     assert b["BSV"] == 0
-    
+
+# TODO : MOOOOOAAAAARRRRR !!! (ledger, etc.)
 
 if __name__ == '__main__':
     pytest.main(['-s', __file__, '--block-network'])

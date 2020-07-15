@@ -1,5 +1,4 @@
-
-
+from __future__ import annotations
 
 # in Minutes : 1 (default), 5, 15, 30, 60, 240, 1440, 10080, 21600
 import functools
@@ -48,6 +47,13 @@ class KTimeFrameModel(Enum):
     def to_timedelta(self):
         return timedelta(minutes=self.value)
 
+    @classmethod
+    def from_timedelta(cls, td: timedelta):
+        for tf in reversed(cls):  # reverse order to find tf just under td !
+            if td.total_seconds() / 60 >= tf.value:
+                break
+        return tf
+
     def __str__(self):
         return self.name
 
@@ -57,16 +63,24 @@ class KTimeFrameModel(Enum):
     # Note  DO NOT DEFINE THIS. It breaks enum hashability and we need it.
     # def __eq__(self, other):
 
-    def __lt__(self, other):
+    def __lt__(self, other: typing.Union[KTimeFrameModel, timedelta]):
+        if isinstance(other, timedelta):
+            return self.value < other.total_seconds() / 60
         return self.value < other.value
 
-    def __gt__(self, other):
+    def __gt__(self, other: typing.Union[KTimeFrameModel, timedelta]):
+        if isinstance(other, timedelta):
+            return self.value > other.total_seconds() / 60
         return self.value > other.value
 
-    def __le__(self, other):
+    def __le__(self, other: typing.Union[KTimeFrameModel, timedelta]):
+        if isinstance(other, timedelta):
+            return self.value <= other.total_seconds() / 60
         return self.value <= other.value
 
-    def __ge__(self, other):
+    def __ge__(self, other: typing.Union[KTimeFrameModel, timedelta]):
+        if isinstance(other, timedelta):
+            return self.value >= other.total_seconds() / 60
         return self.value >= other.value
 
 

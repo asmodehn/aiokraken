@@ -10,9 +10,9 @@ import typing
 from decimal import Decimal
 from types import MappingProxyType
 
-from aiokraken.model.assetpair import AssetPair
+from aiokraken.utils import get_kraken_logger
 
-from aiokraken.domain.ohlcv import OHLCV
+from aiokraken.model.assetpair import AssetPair
 
 from aiokraken.model.timeframe import KTimeFrameModel
 
@@ -21,6 +21,8 @@ from aiokraken.config import load_api_keyfile
 from aiokraken.rest import RestClient, Server
 from aiokraken.rest.assetpairs import AssetPairs as AssetPairsMapping
 from aiokraken.model.ohlc import OHLC
+
+LOGGER = get_kraken_logger(__name__)
 
 
 class AssetPairs:
@@ -39,17 +41,23 @@ class AssetPairs:
         # then filter on usage
         return cls(pairs=assetpairs, filter=pairs)
 
-    _assetpairs: typing.ClassVar[AssetPairsMapping]
-
     _proxy: MappingProxyType
 
-    _ohlcvs: typing.Dict[AssetPair, OHLC]
+    def __init__(self, pairs: AssetPairsMapping, filter: typing.Optional[typing.List[str]] = None):
+        # Note how the keys use the wsname (more consistent / standard naming than kraken's REST names)
+        for p, v in pairs.items():
+            if v.wsname is None:
+                LOGGER.warning(f"AssetPair {p} IGNORED, no websocket name available.")
 
-    def __init__(self, pairs: AssetPairsMapping, filter: typing.List[str]):
-        self._proxy = MappingProxyType({n: d for n, d in pairs.items() if
-                                        n in filter or
-                                        d.altname in filter or
-                                        d.wsname in filter})
+        # Note : This will eliminate darkpools as they dont have websocket names just yet
+        # To play with darkpools, use the rest subpackage directly via aiokraken.rest
+        if filter is not None:
+            self._proxy = MappingProxyType({d.wsname: d for n, d in pairs.items() if d.wsname is not None and
+                                            (n in filter or
+                                            d.altname in filter or
+                                            d.wsname in filter)})
+        else:
+            self._proxy = MappingProxyType({d.wsname: d for n, d in pairs.items() if d.wsname is not None})
 
     def __repr__(self):
         return repr(self._proxy)
@@ -58,10 +66,26 @@ class AssetPairs:
         return str(self._proxy)
 
     def __getitem__(self, item):
-        return self._proxy[item]
+        if item in self._proxy.keys():
+            return self._proxy[item]
+        else:
+            for v in self._proxy.values():
+                if item == v.restname or item == v.altname:
+                    return v
+            raise KeyError(f"{item} not found")
 
     def __iter__(self):
-        return iter(self._proxy)
+        """ Iterating on values() to keep 1-1 relationship """
+        return iter(self._proxy.values())
+
+    def __contains__(self, item):
+        if item in self._proxy.keys():
+            return True
+        else:
+            for v in self._proxy.values():
+                if item== v.restname or item == v.altname:
+                    return True
+            return False
 
     def __len__(self):
         return len(self._proxy)
@@ -75,15 +99,17 @@ class AssetPairs:
     def items(self):
         return self._proxy.items()
 
+    # to still be able to specifically access via restname when needed
+    def rest(self):
+        return MappingProxyType({d.restname: d for n, d in self._proxy.items()})
+
     async def ticker(self, rest: RestClient = None):
         rest = rest if rest is not None else RestClient()
-        t = await rest.ticker(pairs=[k for k in self.keys()])
-        return {p: t[p] if p in t else
-                t[pd.altname] if pd.altname in t else
-                t[pd.wsname]
+        t = await rest.ticker(pairs=[k.restname for k in self.values()])
+        return {pd.wsname: t[pd.restname]
                 for p, pd in self.items()
-                if p in t or pd.altname in t or pd.wsname in t
-                }  # TODO : balance type/namedtuple ?
+                if pd.restname in t
+                }
 
     def trades(self, rest: RestClient = None, start: datetime = None, stop: datetime = None):
         # TODO : this is the PUBLIC trade history on the pair. can also be used by ohlcv() to provide historical data
@@ -94,8 +120,21 @@ class AssetPairs:
         """ the private trade history for the current pairs"""
         raise NotImplementedError
 
-    def ohlcv(self, rest: RestClient = None):  # TODO: , start: datetime = None, stop: datetime = None): ( similar to ledgers for assets )
-        return {p: OHLCV(pair=pd, rest=rest) for p, pd in self.items()}
+    def ohlcv(self, rest: RestClient = None, start: datetime = None, stop: datetime = None): # similar to ledgers for assets
+        # late import for convenience function
+        from aiokraken.domain.ohlcv import OHLCV
+
+        # deduce tfl from start & stop
+        if start > stop:
+            opt_tf = (start - stop) / 720
+        else:
+            opt_tf = (stop - start) / 720
+
+        for tf in KTimeFrameModel:
+            if tf > opt_tf:
+                break
+        # if not found the timeframe will be the largest possible
+        return getattr(OHLCV, tf.name)(pairs=[p for p in self.values()], rest=rest)
 
 
 if __name__ == '__main__':
@@ -110,7 +149,6 @@ if __name__ == '__main__':
     XBTEUR_XTZEUR = asyncio.run(retrieval(["XBT/EUR", "XTZ/EUR"]))
 
     # now we are talking about XBT/EUR or XTZ/EUR...
-
     print(XBTEUR_XTZEUR)  # the assetpair/market data
 
     for p, od in XBTEUR_XTZEUR.ohlcv(rest=rest).items():
