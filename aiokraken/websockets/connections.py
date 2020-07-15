@@ -33,6 +33,7 @@ class WssConnection:  # instance per URL !
         # sending data (async)
         while self.connection is None:
             await asyncio.sleep(0.2)  # busy wait until we are connected ( by consuming messages)
+        LOGGER.warning(f"wss >> {data}")
         await self.connection.send_str(data)
 
     async def __aiter__(self):
@@ -56,6 +57,7 @@ class WssConnection:  # instance per URL !
                             raise AIOKrakenWebSocketError(msg.data)
                         elif msg.type == aiohttp.WSMsgType.TEXT:
                             # pattern match on the value of an enum...
+                            LOGGER.warning(f"wss << {msg.data}")
                             yield msg.data
                         else:  # unhandled/unknown type
                             # TODO : implement websocket management stuff here
@@ -75,52 +77,6 @@ class WssConnection:  # instance per URL !
             except Exception as e:
                 print(e)
                 raise
-
-    # async def __call__(self, on_text=None, on_error=None, on_other=None):
-    #     await self.session_create()
-    #
-    #     # TODO : handle connection/websocket errors here
-    #     try:
-    #         async with session.ws_connect(self.websocket_url) as conn:
-    #             self.connection = conn
-    #             async for msg in self.connection:  # REF:https://docs.kraken.com/websockets/#info
-    #                 if msg.type == aiohttp.WSMsgType.TEXT:
-    #
-    #                     # to avoid flying blind we first need to parse json into python
-    #                     data = json.loads(msg.data)
-    #                     if on_text is None:
-    #                         LOGGER.info(f'{data}')
-    #                     else:
-    #                         on_text(data)
-    #
-    #                 # TODO : protocol exceptions !!
-    #                 elif msg.type == aiohttp.WSMsgType.ERROR:
-    #                     if on_error is None:
-    #                         LOGGER.error(f'{msg}')
-    #                         LOGGER.error(f'{msg.type}')
-    #                         LOGGER.error(f'{msg.data}')
-    #                         break
-    #                     else:
-    #                         on_error(msg)
-    #                 else:
-    #                     if on_other is None:
-    #                         LOGGER.error(f'{msg}')
-    #                         LOGGER.error(f'{msg.type}')
-    #                         LOGGER.error(f'{msg.data}')
-    #                         break
-    #                     else:
-    #                         on_other(msg)
-    #     # in case internet connection fails try and reconnect automatically after 5 seconds
-    #     # there will be no subscriptions though...
-    #     except aiohttp.ClientConnectionError:
-    #         await asyncio.sleep(5)
-    #         print(" !!! Running client interrupted, restarting...")
-    #         self._runtask = self.loop.create_task(
-    #             self(callback=self.api, connection_name=connection_name, connection_env=connection_env)
-    #         )
-    #         # TODO: save subscriptions and resubscribe automatically...
-    #
-    #     self.connection = None
 
 
 if __name__ == '__main__':
