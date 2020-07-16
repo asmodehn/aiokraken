@@ -3,6 +3,7 @@ import typing
 from datetime import datetime, timedelta, timezone
 import asyncio
 
+from aiokraken.rest.schemas.kledger import KLedgerInfo
 from bokeh.io import output_file, save
 
 from aiokraken.domain.assets import Assets
@@ -22,23 +23,25 @@ class Ledger:
     # TODO : maybe use traitlets (see ipython) for a more implicit/interactive management of time here ??
 
     @classmethod
-    async def retrieve(cls, start: datetime, end: datetime, rest: RestClient, loop = None):
+    async def retrieve(cls, start: datetime, end: datetime, rest: RestClient,
+                       assets: typing.Optional[typing.List[typing.Union[Asset, str]]] = None,
+                       loop = None):
         """ Retrieving all ledgers for a specific time period.
         Time is enforced to avoid long retrieval period. This can be relaxed when we have storage...
         Note this is intentionally somewhat orthogonal to construction of OHLC interface, based on assets... """
         # we retrieve all matching ledgerinfos...
-        ledgerinfos, count = await rest.ledgers(start=start, end=end)
+        ledgerinfos, count = await rest.ledgers(start=start, end=end, asset=assets)
 
         # loop until we get *everything*
         # Note : if this is too much, leverage local storage (TODO ! - in relation with time... assume past data doesnt change)
         while len(ledgerinfos) < count:
             # Note : here we recurse only one time. we need to recurse to respect ratelimit...
-            more_ledgers, count = await rest.ledgers(start=start, end=end, offset=len(ledgerinfos))
+            more_ledgers, count = await rest.ledgers(start=start, end=end, asset=assets, offset=len(ledgerinfos))
             ledgerinfos.update(more_ledgers)
 
         model = ledgerframe(ledger_as_dict=ledgerinfos).value
 
-        return cls(ledgers=model, rest=rest, loop=loop)
+        return cls(ledgers=model, assets=assets, rest=rest, loop=loop)
 
     @property
     def begin(self):
@@ -48,7 +51,9 @@ class Ledger:
     def end(self):
         return self.model.end
 
-    def __init__(self,  ledgers: LedgerFrame, rest: RestClient, loop = None):
+    def __init__(self,  ledgers: LedgerFrame, rest: RestClient,
+                 assets: typing.Optional[typing.List[typing.Union[Asset, str]]]=None,
+                 loop = None):
         # We want just one asset at a time. Just like ohlc is one pair at a time.
         # Note ledger instances are mergeable vertically on this...
 
@@ -57,28 +62,31 @@ class Ledger:
         self.loop = loop if loop is not None else asyncio.get_event_loop()   # TODO : use restclient loop ??
 
         self.model = ledgers
+        self.assets = assets
 
     def query(self):
         # TODO : interface to query ledger request
         raise NotImplementedError
 
-    async def __call__(self, start: datetime = None, stop: datetime = None):  # TODO : pass necessary parameters (cf ledger request)
+    async def __call__(self, start: datetime = None, stop: datetime = None,
+                       assets: typing.Optional[typing.List[typing.Union[Asset, str]]] = None):
         """
         This is a call mutating this object after async rest data retrieval.
         """
         # self update
-        # TODO : note how managing times here is similar to managing cache... probably in an another class, interfacing via decorator...
+        # TODO : note how managing times here is similar to managing cache...
+        #  probably in an another class, interfacing via decorator...
 
         if self.restclient is not None and (self.model is None or start < self.model.begin or stop > self.model.end):
             # we retrieve all matching ledgerinfos... lazy on times !
-            ledgerinfos, count = await self.restclient.ledgers(asset=[self.asset], start=start, end=stop, offset=0)
+            ledgerinfos, count = await self.restclient.ledgers(asset=self.assets, start=start, end=stop, offset=0)
 
             # loop until we get *everything*
             # Note : if this is too much, leverage local storage (TODO ! - in relation with time... assume past data doesnt change)
             #  or refine filters (time, etc.)
             while len(ledgerinfos) < count:
                 # Note : here we recurse only one time. we need to recurse to respect ratelimit...
-                more_ledgers, count = await self.restclient.ledgers(asset=[self.asset], start=start, end=stop, offset=len(ledgerinfos))
+                more_ledgers, count = await self.restclient.ledgers(asset=self.assets, start=start, end=stop, offset=len(ledgerinfos))
                 ledgerinfos.update(more_ledgers)
 
             model = ledgerframe(ledger_as_dict=ledgerinfos)
@@ -97,9 +105,9 @@ class Ledger:
         if isinstance(item, datetime):
             return self.model[item]
         elif isinstance(item, slice):
-            # if the model is empty, just return it instead of excepting.
+            # if the model is empty, just return self instead of excepting.
             if not self.model:
-                return self.model
+                return self
             # check for slice of times
             if isinstance(item.start, datetime) and isinstance(item.stop, datetime):
                 # Retrieve data if needed and block (sync)
@@ -111,11 +119,21 @@ class Ledger:
                     ))
                     self.loop.run_until_complete(update_task)  # run the task in background and sync block.
 
-                return self.model[item.start:item.stop]
+                return Ledger(ledgers=self.model[item.start:item.stop], rest=self.restclient, assets=self.assets, loop=self.loop)
 
         else:  # anything else : rely on the model
             # TODO : also access per asset or asset list - container-style
             return self.model[item]
+
+    def __contains__(self, item):
+        if isinstance(item, datetime):
+            return item in self.model
+        else:
+            raise NotImplementedError
+
+    def __iter__(self):
+        """ directly delegate to time-based iteration on the inner model """
+        return self.model.__iter__()
 
     def __len__(self):
         if self.model is not None:

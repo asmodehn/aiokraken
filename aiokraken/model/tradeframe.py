@@ -7,6 +7,11 @@ from collections import namedtuple
 import typing
 from decimal import Decimal
 
+from pandas import DatetimeIndex
+
+from aiokraken.model.assetpair import AssetPair
+
+from aiokraken.model.asset import Asset
 from pandas._libs.tslibs.np_datetime import OutOfBoundsDatetime
 from result import Result, Ok
 
@@ -26,18 +31,21 @@ from aiokraken.utils.timeindexeddataframe import TimeindexedDataframe
 
 class TradeFrame(TimeindexedDataframe):
 
-    def __init__(self, dataframe: pd.DataFrame):
+    def __init__(self, dataframe: pd.DataFrame, pairs = None):
         # TODO : maybe some of this should move into parent class ?
         # drop duplicates : this is a set, there should not be any duplicates (ids are included)
         if dataframe.duplicated().any():
             print("DUPLICATES FOUND ! SHOULD NOT HAPPEN.. DROPPING")
             dataframe.drop_duplicates(inplace=True)
-        #TODO : enforce dtypes of dataframe from original object model...
-        dataframe["datetime"] = pd.to_datetime(dataframe.time, unit='s', utc=True, origin='unix', errors='raise')
-        # switching index to the converted timestamp
-        dataframe.set_index("datetime", drop=True, inplace=True)
-        dataframe.sort_index(axis = 0, inplace=True)
+
+        if not isinstance(dataframe.index, DatetimeIndex):
+            dataframe["datetime"] = pd.to_datetime(dataframe.time, unit='s', utc=True, origin='unix', errors='raise')
+            # switching index to the converted timestamp
+            dataframe.set_index("datetime", drop=True, inplace=True)
+            dataframe.sort_index(axis = 0, inplace=True)
         super(TradeFrame, self).__init__(data=dataframe)
+
+        self.pairs = pairs
 
     def __repr__(self):
         # TODO : HOWTO do this ?
@@ -62,15 +70,35 @@ class TradeFrame(TimeindexedDataframe):
     # def thing(self):
     #     return
     #
-    def __getitem__(self, item):
-        """ Access by (date)times only (mapping interface should be done elsewhere, ie. one layer up)."""
-        if isinstance(item, slice):
-            # slice returns another instance with the slice as dataframe
-            return TradeFrame(dataframe=self.dataframe[item].copy())
-        elif isinstance(item, int):  # Note : because of this, access by timestamp (int) directly cannot work.
-            return self.dataframe.iloc[item]
+
+    def __contains__(self, item):
+        if isinstance(item, datetime):
+            return self.begin < item < self.end
+        else:  # delegate to dataframe
+            return item in self.dataframe
+
+    def __getitem__(self, item: typing.Union[AssetPair, typing.List[AssetPair], datetime, slice, str]):
+        if isinstance(item, AssetPair):
+            return TradeFrame(
+                dataframe = self.dataframe.loc[self.dataframe['pair'] == item.restname],
+                pairs=item)
+        elif isinstance(item, list):
+            return TradeFrame(
+                dataframe = self.dataframe.loc[self.dataframe['pair'].isin(i.restname for i in item)],
+                pairs=item)
+        elif isinstance(item, slice):
+            return TradeFrame(
+                dataframe = self.dataframe[item],  # let dataframe manage time slices
+                pairs=self.pairs)
+        elif isinstance(item, (datetime, str)):
+            # use usual access via key/index, as for a mapping over time...
+            return KTradeModel(**self.dataframe.loc[item])
         else:
-            return self.dataframe.loc[item]
+            raise KeyError(f"{item} not found")
+
+    def __iter__(self):
+        for ts, s in self.dataframe.iterrows():  # TODO : somehow merge with / reuse OHLCModel __iter__()
+            yield {idx: KTradeModel(datetime=ts, **s[idx]) for idx in s.index.levels[0]}
 
     def __len__(self):
         return len(self.dataframe)

@@ -40,7 +40,6 @@ class LedgerFrame(TimeindexedDataframe):
             dataframe.drop_duplicates(inplace=True)
 
         if not isinstance(dataframe.index, DatetimeIndex):
-            # TODO : FIX: A value is trying to be set on a copy of a slice from a DataFrame.
             dataframe["datetime"] = pd.to_datetime(dataframe.time, unit='s', utc=True, origin='unix', errors='raise')
             # switching index to the converted timestamp
             dataframe.set_index("datetime", drop=True, inplace=True)
@@ -67,12 +66,13 @@ class LedgerFrame(TimeindexedDataframe):
         # REMINDER : immutability interface design.
         return new_th
 
-    # # TODO : one property per type for filtering
-    # @property
-    # def thing(self):
-    #     return
-    #
-    def __getitem__(self, item: typing.Union[Asset, typing.List[Asset]]):
+    def __contains__(self, item):
+        if isinstance(item, datetime):
+            return self.begin < item < self.end
+        else:  # delegate to dataframe
+            return item in self.dataframe
+
+    def __getitem__(self, item: typing.Union[Asset, typing.List[Asset], datetime, slice, str]):
         """ Access by asset only (mapping with datetime keys should be done elsewhere, ie. one layer up)."""
 
         if isinstance(item, Asset):
@@ -103,6 +103,10 @@ class LedgerFrame(TimeindexedDataframe):
         #     return self.dataframe.iloc[item]
         # else:
         #     return self.dataframe.loc[item]
+
+    def __iter__(self):
+        for ts, s in self.dataframe.iterrows():  # TODO : somehow merge with / reuse OHLCModel __iter__()
+            yield {idx: KLedgerInfo(datetime=ts, **s[idx]) for idx in s.index.levels[0]}
 
     def __len__(self):
         return len(self.dataframe)

@@ -24,7 +24,7 @@ async def test_ledger(keyfile):
     assert isinstance(ldg, Ledger)
 
     subledger = ldg[datetime.fromisoformat("2020-07-11 17:00:00+00:00"):datetime.fromisoformat("2020-08-23 06:40:00+00:00")]
-    assert isinstance(ldg, Ledger)
+    assert isinstance(subledger, Ledger)
     assert len(subledger) == 5
     assert datetime.fromisoformat("2020-08-23 07:26:18+00:00") not in subledger
 
