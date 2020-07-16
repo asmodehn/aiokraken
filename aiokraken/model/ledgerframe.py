@@ -7,6 +7,9 @@ from collections import namedtuple
 import typing
 from decimal import Decimal
 
+from pandas import DatetimeIndex
+
+from aiokraken.model.asset import Asset
 from result import Result, Ok
 
 from aiokraken.rest.schemas.kledger import KLedgerInfo
@@ -29,18 +32,22 @@ from aiokraken.utils.timeindexeddataframe import TimeindexedDataframe
 
 class LedgerFrame(TimeindexedDataframe):
 
-    def __init__(self, dataframe: pd.DataFrame):
+    def __init__(self, dataframe: pd.DataFrame, assets = None):
         # TODO : maybe some of this should move into parent class ?
         # drop duplicates : this is a set, there should not be any duplicates (ids are included)
         if dataframe.duplicated().any():
             print("DUPLICATES FOUND ! SHOULD NOT HAPPEN.. DROPPING")
             dataframe.drop_duplicates(inplace=True)
 
-        dataframe["datetime"] = pd.to_datetime(dataframe.time, unit='s', utc=True, origin='unix', errors='raise')
-        # switching index to the converted timestamp
-        dataframe.set_index("datetime", drop=True, inplace=True)
-        dataframe.sort_index(axis=0, inplace=True)
+        if not isinstance(dataframe.index, DatetimeIndex):
+            # TODO : FIX: A value is trying to be set on a copy of a slice from a DataFrame.
+            dataframe["datetime"] = pd.to_datetime(dataframe.time, unit='s', utc=True, origin='unix', errors='raise')
+            # switching index to the converted timestamp
+            dataframe.set_index("datetime", drop=True, inplace=True)
+            dataframe.sort_index(axis=0, inplace=True)
         super(LedgerFrame, self).__init__(data=dataframe)
+
+        self.assets = assets  # the list of assets we track in this ledger frame. None means "all".
 
     def __repr__(self):
         # TODO : HOWTO do this ?
@@ -65,15 +72,37 @@ class LedgerFrame(TimeindexedDataframe):
     # def thing(self):
     #     return
     #
-    def __getitem__(self, item):
-        """ Access by (date)times only (mapping interface should be done elsewhere, ie. one layer up)."""
-        if isinstance(item, slice):
-            # slice returns another instance with the slice as dataframe
-            return LedgerFrame(dataframe=self.dataframe[item].copy())
-        elif isinstance(item, int):  # Note : because of this, access by timestamp (int) directly cannot work.
-            return self.dataframe.iloc[item]
+    def __getitem__(self, item: typing.Union[Asset, typing.List[Asset]]):
+        """ Access by asset only (mapping with datetime keys should be done elsewhere, ie. one layer up)."""
+
+        if isinstance(item, Asset):
+            return LedgerFrame(
+                dataframe = self.dataframe.loc[self.dataframe['asset'] == item.restname],
+                assets=item)
+        elif isinstance(item, list):
+            return LedgerFrame(
+                dataframe = self.dataframe.loc[self.dataframe['asset'].isin(i.restname for i in item)],
+                assets=item)
+        elif isinstance(item, slice):
+            return LedgerFrame(
+                dataframe = self.dataframe[item],  # let dataframe manage time slices
+                assets=self.assets)
+        elif isinstance(item, (datetime, str)):
+            # use usual access via key/index, as for a mapping over time...
+            return KLedgerInfo(**self.dataframe.loc[item])
         else:
-            return self.dataframe.loc[item]
+            raise KeyError(f"{item} not found")
+
+        # TODO polish : note the mapping here is along the item line (not the time like for OHLC !)
+
+        #
+        # if isinstance(item, slice):
+        #     # slice returns another instance with the slice as dataframe
+        #     return LedgerFrame(dataframe=self.dataframe[item].copy())
+        # elif isinstance(item, int):  # Note : because of this, access by timestamp (int) directly cannot work.
+        #     return self.dataframe.iloc[item]
+        # else:
+        #     return self.dataframe.loc[item]
 
     def __len__(self):
         return len(self.dataframe)
