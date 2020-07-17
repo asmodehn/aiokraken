@@ -4,6 +4,8 @@
 import asyncio
 import typing
 
+from aiokraken.utils import get_kraken_logger
+
 from aiokraken.websockets.substream import PrivateSubStream
 
 from aiokraken.websockets.channel import channel
@@ -16,6 +18,7 @@ from aiokraken.websockets.schemas.subscriptionstatus import (
     SubscriptionStatusError,
 )
 
+LOGGER = get_kraken_logger(__name__)
 
 # TODO : careful, it seems that exceptions are not forwarded to the top process
 #  but somehow get lost into the event loop... needs investigation...
@@ -110,6 +113,18 @@ reqid = 0
 
 token = None
 
+msgpull_task = None
+
+
+def msgpull():
+    """ Runs a unique background task to receive messages, even if not explicitly requested by the user"""
+    async def unknown():
+        async for msg in _privateapi:  # required to consume messages...
+            print(f"Unknown message: {msg}")  # TODO : probaby onto some error log somehow...
+
+    if msgpull_task is None:
+        asyncio.get_running_loop().create_task(unknown())
+
 
 async def ownTrades( restclient = None):
     # TODO : maybe uniformize the API by adding pairs: typing.List[typing.Union[AssetPair, str]], ?
@@ -125,8 +140,35 @@ async def ownTrades( restclient = None):
     # Note : queue is maybe more internal / lowlevel, keeping the linearity of data. BETTER FIT here when subscribing !
     #        callback implies possible multiplicity (many callbacks => duplication of data).
 
+    msgpull()
+
     msgqueue = await _privateapi.subscribe(subdata)
 
+    async for msg in msgqueue:
+        yield msg
+
+    # Reasons to exit this loop:
+    # - unsubscribed from another coroutine
+    # - some error ??
+
+async def openOrders (restclient = None):
+    # TODO : maybe uniformize the API by adding pairs: typing.List[typing.Union[AssetPair, str]], ?
+    #  It is extra work and may be actually not needed ??
+    global reqid, token
+
+    if token is None:
+        token = await restclient.websockets_token()
+
+    reqid += 1  # leveraging reqid to recognize response
+    subdata = Subscribe(subscription=Subscription(name="openOrders", token=token), reqid=reqid)
+
+    # Note : queue is maybe more internal / lowlevel, keeping the linearity of data. BETTER FIT here when subscribing !
+    #        callback implies possible multiplicity (many callbacks => duplication of data).
+
+    msgpull()
+
+    msgqueue = await _privateapi.subscribe(subdata)
+    # TODO : sometimes we miss the first message here ???
     async for msg in msgqueue:
         yield msg
 
@@ -144,25 +186,22 @@ if __name__ == '__main__':
     client = RestClient(server=Server(key=keystruct.get('key'),
                                     secret=keystruct.get('secret')))
 
-    print(f"My ownTrades: ")
-
     async def owntrades_connect1():
+        print(f"My ownTrades: ")
         async for msg in ownTrades( restclient=client):
             print(f"wss ==> ownTrades: {msg}")
 
-    async def other():
-        async for msg in _privateapi:  # required to consume messages...
-            print(f"Another message: {msg}")
+    async def openOrders_connect1():
+        print(f"My openOrders: ")
+        async for msg in openOrders(restclient=client):
+            print(f"wss ==> openOrders: {msg}")
 
     async def sched():
         await asyncio.gather(
-            owntrades_connect1(),
-            other()
+            # owntrades_connect1(),
+            openOrders_connect1()
         )
 
     asyncio.run(sched())
-
-
-# TODO : move this subpackage and replace existing websocket code
 
 # TODO testing testing testing...

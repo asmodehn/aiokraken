@@ -5,6 +5,8 @@ import asyncio
 
 import typing
 
+from aiokraken.utils import get_kraken_logger
+
 from aiokraken.websockets.substream import PublicSubStream
 from aiokraken.websockets.schemas.unsubscribe import Unsubscribe, UnsubscribeSchema
 
@@ -24,6 +26,7 @@ from aiokraken.websockets.schemas.subscriptionstatus import (
 # TODO : careful, it seems that exceptions are not forwarded to the top process
 #  but somehow get lost into the event loop... needs investigation...
 
+LOGGER = get_kraken_logger(__name__)
 
 public_connection = WssConnection(websocket_url="wss://beta-ws.kraken.com")
 
@@ -167,6 +170,7 @@ async def ticker(pairs: typing.List[typing.Union[AssetPair, str]], restclient = 
         yield msg
 
 
+# TODO : KTimeFrameModel instead of int as interval
 async def ohlc(pairs: typing.List[typing.Union[AssetPair, str]], interval: int = 1, restclient=None):
     global reqid, public_connection
 

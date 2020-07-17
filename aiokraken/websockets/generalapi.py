@@ -7,6 +7,8 @@ from typing import Callable
 import aiohttp
 import typing
 
+from aiokraken.utils import get_kraken_logger
+
 from aiokraken.websockets.substream import PrivateSubStream, PublicSubStream
 
 from aiokraken.websockets.schemas.pingpong import PingSchema, PongSchema
@@ -26,6 +28,9 @@ from aiokraken.websockets.schemas.systemstatus import SystemStatus, SystemStatus
 from aiokraken.websockets.schemas.heartbeat import Heartbeat, HeartbeatSchema
 
 from aiokraken.websockets.connections import WssConnection
+
+
+LOGGER = get_kraken_logger(__name__)
 
 
 class KrakenEvent(Enum):
