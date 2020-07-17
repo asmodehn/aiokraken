@@ -51,11 +51,11 @@ class Orders:
 
     @property
     def begin(self):
-        return self.model.begin
+        return self.closed.begin
 
     @property
     def end(self):
-        return self.model.end
+        return self.closed.end
 
     def __init__(self, closedorders: OrderFrame, openorders: OrderFrame, rest: RestClient, loop = None):
 
@@ -111,23 +111,23 @@ class Orders:
     def __getitem__(self, item):
         # TODO : also access with txid !!
         if isinstance(item, datetime):
-            return self.model[item]
+            return self.closed[item]  # TODO : what about open orders ?
         elif isinstance(item, slice):
             # if the model is empty, just return self instead of excepting.
-            if not self.model:
+            if not self.closed:
                 return self
             # check for slice of times
             if isinstance(item.start, datetime) and isinstance(item.stop, datetime):
                 # Retrieve data if needed and block (sync)
-                if self.model is None or item.start < self.begin or item.stop > self.end:
-                    update_task = self.loop.create_task(
-                        self(  # TODO : stitching to be managed like a cache (decorator around __call__)
-                            start=min(item.start, self.begin) if self.model else item.start,
-                            end=max(item.stop, self.end) if self.model else item.stop
-                    ))
-                    self.loop.run_until_complete(update_task)  # run the task in background and sync block.
-
-                return Orders(trades=self.model[item.start:item.stop], rest=self.rest, loop=self.loop)
+                if self.closed is None or item.start < self.begin or item.stop > self.end:
+                    if not self.loop.is_closed():
+                        update_task = self.loop.create_task(
+                            self(  # TODO : stitching to be managed like a cache (decorator around __call__)
+                                start=min(item.start, self.begin) if self.closed else item.start,
+                                end=max(item.stop, self.end) if self.closed else item.stop
+                        ))
+                        self.loop.run_until_complete(update_task)  # run the task in background and sync block.
+                return Orders(closedorders=self.closed[item.start:item.stop], openorders=self.open, rest=self.rest, loop=self.loop)
 
         else:  # anything else : rely on the model
             # TODO : also access per asset or asset list - container-style
@@ -142,7 +142,7 @@ class Orders:
     def __iter__(self):
         """ directly delegate to time-based iteration on the inner model """
         return self.closed.__iter__()  # Only iterate through closed orders implicitely.
-        # TODO : maybe unify somehow with open ones ??
+        # open ones are available via the async iterator
 
     async def __aiter__(self):
         # this is were we leverage our websocket implementation
