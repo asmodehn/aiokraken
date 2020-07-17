@@ -10,12 +10,11 @@ from aiokraken.model.ticker import Ticker
 async def test_ticker_one_str():
     """ get kraken ticker"""
     async with RestClient(server=Server()) as rest_kraken:
-        ticker_run = rest_kraken.ticker(pairs=['XXBTZEUR'])
-        response = await ticker_run()
-        print(f'response is \n{response}')
-        assert len(response) == 1
-        assert "XXBTZEUR" in response
-        assert isinstance(response.get("XXBTZEUR"), Ticker)
+        ticker = await rest_kraken.ticker(pairs=['XXBTZEUR'])
+        print(f'response is \n{ticker}')
+        assert len(ticker) == 1
+        assert "XXBTZEUR" in ticker
+        assert isinstance(ticker.get("XXBTZEUR"), Ticker)
 
 
 @pytest.mark.asyncio
@@ -23,13 +22,12 @@ async def test_ticker_one_str():
 async def test_ticker_one_pair():
     """ get kraken ticker"""
     async with RestClient(server=Server()) as rest_kraken:
-        assetpairs = await rest_kraken.retrieve_assetpairs()()
-        ticker_run = rest_kraken.ticker(pairs=[assetpairs["XXBTZEUR"]])
-        response = await ticker_run()
-        print(f'response is \n{response}')
-        assert len(response) == 1
-        assert "XXBTZEUR" in response
-        assert isinstance(response.get("XXBTZEUR"), Ticker)
+        assetpairs = await rest_kraken.retrieve_assetpairs()
+        ticker = await rest_kraken.ticker(pairs=[assetpairs["XXBTZEUR"]])
+        print(f'response is \n{ticker}')
+        assert len(ticker) == 1
+        assert "XXBTZEUR" in ticker
+        assert isinstance(ticker.get("XXBTZEUR"), Ticker)
 
 # TODO : multiple ticker request test...
 

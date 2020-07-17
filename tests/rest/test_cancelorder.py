@@ -18,8 +18,8 @@ from aiokraken.rest.schemas.krequestorder import RequestOrder
 @pytest.mark.vcr(filter_headers=['API-Key', 'API-Sign'])
 async def test_cancel_limit_order_id_execute(keyfile):
     async with RestClient(server=Server()) as rest_kraken:
-        ticker_run = rest_kraken.ticker(pairs=['XXBTZEUR'])
-        tickerresponse = (await ticker_run()).get("XXBTZEUR")
+        ticker = await rest_kraken.ticker(pairs=['XXBTZEUR'])
+        tickerresponse = ticker.get("XXBTZEUR")
         assert tickerresponse
         print(tickerresponse)
         # computing realistic price, but unlikely to be filled, even after relative_starttm delay.
@@ -27,23 +27,21 @@ async def test_cancel_limit_order_id_execute(keyfile):
         # Ref : https://support.kraken.com/hc/en-us/articles/360000919926-Does-Kraken-offer-a-Test-API-or-Sandbox-Mode-
         high_price = tickerresponse.ask.price * Decimal(1.5)
         # delayed market order
-        addorder_run = rest_kraken.addorder(order=RequestOrder(
+        bidresponse = await rest_kraken.addorder(order=RequestOrder(
             pair="XBTEUR",
         ).limit(limit_price=high_price).ask(
             volume='0.01',).delay(
             relative_expiretm=15,  # expire in 15 seconds (better than cancelling since cancelling too often can lock us out)
         ).execute(True))
-        bidresponse = await addorder_run()
         # TODO : verify balance before, this will trigger error if not enough funds.
         assert bidresponse
         print(bidresponse)
         # todo : get order ID
         # TODO : Check visible in openorders
 
-        openorders_run = rest_kraken.openorders()
-        response = await openorders_run()
-        assert response
-        print(f'response is {response}')
+        openorders = rest_kraken.openorders()
+        assert openorders
+        print(f'response is {openorders}')
 
         # TODO : cancel it with orderid
         # TODO : check not visible in openorders
@@ -60,8 +58,8 @@ async def test_cancel_limit_order_id_execute(keyfile):
 @pytest.mark.vcr(filter_headers=['API-Key', 'API-Sign'])
 async def test_cancel_limit_order_userref_execute(keyfile):
     async with RestClient(server=Server()) as rest_kraken:
-        ticker_run =  rest_kraken.ticker(pairs=['XXBTZEUR'])
-        tickerresponse = (await ticker_run()).get("XXBTZEUR")
+        ticker = await rest_kraken.ticker(pairs=['XXBTZEUR'])
+        tickerresponse = ticker.get("XXBTZEUR")
         assert tickerresponse
         print(tickerresponse)
         # computing realistic price, but unlikely to be filled, even after relative_starttm delay.
@@ -69,7 +67,7 @@ async def test_cancel_limit_order_userref_execute(keyfile):
         # Ref : https://support.kraken.com/hc/en-us/articles/360000919926-Does-Kraken-offer-a-Test-API-or-Sandbox-Mode-
         high_price = tickerresponse.ask.price * Decimal(1.5)
         # delayed market order
-        addorder_run = rest_kraken.addorder(order=RequestOrder(
+        bidresponse = await rest_kraken.addorder(order=RequestOrder(
             pair="XBTEUR",
         ).limit(
             limit_price=high_price,).ask(
@@ -77,17 +75,15 @@ async def test_cancel_limit_order_userref_execute(keyfile):
             relative_expiretm=15,  # expire in 15 seconds (better than cancelling since cancelling too often can lock us out)
         ).execute(
             execute=True,))
-        bidresponse = await addorder_run()
         # TODO : verify balance before, this will trigger error if not enough funds.
         assert bidresponse
         print(bidresponse)
 
         # TODO : Check visible in openorders via userref
 
-        openorders_run = rest_kraken.openorders()
-        response = await openorders_run()
-        assert response
-        print(f'response is {response}')
+        openorders = await rest_kraken.openorders()
+        assert openorders
+        print(f'response is {openorders}')
 
         # TODO : cancel it with userref
         # TODO : check not visible in openorders

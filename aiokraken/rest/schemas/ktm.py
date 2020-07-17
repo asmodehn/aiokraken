@@ -56,7 +56,8 @@ class TimerField(fields.Field):
         :return: The deserialized value.
 
         """
-        return TMModel(value)
+        # return TMModel(value, relative=False)
+        return value  # TMModel seems to prevent easy casting to proper time later... do we really need it for parsing ??
 
     def _serialize(self, value: typing.Any, attr: str, obj: typing.Any, **kwargs):
         """Serializes ``value`` to a basic Python datatype. Noop by default.

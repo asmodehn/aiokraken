@@ -7,7 +7,7 @@ from marshmallow_dataframe import SplitDataFrameSchema
 from decimal import Decimal
 from collections import namedtuple
 import pandas as pd
-import static_frame as sf
+# import static_frame as sf
 from .base import BaseSchema
 
 ohlc_df = pd.DataFrame(

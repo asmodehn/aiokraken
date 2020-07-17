@@ -10,15 +10,14 @@ from aiokraken.rest.schemas.time import Time
 async def test_time(keyfile):
     """ get kraken trade balance"""
     async with RestClient(server=Server(**keyfile)) as rest_kraken:
-        time_run= rest_kraken.time()
-        response = await time_run()
-        assert isinstance(response, Time)
+        time= await rest_kraken.time()
+        assert isinstance(time, Time)
 
         # Note : cassette recorded at 11:07 Paris Time
-        assert repr(response) == "2020-01-01T10:07:20+00:00"
-        assert str(response) == "Wed Jan  1 10:07:20 2020 UTC"
-        assert response.unixtime == 1577873240
-        print(response)
+        assert repr(time) == "2020-01-01T10:07:20+00:00"
+        assert str(time) == "Wed Jan  1 10:07:20 2020 UTC"
+        assert time.unixtime == 1577873240
+        print(time)
 
 
 if __name__ == '__main__':

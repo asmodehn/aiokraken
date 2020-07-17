@@ -9,7 +9,8 @@ console.setLevel(logging.INFO)
 # add the handler to the root logger
 rest_log.addHandler(console)
 
-class Response():
+
+class Response:
     """
     Response: structure validating response against expected schema
     """
@@ -26,5 +27,5 @@ class Response():
     def __call__(self, status, data, request_data):   # request data as dict (for now) # Goal : display on error)
         assert status == self.status
         # TODO : manage errors here
-        rest_log.debug(data)
+        rest_log.debug(data)  # TODO : better way to log string...
         return self.schema.load(data)

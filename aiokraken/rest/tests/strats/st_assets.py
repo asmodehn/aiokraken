@@ -1,4 +1,4 @@
-from aiokraken.model.asset import Asset
+from aiokraken.model.asset import AssetModel
 from aiokraken.model.tests.strats.st_asset import AssetStrategy
 from aiokraken.rest.assets import Assets
 

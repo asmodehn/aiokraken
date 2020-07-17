@@ -1,4 +1,4 @@
-Test Structure should not reflect code structure.
+Test Structure does not have to reflect code structure.
 But it should match code behavior (and available documentation from kraken)
 
 Once we learn the behavior expected by kraken exchange, we should not hesitate to refactor this...

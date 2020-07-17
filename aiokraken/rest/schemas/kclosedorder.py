@@ -181,7 +181,7 @@ class ClosedOrdersResponseSchema(BaseSchema):
 
     @post_load
     def build_model(self, data, **kwargs):
-        return data['closed'] # TODO : return count and manage like ledger, trades, etc.
+        return data['closed'], data['count']
 
 
 

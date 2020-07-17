@@ -13,22 +13,20 @@ from aiokraken.model.ohlc import OHLC
 async def test_ohlc_pair_newstr():
     """ get kraken ohlc"""
     async with RestClient(server=Server()) as rest_kraken:
-        ohlc_run = rest_kraken.ohlc(pair="XBTEUR")
-        response = await ohlc_run()
-        print(f'response is \n{response.head()}')
+        ohlc = await rest_kraken.ohlc(pair="XBTEUR")
+        print(f'response is \n{ohlc.head()}')
 
-        assert isinstance(response, OHLC)
+        assert isinstance(ohlc, OHLC)
 
 @pytest.mark.asyncio
 @pytest.mark.vcr()
 async def test_ohlc_pair_oldstr():
     """ get kraken ohlc"""
     async with RestClient(server=Server()) as rest_kraken:
-        ohlc_run = rest_kraken.ohlc(pair="XXBTZEUR")
-        response = await ohlc_run()
-        print(f'response is \n{response.head()}')
+        ohlc= await rest_kraken.ohlc(pair="XXBTZEUR")
+        print(f'response is \n{ohlc.head()}')
 
-        assert isinstance(response, OHLC)
+        assert isinstance(ohlc, OHLC)
 
 
 @pytest.mark.asyncio
@@ -36,12 +34,11 @@ async def test_ohlc_pair_oldstr():
 async def test_ohlc_pair_propertype():
     """ get kraken ohlc"""
     async with RestClient(server=Server()) as rest_kraken:
-        assetpairs = await rest_kraken.retrieve_assetpairs()()
-        ohlc_run = rest_kraken.ohlc(pair=assetpairs["XXBTZEUR"])
-        response = await ohlc_run()
-        print(f'response is \n{response.head()}')
+        assetpairs = await rest_kraken.retrieve_assetpairs()
+        ohlc = await rest_kraken.ohlc(pair=assetpairs["XXBTZEUR"])
+        print(f'response is \n{ohlc.head()}')
 
-        assert isinstance(response, OHLC)
+        assert isinstance(ohlc, OHLC)
 
 
 if __name__ == '__main__':

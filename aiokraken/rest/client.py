@@ -8,6 +8,7 @@ import time
 import aiohttp
 import typing
 
+from aiokraken.rest.schemas.kclosedorder import KClosedOrderModel
 from async_property import async_property, async_cached_property
 
 from aiokraken.rest.assetpairs import AssetPairs
@@ -242,8 +243,8 @@ class RestClient:
         # cleaning up pair list
         pair_proper = [p for p in pairs if isinstance(p, AssetPair)]
         if len(pairs) > len(pair_proper):
-            # retrieving assets if necessary
-            cleanpairs = await self.retrieve_assetpairs()
+            # retrieving assetpairs if necessary
+            cleanpairs = await self.retrieve_assetpairs(pairs=pairs)
             pair_translated = [cleanpairs[p] for p in pairs if not isinstance(p, Asset)]
             pairs = pair_proper + pair_translated
         else:
@@ -260,11 +261,17 @@ class RestClient:
         return await self._post(request=req)
 
     @private_limiter
-    async def closedorders(self, trades=False):  # TODO : trades
+    async def closedorders(self, trades=False, start: datetime =None, end: datetime = None, offset = 0) -> typing.Tuple[typing.Dict[str, KClosedOrderModel], int]:  # offset 0 or None ??
         """ make private closedorders request to kraken api"""
+        # Note : here there is no filtering by assetpair from Kraken API, it needs to be managed one level up...
+        if end is None:
+            end = datetime.datetime.now()
+        if start is None:
+            start = datetime.datetime(year=1970, month=1, day=1, hour=1)  # EPOCH
 
-        req = self.server.closedorders(trades=trades)   # returns the request to be made for this API.)
-        return await self._post(request=req)
+        req = self.server.closedorders(trades=trades, start=int(start.timestamp()), end=int(end.timestamp()), offset=offset)
+        corders_list, count = await self._post(request=req)
+        return corders_list, count  # making multiple return explicit in interface
 
     @private_limiter
     async def addorder(self, order):
@@ -287,32 +294,37 @@ class RestClient:
         if end is None:
             end = datetime.datetime.now()
         if start is None:
-            start = end - datetime.timedelta(weeks=1)
+            start = datetime.datetime(year=1970, month=1, day=1, hour=1)  # EPOCH
 
         req = self.server.trades_history(start=int(start.timestamp()), end=int(end.timestamp()), offset = offset)
         trades_list, count = await self._post(request=req)
         return trades_list, count  # making multiple return explicit in interface
 
     @private_limiter
-    async def ledgers(self, asset: typing.Optional[typing.List[typing.Union[Asset, str]]], start: datetime =None, end: datetime = None, offset=0) -> typing.Tuple[typing.Dict[str, KLedgerInfo], int]:
+    async def ledgers(self, start: datetime =None, end: datetime = None, asset: typing.Optional[typing.List[typing.Union[Asset, str]]] = None, offset=0) -> typing.Tuple[typing.Dict[str, KLedgerInfo], int]:
         """ make ledgers requests to kraken api """
 
         # cleaning up asset list
-        asset_proper = [a for a in asset if isinstance(a, Asset)]
-        if len(asset) > len(asset_proper):
-            # retrieving assets if necessary
-            cleanassets = await self.retrieve_assets()
-            asset_translated = [cleanassets[a] for a in asset if not isinstance(a, Asset)]
-            asset = asset_proper + asset_translated
-        else:
-            asset = asset_proper
+        if asset is not None:  # means for all assets
+            asset_proper = [a for a in asset if isinstance(a, Asset)]
+            if len(asset) > len(asset_proper):
+                # retrieving assets if necessary
+                cleanassets = await self.retrieve_assets()
+                asset_translated = [cleanassets[a] for a in asset if not isinstance(a, Asset)]
+                asset = asset_proper + asset_translated
+            else:
+                asset = asset_proper
 
         if end is None:
             end = datetime.datetime.now()
-        if start is None:
-            start = end - datetime.timedelta(weeks=1)
+        end = int(end.timestamp())
 
-        req = self.server.ledgers(asset=asset, start=int(start.timestamp()), end=int(end.timestamp()), offset=offset)
+        if start is None:
+            start = 0  # EPOCH , ie. a long long time ago
+        else:
+            start = int(start.timestamp())
+
+        req = self.server.ledgers(asset=asset, start=start, end=end, offset=offset)
         more_ledgers, count = await self._post(request=req)
         return more_ledgers, count  # making multiple return explicit in interface
 
@@ -327,8 +339,20 @@ if __name__ == '__main__':
 
     client = RestClient()
 
-    print(client.assets)
+    print(asyncio.run(client.retrieve_assets()))
 
-    print(client.assetpairs)
+    print(asyncio.run(client.retrieve_assetpairs()))
 
+    # TMP : TODO : manage local copy of kraken clock...
     # print(client.time())
+
+    # Just testing private endpoint authentication
+
+    from aiokraken.config import load_api_keyfile
+    from aiokraken.rest.api import Server
+
+    keystruct = load_api_keyfile()
+    priv_client = RestClient(server=Server(key=keystruct.get('key'),
+                                    secret=keystruct.get('secret')))
+    print(asyncio.run(priv_client.balance()))
+    print(asyncio.run(priv_client.websockets_token()))

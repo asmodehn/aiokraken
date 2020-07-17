@@ -13,12 +13,11 @@ from aiokraken.model.assetpair import AssetPair
 async def test_assetpairs_newstr():
     """ get kraken assetpairs"""
     async with RestClient(server=Server()) as rest_kraken:
-        assetpairs_run = rest_kraken.retrieve_assetpairs(pairs=["XBTEUR"])
-        response = await assetpairs_run()
-        asset = response["XXBTZEUR"]  # PB : convert between representations of currency ? => job of the domain model layer
-        print(f'response is \n{response}')
+        assetpairs = await rest_kraken.retrieve_assetpairs(pairs=["XBTEUR"])
+        pair = assetpairs["XXBTZEUR"]  # PB : convert between representations of currency ? => job of the domain model layer
+        print(f'response is \n{assetpairs}')
 
-        assert isinstance(asset, AssetPair)
+        assert isinstance(pair, AssetPair)
 
 
 @pytest.mark.asyncio
@@ -26,26 +25,24 @@ async def test_assetpairs_newstr():
 async def test_assetpairs_oldstr():
     """ get kraken assetpairs"""
     async with RestClient(server=Server()) as rest_kraken:
-        assetpairs_run = rest_kraken.retrieve_assetpairs(pairs=["XXBTZEUR"])
-        response = await assetpairs_run()
-        asset = response["XXBTZEUR"]  # PB : convert between representations of currency ? => job of the domain model layer
-        print(f'response is \n{response}')
+        assetpairs = await rest_kraken.retrieve_assetpairs(pairs=["XXBTZEUR"])
+        pair = assetpairs["XXBTZEUR"]  # PB : convert between representations of currency ? => job of the domain model layer
+        print(f'response is \n{assetpairs}')
 
-        assert isinstance(asset, AssetPair)
+        assert isinstance(pair, AssetPair)
 
 # TODO : test updating partial/ old assetpair
+
 
 @pytest.mark.asyncio
 @pytest.mark.vcr()
 async def test_assetpairs_all():
     """ get kraken assetpairs"""
     async with RestClient(server=Server()) as rest_kraken:
-        assetpairs_run = rest_kraken.retrieve_assetpairs()
-        response = await assetpairs_run()
-        print(f'response is \n{response}')
-        for name, asset in response.items():
+        assetpairs = await rest_kraken.retrieve_assetpairs()
+        print(f'response is \n{assetpairs}')
+        for name, asset in assetpairs.items():
             assert isinstance(asset, AssetPair)
-
 
 
 if __name__ == '__main__':

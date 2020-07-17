@@ -11,13 +11,23 @@ from aiokraken.rest.schemas.krequestorder import RequestOrder
 @pytest.mark.vcr(filter_headers=['API-Key', 'API-Sign'])
 async def test_trades_nonempty(keyfile):
     async with RestClient(server=Server(**keyfile)) as rest_kraken:
-        trades_run = rest_kraken.trades(offset=0)
-        response = await trades_run()
-    print(f'response is {response}')
+        trades, count = await rest_kraken.trades(offset=0)
+        print(f'response is {trades}')
 
-    # assert 'OEES77-MGNR7-HDQLW7' in response
-    # assert 'OSFLKN-U4LLK-RVLQI4' in response
-
+        # from cassette
+        assert count == 12
+        assert 'TWSFUZ-YBBCM-XFU2FG' in trades
+        assert 'TJFV3P-TGSJ4-TCAEUD' in trades
+        assert 'T7IONT-NOOLP-5X3PGX' in trades
+        assert 'T2SXUI-QWKSI-HFJIT6' in trades
+        assert 'TYMPWS-43QSS-5YWAGD' in trades
+        assert 'T5UIUL-2SZBI-VIOGIG' in trades
+        assert 'T2WW7B-CAW77-BDXKIR' in trades
+        assert 'TNDNSP-4H6HR-GL5NWP' in trades
+        assert 'TXIRKD-TWZVQ-ZYPQRH' in trades
+        assert 'TQIWNZ-GOXOH-VLRDCE' in trades
+        assert 'TZT4H6-MKFDM-DAVW4C' in trades
+        assert 'THNILV-B4KOW-NCBBTN' in trades
 
 if __name__ == '__main__':
     # replay

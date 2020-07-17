@@ -251,7 +251,7 @@ class Server:
                                                      )
                                    )
 
-    def closedorders(self, trades=False, userref=None):
+    def closedorders(self, trades=False,  start: typing.Optional[int] = None, end: typing.Optional[int] = None, offset=0, userref=None):
         data = {'trades': trades}
 
         # trades = whether or not to include trades in output (optional.  default = false)
@@ -263,7 +263,13 @@ class Server:
         #     open
         #     close
         #     both (default)
-
+        data = dict()
+        if offset > 0:
+            data.update({'ofs': offset})
+        if start is not None:
+            data.update({'start': start})
+        if end is not None:
+            data.update({'end': end})
         if userref is not None:
             data.update({'userref': userref})
         return self.private.request('ClosedOrders',
@@ -312,7 +318,7 @@ class Server:
         # start = starting unix timestamp or trade tx id of results (optional.  exclusive)
         # end = ending unix timestamp or trade tx id of results (optional.  inclusive)
         # ofs = result offset
-        # TODO : integration tests !!!
+
         data = dict()
         if offset > 0:
             data.update({'ofs': offset})

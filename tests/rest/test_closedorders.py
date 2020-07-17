@@ -11,12 +11,13 @@ from aiokraken.rest.schemas.krequestorder import RequestOrder
 @pytest.mark.vcr(filter_headers=['API-Key', 'API-Sign'])
 async def test_closedorders_nonempty(keyfile):
     async with RestClient(server=Server(**keyfile)) as rest_kraken:
-        closedorders_run = rest_kraken.closedorders()
-        response = await closedorders_run()
-    print(f'response is {response}')
+        closedorders, count = await rest_kraken.closedorders()
+        print(f'response is {closedorders}')
 
-    assert 'OEES77-MGNR7-HDQLW7' in response
-    assert 'OSFLKN-U4LLK-RVLQI4' in response
+    # from cassette
+    assert count == 2
+    assert 'OEES77-MGNR7-HDQLW7' in closedorders
+    assert 'OSFLKN-U4LLK-RVLQI4' in closedorders
 
 
 if __name__ == '__main__':

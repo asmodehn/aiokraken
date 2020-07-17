@@ -10,10 +10,9 @@ from aiokraken.rest.schemas.trade_balance import TradeBalance, TradeBalanceSchem
 async def test_trade_balance(keyfile):
     """ get kraken trade balance"""
     async with RestClient(server=Server(**keyfile)) as rest_kraken:
-        tradebalance_run= rest_kraken.trade_balance()
-        response = await tradebalance_run()
-        assert isinstance(response, TradeBalance)
-        print(response)
+        tradebalance = await rest_kraken.trade_balance()
+        assert isinstance(tradebalance, TradeBalance)
+        print(tradebalance)
 
 
 if __name__ == '__main__':
