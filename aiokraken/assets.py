@@ -75,27 +75,9 @@ class Assets:
 
     # TODO : maybe an access via getitem instead, indexing over time ??
     async def ledger(self, rest: RestClient, start: datetime =None, stop: datetime = None,):
-        if rest is not None and (self._ledgers is None or start < self._ledgers.begin or stop > self._ledgers.end):
-            # we retrieve all matching ledgerinfos... lazy on times ! # TODO : improve requesting only on unknown times
-            ledgerinfos, count = await rest.ledgers(asset=[v for v in self.values()], start=start, end=stop, offset=0)
-            # TODO : maybe separate in different module (similar to ohlcv for pairs)
+        from aiokraken.domain.ledgers import Ledger
 
-            # loop until we get *everything*
-            # Note : if this is too much, leverage local storage (TODO ! - in relation with time... assume past data doesnt change)
-            #  or refine filters (time, etc.)
-            while len(ledgerinfos) < count:
-                # Note : here we recurse only one time. we need to recurse to respect ratelimit...
-                more_ledgers, count = await rest.ledgers(asset=[v for v in self.values()], start=start, end=stop, offset=len(ledgerinfos))
-                ledgerinfos.update(more_ledgers)
-
-            ledgers = ledgerframe(ledger_as_dict=ledgerinfos)
-            if ledgers:
-                self._ledgers = ledgers.value
-            else:
-                raise RuntimeError("Something went wrong")
-
-        # we keep aggregating in place on the same object
-        return self._ledgers
+        return await Ledger.retrieve(start=start, end=stop, assets=[v for v in self.values()], rest=rest)
 
     async def trades(self):
         # TODO : this is just an access point for hte trades module (for private trades)...

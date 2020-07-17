@@ -218,7 +218,7 @@ class OHLCV:
             yield {idx: OHLCValue(datetime=ts, **s[idx]) for idx in s.index.levels[0]}
 
     async def __aiter__(self):
-        # TODO : this is were we leverage our websocket implementation
+        # this is were we leverage our websocket implementation
         # forwarding every update to the user (and also using it internally to update the model,
         # waiting for the next (user-triggered) rest request...
 
