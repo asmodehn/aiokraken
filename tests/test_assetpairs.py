@@ -5,12 +5,12 @@ from decimal import Decimal
 import pytest
 from aiokraken.model.assetpair import AssetPair
 
-from aiokraken.domain.ohlcv import OHLCV
+from aiokraken.ohlcv import OHLCV
 from aiokraken.model.ohlc import OHLC
 
 from aiokraken.model.ticker import Ticker
 
-from aiokraken.domain.assetpairs import AssetPairs
+from aiokraken.assetpairs import AssetPairs
 from aiokraken.rest import RestClient, Server
 
 

@@ -13,7 +13,7 @@ from aiokraken.model.assetpair import AssetPair
 async def test_assetpairs_newstr():
     """ get kraken assetpairs"""
     async with RestClient(server=Server()) as rest_kraken:
-        assetpairs_run = rest_kraken.assetpairs(pairs=["XBTEUR"])
+        assetpairs_run = rest_kraken.retrieve_assetpairs(pairs=["XBTEUR"])
         response = await assetpairs_run()
         asset = response["XXBTZEUR"]  # PB : convert between representations of currency ? => job of the domain model layer
         print(f'response is \n{response}')
@@ -26,7 +26,7 @@ async def test_assetpairs_newstr():
 async def test_assetpairs_oldstr():
     """ get kraken assetpairs"""
     async with RestClient(server=Server()) as rest_kraken:
-        assetpairs_run = rest_kraken.assetpairs(pairs=["XXBTZEUR"])
+        assetpairs_run = rest_kraken.retrieve_assetpairs(pairs=["XXBTZEUR"])
         response = await assetpairs_run()
         asset = response["XXBTZEUR"]  # PB : convert between representations of currency ? => job of the domain model layer
         print(f'response is \n{response}')
@@ -40,7 +40,7 @@ async def test_assetpairs_oldstr():
 async def test_assetpairs_all():
     """ get kraken assetpairs"""
     async with RestClient(server=Server()) as rest_kraken:
-        assetpairs_run = rest_kraken.assetpairs()
+        assetpairs_run = rest_kraken.retrieve_assetpairs()
         response = await assetpairs_run()
         print(f'response is \n{response}')
         for name, asset in response.items():

@@ -36,7 +36,7 @@ async def test_ohlc_pair_oldstr():
 async def test_ohlc_pair_propertype():
     """ get kraken ohlc"""
     async with RestClient(server=Server()) as rest_kraken:
-        assetpairs = await rest_kraken.assetpairs()()
+        assetpairs = await rest_kraken.retrieve_assetpairs()()
         ohlc_run = rest_kraken.ohlc(pair=assetpairs["XXBTZEUR"])
         response = await ohlc_run()
         print(f'response is \n{response.head()}')

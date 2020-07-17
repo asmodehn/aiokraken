@@ -23,7 +23,7 @@ async def test_ticker_one_str():
 async def test_ticker_one_pair():
     """ get kraken ticker"""
     async with RestClient(server=Server()) as rest_kraken:
-        assetpairs = await rest_kraken.assetpairs()()
+        assetpairs = await rest_kraken.retrieve_assetpairs()()
         ticker_run = rest_kraken.ticker(pairs=[assetpairs["XXBTZEUR"]])
         response = await ticker_run()
         print(f'response is \n{response}')

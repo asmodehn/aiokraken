@@ -1,7 +1,9 @@
 from decimal import Decimal
 
 import pytest
-from aiokraken.domain.assets import Assets
+import aiokraken
+print(aiokraken)
+from aiokraken.assets import Assets
 from aiokraken.rest import RestClient, Server
 
 

@@ -4,7 +4,7 @@ from decimal import Decimal
 import pytest
 from aiokraken.rest.schemas.kledger import KLedgerInfo
 
-from aiokraken.domain.ledgers import Ledger
+from aiokraken.ledgers import Ledger
 
 from aiokraken.rest import RestClient, Server
 

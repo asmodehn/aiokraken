@@ -11,10 +11,9 @@ async def test_balance(keyfile):
     """ get kraken balance"""
     server = Server(key = keyfile.get('key'), secret = keyfile.get('secret'))
     async with RestClient(server=server) as rest_kraken:
-        balance_run= rest_kraken.balance()
-        response = await balance_run()
-        assert isinstance(response, dict)  # TODO : proper type here
-        print(response)
+        balance = await rest_kraken.balance()
+        assert isinstance(balance, dict)  # TODO : proper type here
+        print(balance)
 
 
 if __name__ == '__main__':

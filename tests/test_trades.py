@@ -6,7 +6,7 @@ from aiokraken.rest.schemas.ktrade import KTradeModel
 
 from aiokraken.rest.schemas.kledger import KLedgerInfo
 
-from aiokraken.domain.trades import Trades
+from aiokraken.trades import Trades
 
 from aiokraken.rest import RestClient, Server
 

@@ -2,8 +2,8 @@ from decimal import Decimal
 
 import pytest
 
-from aiokraken.domain.assetpairs import AssetPairs
-from aiokraken.domain.ohlcv import OHLCV
+from aiokraken.assetpairs import AssetPairs
+from aiokraken.ohlcv import OHLCV
 from aiokraken.model.ohlc import OHLC
 from aiokraken.rest import RestClient, Server
 
