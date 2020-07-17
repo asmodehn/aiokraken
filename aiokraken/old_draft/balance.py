@@ -12,13 +12,15 @@ from collections.abc import Mapping
 from aiokraken.utils.filter import Filter
 
 
+# Note: Conceptually, a balance over time IS a ledger...
+# and vice versa a Ledger state right now constitutes the balance (the aggregate)
 class Balance(Mapping):
     # TODO : Design concept. At this level of the package, the classes are containers for data that can "change"
     #  (in a controlled way : always the same type) because of rest or ws communication, "under the hood",
     #  meaning the user is not aware of it, unless a signal is triggered...
 
     _filter: Filter
-    impl: typing.Dict[str, Decimal]
+    impl: typing.Dict[str, Decimal]  # TODO : timeindexed dataframe here (by retrieving ledgers, we can get an evolution of the balance)
     updated: datetime    # TODO : maybe use traitlets (see ipython) for a more implicit/interactive management of time here ??
     validtime: timedelta
 

@@ -1,7 +1,5 @@
-from dataclasses import dataclass
-
 import typing
-from datetime import timedelta, datetime, timezone
+from datetime import timedelta, datetime
 
 from aiokraken.rest.schemas.krequestorder import RequestOrder
 from aiokraken.model.timeframe import KTimeFrameModel
@@ -9,9 +7,7 @@ from aiokraken.model.timeframe import KTimeFrameModel
 from aiokraken.model.assetpair import AssetPair
 
 from aiokraken.model.ohlc import OHLC as OHLCModel
-from aiokraken.ohlc import ohlc
 from aiokraken.rest import RestClient
-from aiokraken.trades import Trades
 
 
 class MarketData:
@@ -50,6 +46,58 @@ class MarketData:
         #   instead of expecting another call and awaiting
 
         return self  # returning mutated self for chaining api calls
+    #
+    # def __getitem__(self, item: KTimeFrameModel):
+    #
+    #     if not item in self.tf_ohlc:
+    #
+    #         return self.tf_ohlc[item]
+    # TODO : how to do that ? async call from getitem ??
+
+    # TODO : some user interactive confirmation, optional but by default...
+    def market_sell(self, volume, execute=False, trade_future=False):
+        # prepare the order
+        order = RequestOrder(pair=self.pair.restname).market().sell(
+            volume=volume).execute(execute)
+
+        return self._pass_order(order=order, trade_future=trade_future)
+
+    def market_buy(self, volume, execute=False, trade_future=False):
+        # prepare the order
+        order = RequestOrder(pair=self.pair.restname).market().buy(
+            volume=volume).execute(execute)
+
+        return self._pass_order(order=order, trade_future=trade_future)
+
+    def limit_sell(self, limit_price, volume, execute=False, trade_future=False):
+        # prepare the order
+        order = RequestOrder(pair=self.pair.restname).limit(limit_price=limit_price).sell(
+            volume=volume).execute(execute)
+
+        return self._pass_order(order=order, trade_future=trade_future)
+
+    def limit_buy(self, limit_price, volume, execute=False, trade_future=False):
+        # prepare the order
+        order = RequestOrder(pair=self.pair.restname).limit(limit_price=limit_price).buy(
+            volume=volume).execute(execute)
+
+        return self._pass_order(order=order, trade_future=trade_future)
+
+    def stop_loss_sell(self, stop_loss_price, volume, execute= False, trade_future=False):
+
+        # prepare the order
+        order = RequestOrder(pair=self.pair.restname).stop_loss(stop_loss_price=stop_loss_price).sell(volume=volume).execute(execute)
+
+        # pass the order
+        return self._pass_order(order=order, trade_future=trade_future)
+
+    def stop_loss_buy(self, stop_loss_price, volume, execute= False, trade_future=False):
+
+        # prepare the order
+        order = RequestOrder(pair=self.pair.restname).stop_loss(stop_loss_price=stop_loss_price).buy(volume=volume).execute(execute)
+
+        # pass the order
+        return self._pass_order(order=order, trade_future=trade_future)
 
     # TODO : representation of this is tricky...
     # We should have a main graph one, displaying it somehow...
@@ -70,8 +118,8 @@ if __name__ == '__main__':
 
     # Client can be global: there is only one.
     priv_client = RestClient(server=Server(
-        key=keystruct.get('key'),
-        secret=keystruct.get('secret')
+        #key=keystruct.get('key'),
+        #secret=keystruct.get('secret')
     ))
     # priv client is needed since we get orders and trades...
     # TODO : maybe split into another class ??

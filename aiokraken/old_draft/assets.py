@@ -52,9 +52,9 @@ class Assets(Mapping):
             # result not valid any longer -> new request needed
 
             if self._filter.whitelist:
-                self.impl = await self.restclient.assets(assets=self._filter.whitelist)
+                self.impl = await self.restclient.retrieve_assets(assets=self._filter.whitelist)
             else:
-                self.impl = await self.restclient.assets()
+                self.impl = await self.restclient.retrieve_assets()
             self.updated = datetime.now(tz=timezone.utc)
 
         # in any case
@@ -87,7 +87,7 @@ async def assets(restclient: RestClient):
     # async constructor, to enable RAII for this class - think directed container in time, extracting more data from the now...
     a = Assets(restclient=restclient)
     return await a()  # RAII()
-    # TODO : return a proxy instead...
+    # TODO : return a proxy instead... or maybe put that into __new__ ??
 
 
 if __name__ == '__main__':
