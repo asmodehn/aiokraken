@@ -27,10 +27,10 @@ async def test_ohlcv_one_day():
     xbt_eur = subohlcv["XBT/EUR"]
     assert isinstance(xbt_eur, OHLC)
 
-    # TODO : more tests
+    # TODO : more tests about time mapping
 
 
 if __name__ == '__main__':
     pytest.main(['-s', __file__, '--block-network'])
     # record run
-    #pytest.main(['-s', __file__, '--with-keyfile', '--record-mode=new_episodes'])
+    #pytest.main(['-s', __file__, '--record-mode=new_episodes'])

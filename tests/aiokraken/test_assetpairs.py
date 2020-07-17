@@ -88,6 +88,6 @@ async def test_assetpairs_ohlcv():
 if __name__ == '__main__':
     pytest.main(['-s', __file__, '--block-network'])
     # record run
-    #pytest.main(['-s', __file__, '--with-keyfile', '--record-mode=new_episodes'])
+    #pytest.main(['-s', __file__, '--record-mode=new_episodes'])
 
 

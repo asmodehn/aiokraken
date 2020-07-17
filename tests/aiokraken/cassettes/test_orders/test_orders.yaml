@@ -1,0 +1,116 @@
+interactions:
+- request:
+    body:
+      end: 1588168800
+      nonce: 1594906869214
+      start: 1572888300
+    headers: {}
+    method: POST
+    uri: https://api.kraken.com/0/private/ClosedOrders
+  response:
+    body:
+      string: '{"error":[],"result":{"closed":{
+        "OREZPT-2FLTZ-L4EQ23":{"refid":null,"userref":null,"status":"closed","reason":null,"opentm":1598164767.2479,"closetm":1598167578.5044,"starttm":0,"expiretm":0,"descr":{"pair":"XTZEUR","type":"sell","ordertype":"stop-loss","price":"2.6000","price2":"0","leverage":"none","order":"sell 100.00000000 XTZEUR @ stop loss 2.6000","close":""},"vol":"100.00000000","vol_exec":"100.00000000","cost":"259.9999","fee":"0.6760","price":"2.6000","stopprice":"2.6000","limitprice":"0.000000","misc":"stopped","oflags":"fciq"},
+        "OYRL7K-IYEBH-HXGI6D":{"refid":null,"userref":null,"status":"closed","reason":null,"opentm":1598164711.1806,"closetm":1598164726.4108,"starttm":0,"expiretm":0,"descr":{"pair":"XTZEUR","type":"buy","ordertype":"limit","price":"2.6200","price2":"0","leverage":"none","order":"buy 100.00000000 XTZEUR @ limit 2.6200","close":""},"vol":"100.00000000","vol_exec":"100.00000000","cost":"262.0000","fee":"0.4192","price":"2.6200","stopprice":"0.000000","limitprice":"0.000000","misc":"","oflags":"fciq"},
+        "OKV4G5-VDNVH-AFD3M5":{"refid":null,"userref":null,"status":"canceled","reason":"User requested","opentm":1597285870.3274,"closetm":1597291210.2652,"starttm":0,"expiretm":0,"descr":{"pair":"XTZEUR","type":"buy","ordertype":"limit","price":"2.0900","price2":"0","leverage":"2:1","order":"buy 200.00000000 XTZEUR @ limit 2.0900 with 2:1 leverage","close":""},"vol":"200.00000000","vol_exec":"0.00000000","cost":"0.000000","fee":"0.000000","price":"0.000000","stopprice":"0.000000","limitprice":"0.000000","misc":"","oflags":"fciq"},
+        "OYBVOA-AY6E5-S7L3WJ":{"refid":null,"userref":null,"status":"closed","reason":null,"opentm":1597284324.5762,"closetm":1597290628.6488,"starttm":0,"expiretm":0,"descr":{"pair":"XTZEUR","type":"buy","ordertype":"stop-loss","price":"2.1250","price2":"0","leverage":"2:1","order":"buy 200.00000000 XTZEUR @ stop loss 2.1250","close":""},"vol":"200.00000000","vol_exec":"200.00000000","cost":"425.6400","fee":"1.1066","price":"2.1282","stopprice":"2.1282","limitprice":"0.000000","misc":"stopped","oflags":"fciq"},
+        "ODVWAK-BHDCU-RA4CTH":{"refid":null,"userref":null,"status":"canceled","reason":"User requested","opentm":1597283649.1252,"closetm":1597284326.7389,"starttm":0,"expiretm":0,"descr":{"pair":"XTZEUR","type":"buy","ordertype":"stop-loss","price":"2.1400","price2":"0","leverage":"2:1","order":"buy 200.00000000 XTZEUR @ stop loss 2.1400","close":""},"vol":"200.00000000","vol_exec":"0.00000000","cost":"0.000000","fee":"0.000000","price":"0.000000","stopprice":"0.000000","limitprice":"0.000000","misc":"","oflags":"fciq"},
+        "OSTQ5S-KJ6I3-CJ4R24":{"refid":null,"userref":null,"status":"closed","reason":null,"opentm":1597283581.3316,"closetm":1597283581.339,"starttm":0,"expiretm":0,"descr":{"pair":"XTZEUR","type":"sell","ordertype":"market","price":"0","price2":"0","leverage":"2:1","order":"sell 200.00000000 XTZEUR @ market with 2:1 leverage","close":""},"vol":"200.00000000","vol_exec":"200.00000000","cost":"421.5387","fee":"1.1803","price":"2.1076","stopprice":"0.000000","limitprice":"0.000000","misc":"","oflags":"fciq"},
+        "OTMW3J-USBZQ-2TRYSS":{"refid":null,"userref":null,"status":"canceled","reason":"User requested","opentm":1595844667.0107,"closetm":1595845315.536,"starttm":0,"expiretm":0,"descr":{"pair":"XTZEUR","type":"sell","ordertype":"limit","price":"1.6300","price2":"0","leverage":"2:1","order":"sell 200.00000000 XTZEUR @ limit 1.6300 with 2:1 leverage","close":""},"vol":"200.00000000","vol_exec":"0.00000000","cost":"0.000000","fee":"0.000000","price":"0.000000","stopprice":"0.000000","limitprice":"0.000000","misc":"","oflags":"fciq"},
+        "OSMZFY-TAMKL-LOAOBJ":{"refid":null,"userref":null,"status":"closed","reason":null,"opentm":1595844699.0007,"closetm":1595845267.9725,"starttm":0,"expiretm":0,"descr":{"pair":"XTZEUR","type":"sell","ordertype":"stop-loss","price":"1.6100","price2":"0","leverage":"2:1","order":"sell 200.00000000 XTZEUR @ stop loss 1.6100","close":""},"vol":"200.00000000","vol_exec":"200.00000000","cost":"321.4000","fee":"0.8356","price":"1.6070","stopprice":"1.6070","limitprice":"0.000000","misc":"stopped","oflags":"fciq"}
+      },"count":16}}'
+    headers:
+      CF-Cache-Status: DYNAMIC
+      CF-RAY: 5b3c239d0f54cd87-CDG
+      Connection: keep-alive
+      Content-Type: application/json; charset=utf-8
+      Date: Thu, 16 Jul 2020 13:41:09 GMT
+      Expect-CT: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      Server: cloudflare
+      Set-Cookie: __cfduid=d204a98c38bd2fa089bba6b6cf47b0d051594906869; expires=Sat,
+        15-Aug-20 13:41:09 GMT; path=/; domain=.kraken.com; HttpOnly; SameSite=Lax
+      Transfer-Encoding: chunked
+      cf-request-id: 03f97496200000cd871d0ab200000001
+      content-encoding: gzip
+      strict-transport-security: max-age=15768000
+      vary: Accept-Encoding
+    status:
+      code: 200
+      message: OK
+    url: https://api.kraken.com/0/private/ClosedOrders
+- request:
+    body:
+      end: 1588168800
+      nonce: 1594906879222
+      ofs: 50
+      start: 1572888300
+    headers: {}
+    method: POST
+    uri: https://api.kraken.com/0/private/ClosedOrders
+  response:
+    body:
+      string: '{"error":[],"result":{"closed":{
+      "OYVYUO-K5SYT-IDZBNV":{"refid":null,"userref":null,"status":"closed","reason":null,"opentm":1594188574.9699,"closetm":1594188574.9724,"starttm":0,"expiretm":0,"descr":{"pair":"XTZEUR","type":"sell","ordertype":"market","price":"0","price2":"0","leverage":"2:1","order":"sell 100.00000000 XTZEUR @ market with 2:1 leverage","close":""},"vol":"100.00000000","vol_exec":"100.00000000","cost":"147.1000","fee":"0.4118","price":"1.4710","stopprice":"0.000000","limitprice":"0.000000","misc":"","oflags":"fciq"},
+      "OUWM2U-S4YZX-PZ66XZ":{"refid":null,"userref":null,"status":"canceled","reason":"User requested","opentm":1594183760.4675,"closetm":1594188553.6947,"starttm":0,"expiretm":0,"descr":{"pair":"XTZEUR","type":"sell","ordertype":"limit","price":"1.5700","price2":"0","leverage":"2:1","order":"sell 100.00000000 XTZEUR @ limit 1.5700 with 2:1 leverage","close":""},"vol":"100.00000000","vol_exec":"0.00000000","cost":"0.000000","fee":"0.000000","price":"0.000000","stopprice":"0.000000","limitprice":"0.000000","misc":"","oflags":"fciq"},
+      "OS55GQ-3HCUH-KXQ2DU":{"refid":null,"userref":null,"status":"closed","reason":null,"opentm":1594183716.4821,"closetm":1594188541.5435,"starttm":0,"expiretm":0,"descr":{"pair":"XTZEUR","type":"sell","ordertype":"stop-loss","price":"1.4800","price2":"0","leverage":"2:1","order":"sell 100.00000000 XTZEUR @ stop loss 1.4800","close":""},"vol":"100.00000000","vol_exec":"100.00000000","cost":"147.5700","fee":"0.3836","price":"1.4757","stopprice":"1.4800","limitprice":"0.000000","misc":"stopped","oflags":"fciq"},
+      "OJQUGK-GAVZC-2ZT7DW":{"refid":null,"userref":null,"status":"closed","reason":null,"opentm":1594183644.842,"closetm":1594183644.8448,"starttm":0,"expiretm":0,"descr":{"pair":"XTZEUR","type":"buy","ordertype":"market","price":"0","price2":"0","leverage":"2:1","order":"buy 100.00000000 XTZEUR @ market with 2:1 leverage","close":""},"vol":"100.00000000","vol_exec":"100.00000000","cost":"151.3700","fee":"0.4238","price":"1.5137","stopprice":"0.000000","limitprice":"0.000000","misc":"","oflags":"fciq"},
+      "OQMYXG-DRT46-6UPTIJ":{"refid":null,"userref":null,"status":"canceled","reason":"User requested","opentm":1594116797.1523,"closetm":1594118008.2776,"starttm":0,"expiretm":0,"descr":{"pair":"XTZEUR","type":"sell","ordertype":"limit","price":"1.6000","price2":"0","leverage":"2:1","order":"sell 100.00000000 XTZEUR @ limit 1.6000 with 2:1 leverage","close":""},"vol":"100.00000000","vol_exec":"0.00000000","cost":"0.000000","fee":"0.000000","price":"0.000000","stopprice":"0.000000","limitprice":"0.000000","misc":"","oflags":"fciq"},
+      "OHLCR7-LT4EO-JU7E6Q":{"refid":null,"userref":null,"status":"closed","reason":null,"opentm":1594117908.9724,"closetm":1594117999.581,"starttm":0,"expiretm":0,"descr":{"pair":"XTZEUR","type":"sell","ordertype":"stop-loss","price":"1.5100","price2":"0","leverage":"2:1","order":"sell 100.00000000 XTZEUR @ stop loss 1.5100","close":""},"vol":"100.00000000","vol_exec":"100.00000000","cost":"150.9837","fee":"0.3925","price":"1.5098","stopprice":"1.5100","limitprice":"0.000000","misc":"stopped","oflags":"fciq"},
+      "O4KEUP-OUFI5-NZ7NJB":{"refid":null,"userref":null,"status":"canceled","reason":"User requested","opentm":1594117668.1145,"closetm":1594117911.3318,"starttm":0,"expiretm":0,"descr":{"pair":"XTZEUR","type":"sell","ordertype":"stop-loss","price":"1.5000","price2":"0","leverage":"2:1","order":"sell 100.00000000 XTZEUR @ stop loss 1.5000","close":""},"vol":"100.00000000","vol_exec":"0.00000000","cost":"0.000000","fee":"0.000000","price":"0.000000","stopprice":"0.000000","limitprice":"0.000000","misc":"","oflags":"fciq"},
+      "OUQS4N-LDJ7K-PTMUGD":{"refid":null,"userref":null,"status":"canceled","reason":"User requested","opentm":1594117285.6956,"closetm":1594117670.249,"starttm":0,"expiretm":0,"descr":{"pair":"XTZEUR","type":"sell","ordertype":"stop-loss","price":"1.4865","price2":"0","leverage":"2:1","order":"sell 100.00000000 XTZEUR @ stop loss 1.4865","close":""},"vol":"100.00000000","vol_exec":"0.00000000","cost":"0.000000","fee":"0.000000","price":"0.000000","stopprice":"0.000000","limitprice":"0.000000","misc":"","oflags":"fciq"}
+    },"count":16}}'
+    headers:
+      CF-Cache-Status: DYNAMIC
+      CF-RAY: 5b3c23db889d0834-CDG
+      Connection: keep-alive
+      Content-Type: application/json; charset=utf-8
+      Date: Thu, 16 Jul 2020 13:41:19 GMT
+      Expect-CT: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      Server: cloudflare
+      Set-Cookie: __cfduid=d9f2d50990adc1c9c137cbc9a0ba562061594906879; expires=Sat,
+        15-Aug-20 13:41:19 GMT; path=/; domain=.kraken.com; HttpOnly; SameSite=Lax
+      Transfer-Encoding: chunked
+      cf-request-id: 03f974bd3300000834c511f200000001
+      content-encoding: gzip
+      strict-transport-security: max-age=15768000
+      vary: Accept-Encoding
+    status:
+      code: 200
+      message: OK
+    url: https://api.kraken.com/0/private/ClosedOrders
+
+- request:
+    body:
+      nonce: 1594906894233
+      trades: false
+    headers: {}
+    method: POST
+    uri: https://api.kraken.com/0/private/OpenOrders
+  response:
+    body:
+      string: '{"error":[],"result":{"open":{
+        "OYMG4Q-D4G24-RZIVAP":{"refid":null,"userref":0,"status":"open","opentm":1592049083.066,"starttm":0,"expiretm":0,"descr":{"pair":"BCHEUR","type":"sell","ordertype":"limit","price":"450.0","price2":"0","leverage":"none","order":"sell 1.89215680 BCHEUR @ limit 450.0","close":""},"vol":"1.89215680","vol_exec":"0.00000000","cost":"0.000000","fee":"0.000000","price":"0.000000","stopprice":"0.000000","limitprice":"0.000000","misc":"","oflags":"fciq"},
+        "O5CX44-U7JKF-P4XZWG":{"refid":null,"userref":0,"status":"open","opentm":1591783141.9052,"starttm":0,"expiretm":0,"descr":{"pair":"EOSEUR","type":"sell","ordertype":"limit","price":"5.6000","price2":"0","leverage":"none","order":"sell 50.00000000 EOSEUR @ limit 5.6000","close":""},"vol":"50.00000000","vol_exec":"0.00000000","cost":"0.000000","fee":"0.000000","price":"0.000000","stopprice":"0.000000","limitprice":"0.000000","misc":"","oflags":"fciq"},
+        "O3ESGO-X6S2C-A27GYT":{"refid":null,"userref":0,"status":"open","opentm":1591747891.1312,"starttm":0,"expiretm":0,"descr":{"pair":"XBTEUR","type":"sell","ordertype":"limit","price":"9650.0","price2":"0","leverage":"none","order":"sell 0.02516250 XBTEUR @ limit 9650.0","close":""},"vol":"0.02516250","vol_exec":"0.00000000","cost":"0.00000","fee":"0.00000","price":"0.00000","stopprice":"0.00000","limitprice":"0.00000","misc":"","oflags":"fciq"},
+        "OTVAQ2-PDROT-VUPRD6":{"refid":null,"userref":0,"status":"open","opentm":1591503754.4483,"starttm":0,"expiretm":0,"descr":{"pair":"ETCEUR","type":"sell","ordertype":"limit","price":"16.000","price2":"0","leverage":"none","order":"sell 50.00000000 ETCEUR @ limit 16.000","close":""},"vol":"50.00000000","vol_exec":"0.00000000","cost":"0.00000000","fee":"0.00000000","price":"0.00000000","stopprice":"0.00000000","limitprice":"0.00000000","misc":"","oflags":"fciq"}
+      }}}'
+    headers:
+      CF-Cache-Status: DYNAMIC
+      CF-RAY: 5b3c24395a180824-CDG
+      Connection: keep-alive
+      Content-Type: application/json; charset=utf-8
+      Date: Thu, 16 Jul 2020 13:41:34 GMT
+      Expect-CT: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      Server: cloudflare
+      Set-Cookie: __cfduid=d0027a16cd55d9a7799693ed9f88c96ea1594906894; expires=Sat,
+        15-Aug-20 13:41:34 GMT; path=/; domain=.kraken.com; HttpOnly; SameSite=Lax
+      Transfer-Encoding: chunked
+      cf-request-id: 03f974f7d800000824da321200000001
+      content-encoding: gzip
+      strict-transport-security: max-age=15768000
+      vary: Accept-Encoding
+    status:
+      code: 200
+      message: OK
+    url: https://api.kraken.com/0/private/OpenOrders
+version: 1
