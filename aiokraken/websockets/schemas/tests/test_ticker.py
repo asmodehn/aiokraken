@@ -1,8 +1,9 @@
 import unittest
 
-from aiokraken.websockets.schemas.ticker import MinOrder, MinTrade, DailyValue, TickerWS
+from aiokraken.websockets.schemas.ticker import MinOrder, MinTrade, DailyValue, TickerWS, TickerWSSchema
 from hypothesis import given
-from aiokraken.websockets.schemas.tests.strats.st_ticker import st_tickerws
+from aiokraken.websockets.schemas.tests.strats.st_ticker import st_tickerws, st_tickerwsdict
+
 
 class TestTicker(unittest.TestCase):
 
@@ -20,6 +21,13 @@ class TestTicker(unittest.TestCase):
         assert isinstance(tkr.low, DailyValue)
         assert isinstance(tkr.todays_opening, DailyValue)  # the only change from Ticker !!!!
         # assert isinstance(tkr.pairname, typing.Optional[str])  # todo test this
+
+    @given(dtrd = st_tickerwsdict())
+    def test_valid_dictstrategy(self, dtrd):
+
+        sch = TickerWSSchema()
+        inst = sch.load(dtrd)
+        assert isinstance(inst, TickerWS)
 
 
 if __name__ == '__main__':
