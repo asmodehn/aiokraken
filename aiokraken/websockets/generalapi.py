@@ -140,7 +140,8 @@ class API:  # 1 instance per connection
             if isinstance(message, list):
                 for subdata, strm in self._streams.items():
                     # each stream is responsible to drop the message if it is not for itself.
-                    await strm(message)
+                    # format of message (size of list, etc.) is determined by the stream type
+                    await strm(*message)
 
             elif isinstance(message, dict):
                 # We can always attempt a match on "event" string and decide on the response schema from it.

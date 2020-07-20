@@ -35,7 +35,7 @@ class PublicAPI(API):
 
     # not channels here have one more level of indirection than privateAPI,
     # to effectively take care of the "pair/id" level...
-    _future_channels: typing.Dict[str, typing.Dict[str, asyncio.Future]]
+    _future_channels: typing.Dict[str, asyncio.Future]
 
     def __init__(self, connect: WssConnection):
         super(PublicAPI, self).__init__(connect=connect)
@@ -59,18 +59,18 @@ class PublicAPI(API):
             subname = f"ohlc-{subdata.subscription.interval}"
         else:
             subname = subdata.subscription.name
-        self._future_channels.setdefault(subname, dict())
+        self._future_channels.setdefault(subname, asyncio.get_running_loop().create_future())
 
-        for pair in self._future_channels[subname].keys():
-            available_pairs.add(pair)
+        if self._future_channels[subname].done():
+            for pair in self._future_channels[subname].keys():
+                available_pairs.add(pair)
 
-        subscribe_required_pairs = subdata.pair - available_pairs
+            subscribe_required_pairs = subdata.pair - available_pairs
+        else:
+            subscribe_required_pairs = subdata.pair
+        # otherwise no pair has been received just yet
 
         if subscribe_required_pairs:
-            # if we don't have a channel with this name and pair yet, we need to actually subscribe
-            for p in subscribe_required_pairs:
-                self._future_channels[subname][p] = asyncio.get_running_loop().create_future()
-
             # we use the exact same subdata here
             strdata = self.subscribe_schema.dumps(
                 Subscribe(subscription=subdata.subscription,
@@ -81,7 +81,7 @@ class PublicAPI(API):
             await self.connect(strdata)
 
         # awaiting all channels and building the subscribe stream
-        stream = PublicSubStream(* [await self._future_channels[subname][p] for p in subdata.pair])
+        stream = PublicSubStream(await self._future_channels[subname], pairs=subdata.pair)
 
         # storing the stream for this subscribe request
         self._streams[subdata] = stream
@@ -113,17 +113,19 @@ class PublicAPI(API):
                 else:  # normal case
                     # based on docs https://docs.kraken.com/websockets/#message-subscriptionStatus
                     if data.status == 'subscribed':
-                        # setting up channels for data
-                        chan = channel(name=data.channel_name,
-                                       # public channel needs pair and id as well
-                                       pair=data.pair, id=data.channel_id)
+                        if data.channel_name in self._future_channels:
+                            # TODO : careful here with concurrency issues !
+                            #  maybe we need some lock when setting result ?
+                            if not self._future_channels[data.channel_name].done():
+                                self._future_channels[data.channel_name].set_result(
+                                    channel(name=data.channel_name)
+                                )
+                                print(f"Channel created: {self._future_channels[data.channel_name].result()}")
 
-                        # new subscribed event : we set (or replace existing) channel
-                        self._future_channels[chan.channel_name][data.pair].set_result(chan)
-
-                        print(f"Channel created: {chan}")
-
-                        # retrieve potentially existing channels for this id
+                            # matching pair and id on existing channelset
+                            # TODO : leverage global REST client to parse teh datapair in a proper object.
+                            #  currently this works only while kraken is consistent on the pair string returned...
+                            (await self._future_channels[data.channel_name])[data.pair] = data.channel_id
 
                     elif data.status == 'unsubscribed':
                         raise NotImplementedError  # TODO

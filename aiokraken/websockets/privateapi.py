@@ -53,7 +53,7 @@ class PrivateAPI(API):
 
         # retrieving channel tor extract messages from it
         # possibly awaiting for channel to be created by the future
-        stream = PrivateSubStream(* [await self._future_channels[subdata.subscription.name]])
+        stream = PrivateSubStream(await self._future_channels[subdata.subscription.name])
 
         # storing the stream for this subscribe request
         self._streams[subdata] = stream
@@ -151,6 +151,7 @@ async def ownTrades( restclient = None):
     # - unsubscribed from another coroutine
     # - some error ??
 
+
 async def openOrders (restclient = None):
     # TODO : maybe uniformize the API by adding pairs: typing.List[typing.Union[AssetPair, str]], ?
     #  It is extra work and may be actually not needed ??
@@ -188,7 +189,7 @@ if __name__ == '__main__':
 
     async def owntrades_connect1():
         print(f"My ownTrades: ")
-        async for msg in ownTrades( restclient=client):
+        async for msg in ownTrades(restclient=client):
             print(f"wss ==> ownTrades: {msg}")
 
     async def openOrders_connect1():
@@ -198,10 +199,10 @@ if __name__ == '__main__':
 
     async def sched():
         await asyncio.gather(
-            # owntrades_connect1(),
+            owntrades_connect1(),
             openOrders_connect1()
         )
 
-    asyncio.run(sched())
+    asyncio.run(sched(), debug=True)
 
 # TODO testing testing testing...
