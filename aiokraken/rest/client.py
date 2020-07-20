@@ -56,10 +56,13 @@ public_limiter = calllimiter(ratelimit=datetime.timedelta(seconds=3))
 
 class RestClient:
 
+    _tokens: typing.Dict[str, int]  # dict of tokens as key, with retrieval time as value
+
     # TODO : better async design... maybe session building as part of theclass, or maybe no class ???
     def __init__(self, server = None, loop=None, protocol = "https://"):
         self.server = server or Server()
         if loop is None:
+            # TODO : CAREFUL here ! This might not be the actual running loop started by the user !!!!!!
             try:
                 loop = asyncio.get_event_loop()  # TODO : fix this : will break on the second call ?!?!
             except RuntimeError as re:
@@ -67,6 +70,7 @@ class RestClient:
                 loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(loop)
         self.loop = loop
+        self._alock = None  # lock creation must be done when event loop is already running !
 
         self.protocol = protocol
 
@@ -330,9 +334,25 @@ class RestClient:
 
     @private_limiter
     async def websockets_token(self):
-        req = self.server.websocket_token()
-        token = await self._post(request=req)
-        return token
+        # Note : token is valid for 15 minutes, no need to retrieve another to setup multiple websocket connexions.
+        if not hasattr(self, "_token"):
+            self._token = dict()
+
+        if self._alock is None:
+            # should work because we are not asyncio-preemptable here.
+            self._alock = asyncio.Lock()  # Lock to prevent concurrent requests (in case of concurrent calls)
+
+        async with self._alock:  # to prevent concurrent runs
+            # take last token if still valid (15 minutes)
+            for tk, tm in reversed(self._token.items()):
+                if datetime.datetime.now() < tm + datetime.timedelta(minutes=15):
+                    break
+            else:  # none found
+                req = self.server.websocket_token()
+                tk = await self._post(request=req)
+                self._token[tk] = datetime.datetime.now()
+                # token requested are accumulated in the dict attribute
+            return tk
 
 
 if __name__ == '__main__':
