@@ -1,10 +1,11 @@
 import hypothesis.strategies as st
-from aiokraken.websockets.schemas.owntrades import ownTradeWS, ownTradeWSContentSchema, ownTradeWSSchema
+from aiokraken.websockets.schemas.owntrades import ownTradeWS, ownTradeWSSchema
 
 
 @st.composite
 def st_owntradews(draw):
     return ownTradeWS(
+        tradeid= draw(st.text()),
         ordertxid= draw(st.text()),
         postxid= draw(st.text()),
         pair= draw(st.text()),
@@ -25,21 +26,8 @@ def st_owntradews(draw):
 @st.composite
 def st_owntradewsdict(draw):
     model = draw(st_owntradews())
-    schema = ownTradeWSContentSchema()
-    return schema.dump(model)
-
-@st.composite
-def st_owntradewspayload(draw):
-
     schema = ownTradeWSSchema()
-
-    # just here to format data
-    # TODO : review this, should we handle idiotic kraken format here or in channel ?
-    #  Or maybe have a special "payload" or "IdDict" concept (often used with json style data)?
-    obj = schema.load({
-        draw(st.text()): draw(st_owntradews())
-    })
-    return schema.dump(obj)
+    return schema.dump(model)
 
 
 if __name__ == '__main__':
@@ -50,5 +38,3 @@ if __name__ == '__main__':
     for n in range(1, 10):
         print(repr(st_owntradewsdict().example()))
 
-    for n in range(1, 10):
-        print(repr(st_owntradewspayload().example()))

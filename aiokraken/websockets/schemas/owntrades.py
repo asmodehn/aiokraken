@@ -1,4 +1,4 @@
-from marshmallow import fields, post_load, pre_load
+from marshmallow import fields, post_dump, post_load, pre_load
 
 from aiokraken.rest.schemas.base import BaseSchema
 
@@ -20,6 +20,7 @@ import typing
 @dataclass(frozen=True, init=True)
 class ownTradeWS:
 
+    tradeid: typing.Optional[str]  # trade id
     ordertxid: str 	# order responsible for execution of trade
     postxid: str      # Position trade id
     pair: str         # Asset pair
@@ -35,27 +36,17 @@ class ownTradeWS:
     # seems to have been added recently (some trades dont have it, despite having a postxid...)
     posstatus: typing.Optional[str] = field(default=None)  # Position status
 
-    tradeid: typing.Optional[str] = field(default=None)  # this will be set a bit after initialization
-
-    def __call__(self, tradeid):
-        newdata = asdict(self)
-        newdata.update({'tradeid': tradeid})
-        return ownTradeWS(**newdata)
-
-    # @staticmethod
-    # def strategy(self):
-    #     from aiokraken.websockets.schemas.tests.strats.st_trade import st_tradews
-    #     return st_tradews()
+    def strategy(self):
+        from aiokraken.websockets.schemas.tests.strats.st_owntrade import st_owntradews
+        return st_owntradews()
 
 
-
-
-class ownTradeWSContentSchema(BaseSchema):
+class ownTradeWSSchema(BaseSchema):
     # <pair_name> = pair name
-
+    tradeid = fields.Str()
     ordertxid = fields.Str() 	# order responsible for execution of trade
     postxid = fields.Str()      # Position trade id
-    posstatus = fields.Str()    # Position status
+    posstatus = fields.Str(allow_none=True)    # Position status
     pair = fields.Str()         # Asset pair
     time = fields.Float()       # unix timestamp of trade
     type = fields.Str()         # type of order (buy/sell)
@@ -67,32 +58,25 @@ class ownTradeWSContentSchema(BaseSchema):
     margin = fields.Float()     # initial margin (quote currency)
 
     @pre_load
-    def cleanup(self, data, **kwargs):
+    def flatten(self, data, **kwargs):
+        assert isinstance(data, dict)
+        assert len(data) == 1
+        k, v = next(iter(data.items()))
+        data = {'tradeid': k, **v}
         return data
 
     @post_load
     def build_model(self, data, **kwargs):
         return ownTradeWS(**data)
 
-    # @staticmethod
-    # def strategy():
-    #     from aiokraken.websockets.schemas.tests.strats.st_trade import st_tradewsdict
-    #     return st_tradewsdict()
+    @post_dump
+    def id_as_key(self, data, **kwargs):
+        tid = data.pop("tradeid")
+        return {
+            tid: data
+        }
 
+    def strategy(self):
+        from aiokraken.websockets.schemas.tests.strats.st_owntrade import st_owntradewsdict
+        return st_owntradewsdict()
 
-class ownTradeWSSchema(BaseSchema):
-
-    trade_id = fields.Str()
-    trade_details = fields.Nested(ownTradeWSContentSchema())
-
-    @pre_load
-    def cleanup(self, data, many, **kwargs):
-        assert len(data) == 1  # only one trade here
-        # temporary structure to manage kraken dynamic dict style...
-        k, v = next(iter(data.items()))
-        return {'trade_id': k,
-                'trade_details': v}
-
-    @post_load
-    def build_model(self, data, many, **kwargs):
-        return data['trade_details'](data['trade_id'])

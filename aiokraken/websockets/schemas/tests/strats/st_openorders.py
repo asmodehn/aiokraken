@@ -1,5 +1,7 @@
 import hypothesis.strategies as st
-from aiokraken.websockets.schemas.openorders import openOrderDescrWS, openOrderDescrWSSchema, openOrderWS, openOrderWSContentSchema
+from aiokraken.websockets.schemas.openorders import (
+    openOrderDescrWS, openOrderDescrWSSchema, openOrderWS, openOrderWSSchema,
+)
 
 
 @st.composite
@@ -25,6 +27,7 @@ def st_openorderdescrwsdict(draw):
 @st.composite
 def st_openorderws(draw):
     return openOrderWS(
+        orderid=draw(st.text()),
         refid= draw(st.text()),
         userref= draw(st.integers()),
         status= draw(st.text()),
@@ -47,7 +50,7 @@ def st_openorderws(draw):
 @st.composite
 def st_openorderwsdict(draw):
     model = draw(st_openorderws())
-    schema = openOrderWSContentSchema()
+    schema = openOrderWSSchema()
     return schema.dump(model)
 
 

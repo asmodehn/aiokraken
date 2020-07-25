@@ -1,4 +1,4 @@
-from marshmallow import fields, post_load, pre_load
+from marshmallow import fields, post_dump, post_load, pre_load
 
 from aiokraken.rest.schemas.base import BaseSchema
 
@@ -25,13 +25,19 @@ class openOrderDescrWS:
     close: str          # 	string 	conditional close order description (if conditional close set)
     position: typing.Optional[str] = field(default=None)       # 	string 	Optional - position ID (if applicable)
 
+    @staticmethod
+    def strategy():
+        from aiokraken.websockets.schemas.tests.strats.st_openorders import st_openorderdescrws
+        return st_openorderdescrws()
 
 
 @dataclass(frozen=True, init=True)
 class openOrderWS:
 
+    orderid: typing.Optional[str]  # this will be set a bit after initialization
+
     refid: str          # 	string 	Referral order transaction id that created this order
-    userref: str        # 	integer 	user reference ID
+    userref: int        # 	integer 	user reference ID
     status: str         # 	string 	status of order:
     opentm: float       # 	float 	unix timestamp of when order was placed
     starttm: float      # 	float 	unix timestamp of order start time (if set)
@@ -47,23 +53,15 @@ class openOrderWS:
     misc: str           # 	string 	comma delimited list of miscellaneous info: stopped=triggered by stop price, touched=triggered by touch price, liquidation=liquidation, partial=partial fill
     oflags: str         # 	string 	Optional - comma delimited list of order flags. viqc = volume in quote currency (not currently available), fcib = prefer fee in base currency, fciq = prefer fee in quote currency, nompp = no market price protection, post = post only order (available when ordertype = limit)
 
-    orderid: typing.Optional[str] = field(default=None)  # this will be set a bit after initialization
-
-    def __call__(self, orderid):
-        newdata = asdict(self)
-        newdata.update({'orderid': orderid})
-        return openOrderWS(**newdata)
-
-    # @staticmethod
-    # def strategy(self):
-    #     from aiokraken.websockets.schemas.tests.strats.st_trade import st_tradews
-    #     return st_tradews()
-
+    @staticmethod
+    def strategy():
+        from aiokraken.websockets.schemas.tests.strats.st_openorders import st_openorderws
+        return st_openorderws()
 
 
 class openOrderDescrWSSchema(BaseSchema):
     pair=fields.Str()       # 	string 	asset pair
-    position=fields.Str()   # 	string 	Optional - position ID (if applicable)
+    position=fields.Str(allow_none=True)   # 	string 	Optional - position ID (if applicable)
     type=fields.Str()       # 	string 	type of order (buy/sell)
     ordertype=fields.Str()  # 	string 	order type
     price=fields.Float()    # 	float 	primary price
@@ -80,10 +78,15 @@ class openOrderDescrWSSchema(BaseSchema):
     def build_model(self, data, **kwargs):
         return openOrderDescrWS(**data)
 
+    @staticmethod
+    def strategy():
+        from aiokraken.websockets.schemas.tests.strats.st_openorders import st_openorderdescrwsdict
+        return st_openorderdescrwsdict()
 
-class openOrderWSContentSchema(BaseSchema):
+
+class openOrderWSSchema(BaseSchema):
     # <pair_name> = pair name
-
+    orderid=fields.Str()    # orderid
     refid=fields.Str(allow_none=True)      # 	string 	Referral order transaction id that created this order
     userref=fields.Int()    # 	integer 	user reference ID
     status=fields.Str()     # 	string 	status of order:
@@ -102,34 +105,50 @@ class openOrderWSContentSchema(BaseSchema):
     misc=fields.Str()        # 	string 	comma delimited list of miscellaneous info: stopped=triggered by stop price, touched=triggered by touch price, liquidation=liquidation, partial=partial fill
     oflags=fields.Str()     # 	string 	Optional - comma delimited list of order flags. viqc = volume in quote currency (not currently available), fcib = prefer fee in base currency, fciq = prefer fee in quote currency, nompp = no market price protection, post = post only order (available when ordertype = limit)
 
-
     @pre_load
-    def cleanup(self, data, **kwargs):
+    def flatten(self, data, **kwargs):
+        assert isinstance(data, dict)
+        assert len(data) == 1
+        k, v = next(iter(data.items()))
+        data = {'orderid': k, **v}
         return data
 
     @post_load
     def build_model(self, data, **kwargs):
         return openOrderWS(**data)
 
-    # @staticmethod
-    # def strategy():
-    #     from aiokraken.websockets.schemas.tests.strats.st_trade import st_tradewsdict
-    #     return st_tradewsdict()
+    @post_dump
+    def id_as_key(self, data, **kwargs):
+        oid = data.pop("orderid")
+        return {
+            oid: data
+        }
+
+    @staticmethod
+    def strategy():
+        from aiokraken.websockets.schemas.tests.strats.st_openorders import st_openorderwsdict
+        return st_openorderwsdict()
 
 
-class openOrderWSSchema(BaseSchema):
-
-    order_id = fields.Str()
-    order_details = fields.Nested(openOrderWSContentSchema())
-
-    @pre_load
-    def cleanup(self, data, many, **kwargs):
-        assert len(data) == 1  # only one trade here
-        # temporary structure to manage kraken dynamic dict style...
-        k, v = next(iter(data.items()))
-        return {'order_id': k,
-                'order_details': v}
-
-    @post_load
-    def build_model(self, data, many, **kwargs):
-        return data['order_details'](data['order_id'])
+# # TODO : rename to payload for consistency ?
+# class openOrderWSSchema(BaseSchema):
+#
+#     order_id = fields.Str()
+#     order_details = fields.Nested(openOrderWSContentSchema())
+#
+#     @pre_load
+#     def cleanup(self, data, many, **kwargs):
+#         assert len(data) == 1  # only one trade here
+#         # temporary structure to manage kraken dynamic dict style...
+#         k, v = next(iter(data.items()))
+#         return {'order_id': k,
+#                 'order_details': v}
+#
+#     @post_load
+#     def build_model(self, data, many, **kwargs):
+#         return data['order_details'](data['order_id'])
+#
+#     @staticmethod
+#     def strategy():
+#         from aiokraken.websockets.schemas.tests.strats.st_openorders import st_openorderwspayload
+#         return st_openorderwspayload()

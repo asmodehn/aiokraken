@@ -1,8 +1,7 @@
 import unittest
 
 from aiokraken.websockets.schemas.openorders import (
-    openOrderDescrWS, openOrderDescrWSSchema, openOrderWS,
-    openOrderWSContentSchema,
+    openOrderDescrWS, openOrderDescrWSSchema, openOrderWS, openOrderWSSchema,
 )
 
 from aiokraken.websockets.schemas.tests.strats.st_openorders import (
@@ -43,6 +42,7 @@ class TestopenOrder(unittest.TestCase):
     def test_valid_strategy(self, oo):
         assert isinstance(oo, openOrderWS)
 
+        assert isinstance(oo.orderid, str)
         assert isinstance(oo.refid, str)
         assert isinstance(oo.userref, int)
         assert isinstance(oo.status, str)
@@ -65,7 +65,7 @@ class TestopenOrder(unittest.TestCase):
     @given(ood = st_openorderwsdict())
     def test_valid_dictstrategy(self, ood):
 
-        sch = openOrderWSContentSchema()
+        sch = openOrderWSSchema()
         inst = sch.load(ood)
         assert isinstance(inst, openOrderWS)
 

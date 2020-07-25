@@ -2,7 +2,7 @@ import unittest
 
 from aiokraken.websockets.schemas.tests.strats.st_owntrade import st_owntradews, st_owntradewsdict
 
-from aiokraken.websockets.schemas.owntrades import ownTradeWS, ownTradeWSContentSchema, ownTradeWSSchema
+from aiokraken.websockets.schemas.owntrades import ownTradeWS, ownTradeWSSchema
 
 from hypothesis import given
 
@@ -13,6 +13,7 @@ class TestownTrade(unittest.TestCase):
     def test_valid_strategy(self, trd):
         assert isinstance(trd, ownTradeWS)
 
+        assert isinstance(trd.tradeid, str)
         assert isinstance(trd.ordertxid, str)
         assert isinstance(trd.postxid, str)
         assert isinstance(trd.pair, str)
@@ -30,12 +31,10 @@ class TestownTrade(unittest.TestCase):
     @given(dtrd = st_owntradewsdict())
     def test_valid_dictstrategy(self, dtrd):
 
-        sch = ownTradeWSContentSchema()
+        sch = ownTradeWSSchema()
         inst = sch.load(dtrd)
         assert isinstance(inst, ownTradeWS)
 
-
-# TODO : test payload as well...
 
 if __name__ == '__main__':
     unittest.main()

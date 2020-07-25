@@ -13,7 +13,8 @@ class BaseSchema(marshmallow.Schema):
         # ref: https://marshmallow.readthedocs.io/en/stable/upgrading.html#upgrading-to-3-0
         #unknown = getattr(marshmallow, "EXCLUDE", None)
         # WE EXPECT VALIDATION ERROR !
-        pass
+
+        ordered=True  # to enforce order of dumped keys as defined in the schema
 
     # def loads(self, *args, **kwargs):
     #     try:
