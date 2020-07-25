@@ -66,8 +66,6 @@ class TickerWS:
                f"today's open {self.todays_opening} high {self.high.today} low {self.low.today} close {self.last_trade_closed} volume {self.volume}\n"\
                f"{self.number_of_trades.today} trades @ vol_avg_price {self.volume_weighted_average_price.today}\n"
 
-
-    @staticmethod
     def strategy(self):
         from aiokraken.websockets.schemas.tests.strats.st_ticker import st_tickerws
         return st_tickerws()

@@ -76,7 +76,8 @@ class ownTradeWSSchema(BaseSchema):
             tid: data
         }
 
-    def strategy(self):
+    @staticmethod
+    def strategy():
         from aiokraken.websockets.schemas.tests.strats.st_owntrade import st_owntradewsdict
         return st_owntradewsdict()
 

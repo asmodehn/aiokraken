@@ -7,9 +7,9 @@ from aiokraken.websockets.schemas.ticker import TickerWS, TickerWSSchema, MinOrd
 @st.composite
 def st_tradews(draw):
     return TradeWS(
-        price= draw(st.floats()),
-        volume= draw(st.floats()),
-        time= draw(st.floats()),
+        price= draw(st.floats(allow_nan=False, allow_infinity=False)),
+        volume= draw(st.floats(allow_nan=False, allow_infinity=False)),
+        time= draw(st.floats(allow_nan=False, allow_infinity=False)),
         side= draw(st.text()),
         orderType = draw(st.text()),
         misc= draw(st.text()),

@@ -93,6 +93,11 @@ class OHLCUpdateSchema(BaseSchema):
         a = OHLCUpdate(**data)
         return a
 
+    @staticmethod
+    def strategy():
+        from aiokraken.websockets.schemas.tests.strats.st_ohlc import st_ohlcupdatedict
+        return st_ohlcupdatedict()
+
 
 if __name__ == '__main__':
     import doctest

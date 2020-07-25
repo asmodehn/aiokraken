@@ -15,13 +15,13 @@ from decimal import Decimal
 import typing
 
 
-""" A common data structure for a Ticker """
+""" A common data structure for a Trade """
 
 @dataclass(frozen=True, init=True)
 class TradeWS:
 
     price: float  # Price
-    volume: 	float #	Volume
+    volume: float  #	Volume
     time: 	float 	# Time, seconds since epoch
     side: 	str  # Triggering order side, buy/sell
     orderType: 	str  # Triggering order type market/limit
@@ -33,10 +33,9 @@ class TradeWS:
         newdata.update({'pairname': pairname})
         return TradeWS(**newdata)
 
-    # @staticmethod
-    # def strategy(self):
-    #     from aiokraken.websockets.schemas.tests.strats.st_trade import st_tradews
-    #     return st_tradews()
+    def strategy(self):
+        from aiokraken.websockets.schemas.tests.strats.st_trade import st_tradews
+        return st_tradews()
 
 
 class TradeWSSchema(BaseSchema):
@@ -51,21 +50,20 @@ class TradeWSSchema(BaseSchema):
     @pre_load
     def parse_raw2dict(self, data, **kwargs):
         # https://docs.kraken.com/websockets-beta/#message-trade
-        #CAREFUL : for some reason there are 2 levels of array...
         return {
-            'price': data[0][0],
-            'volume': data[0][1],
-            'time': data[0][2],
-            'side': data[0][3],
-            'orderType': data[0][4],
-            'misc': data[0][5],
+            'price': data[0],
+            'volume': data[1],
+            'time': data[2],
+            'side': data[3],
+            'orderType': data[4],
+            'misc': data[5],
         }
 
     @post_load
     def build_model(self, data, **kwargs):
         return TradeWS(**data)
 
-    # @staticmethod
-    # def strategy():
-    #     from aiokraken.websockets.schemas.tests.strats.st_trade import st_tradewsdict
-    #     return st_tradewsdict()
+    @staticmethod
+    def strategy():
+        from aiokraken.websockets.schemas.tests.strats.st_trade import st_tradewsdict
+        return st_tradewsdict()
