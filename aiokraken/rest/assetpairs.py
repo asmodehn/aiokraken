@@ -67,7 +67,7 @@ class AssetPairs(Mapping):
     def __len__(self):
         return len(self.impl)
 
-    def __iter__(self):
+    def __iter__(self):  # Iterating on keys, or TODO on values ?
         return iter(self.impl)
 
 
