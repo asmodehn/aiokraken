@@ -17,29 +17,6 @@ from aiokraken.model.assetpair import AssetPair
 from aiokraken.websockets.channelparser import privatechannelparser, publicchannelparser
 
 
-# class PublicChannel:
-#
-#     pair: AssetPair
-#     subid: asyncio.Future
-#     parser: typing.Optional[typing.Callable] = None
-#
-#     def __init__(self, *, pair: AssetPair, loop):
-#         self.pair = pair
-#         self.subid = loop.create_future()
-#
-#     def subscribed(self, *, channel_name: str, pairstr: str, channel_id: int) -> None:
-#         assert pairstr == self.pair.wsname
-#         self.parser = functools.partial(publicchannelparser(channel_name=channel_name), pair=self.pair)
-#         # signal channel is ready to receive message by setting the subscribed future
-#         self.subid.set_result(channel_id)
-#
-#     def __call__(self, *, chan_id, data, pair: str) -> typing.Any:  # TODO : refine Any ?
-#         # parsing data received
-#         assert chan_id == self.subid.result()  # WARNING: result has to be set here !
-#         assert pair == self.pair.wsname
-#         return self.parser(data=data)
-
-
 class PublicChannelSet:
 
     subids: typing.Dict[AssetPair, asyncio.Future]
@@ -104,21 +81,21 @@ class PublicChannelSet:
         # Note here we trust the assetpair <-> channel_id relationship we set previously on subscribed()
 
 
-trade: typing.Optional[PublicChannelSet] = None
-ticker: typing.Optional[PublicChannelSet] = None
-
-for tf in KTimeFrameModel:
-    globals()[f'ohlc-{tf.value}'] = None
+# Note we have to store object here so that we can forward them somewhere else to be mutated...
+# (probably not a good idea BTW ?) TODO : some different, more easily testable design ?
+trade: PublicChannelSet = PublicChannelSet()
+ticker: PublicChannelSet = PublicChannelSet()
+ohlc: typing.Dict[int, PublicChannelSet] = {  # TODO : refine int to KTimeFrameModel
+    tf.value: PublicChannelSet()
+    for tf in KTimeFrameModel
+}
 
 
 def public_subscribe(pairs: AssetPairs, subscription: Subscription, loop: asyncio.AbstractEventLoop,
                      reqid: typing.Optional[int] = None) -> typing.Tuple[typing.Optional[Subscribe], PublicChannelSet]:
     # for subscription request
-    global trade, ticker
+    global trade, ticker, ohlc
     if subscription.name == "trade":
-        if trade is None:
-            trade = PublicChannelSet()
-
         subpairs = trade.subscribe(pairs=pairs, loop=loop)
 
         return Subscribe(pair=[p.wsname for p in subpairs.values()],
@@ -126,15 +103,22 @@ def public_subscribe(pairs: AssetPairs, subscription: Subscription, loop: asynci
                          reqid=reqid), trade
 
     elif subscription.name == "ticker":
-        if ticker is None:
-            ticker = PublicChannelSet()
         subpairs = ticker.subscribe(pairs=pairs, loop=loop)
 
         return Subscribe(pair=[p.wsname for p in subpairs.values()],
                          subscription=subscription,
                          reqid=reqid), ticker
 
-    elif subscription.name == "":
+    elif subscription.name == "ohlc":
+        ohlc_chan = subscription_channel(subscription)
+
+        subpairs = ohlc_chan.subscribe(pairs=pairs, loop=loop)
+
+        return Subscribe(pair=[p.wsname for p in subpairs.values()],
+                         subscription=subscription,
+                         reqid=reqid), ohlc_chan
+
+    else:
         raise NotImplementedError
 
 
@@ -146,6 +130,11 @@ def public_subscribed(channel_name: str, pairstr: str, channel_id: int) -> Publi
     elif channel_name == "ticker":
         ticker.subscribed(channel_name=channel_name, pairstr=pairstr, channel_id=channel_id)
         return ticker
+    elif channel_name.startswith("ohlc"):
+        sub = channel_name_subscription(channel_name)
+        chan = subscription_channel(sub)
+        chan.subscribed(channel_name=channel_name, pairstr=pairstr, channel_id=channel_id)
+        return chan
     else:
         raise NotImplementedError
 
@@ -168,13 +157,25 @@ def public_unsubscribe(pairs: AssetPairs, subscription: Subscription, # loop: as
                          subscription=subscription,
                          reqid=reqid), ticker
 
-    elif subscription.name == "":
+    elif subscription.name.startswith("ohlc"):
+        chan = subscription_channel(subscription)
+        subpairs = chan.unsubscribe(pairs=pairs)
+
+        return Unsubscribe(pair=[p.wsname for p in subpairs.values()],
+                           subscription=subscription,
+                           reqid=reqid), chan
+    else:
         raise NotImplementedError
 
 
 def subscription_channel(subscription: Subscription):
-    name = subscription_channel_name(subscription=subscription)
-    return globals()[name]
+    if subscription.name in ["trade", "ticker"]:
+        return globals()[subscription.name]
+    elif subscription.name == "ohlc":
+        # creating the timeframe key if needed
+        return globals()[subscription.name][subscription.interval]
+    else:
+        raise NotImplementedError
 
 
 def subscription_channel_name(subscription: Subscription):
@@ -188,37 +189,48 @@ def subscription_channel_name(subscription: Subscription):
         raise NotImplementedError
 
 
+def channel_name_subscription(channel_name):
+    if channel_name in ["trade", "ticker"]:
+        return Subscription(name=channel_name)
+    elif channel_name.startswith("ohlc"):
+        return Subscription(name="ohlc", interval=int(channel_name[5:]))
+    else:
+        raise NotImplementedError
+
+
 class ChannelPrivate:
 
-    subid: asyncio.Future
+    subid: typing.Optional[asyncio.Future] = None
     parser: typing.Optional[typing.Callable] = None
 
-    def __init__(self, *, loop):
-        self.subid = loop.create_future()
+    def subscribe(self, loop: asyncio.AbstractEventLoop):
+        if self.subid is None:
+            self.subid = loop.create_future()
 
     def subscribed(self, *, channel_name: str) -> None:
         self.parser = privatechannelparser(channel_name=channel_name)
         # signal channel is ready to receive message by setting the subscribed future
         self.subid.set_result(channel_name)  # need to set the future to something...
 
+    def unsubscribe(self):
+        self.subid = None
+
     def __call__(self, *, data) -> typing.Any:  # TODO : refine Any ?
         # parsing data received
         return self.parser(data=data)
 
 
-ownTrades: typing.Optional[ChannelPrivate] = None
-openOrders: typing.Optional[ChannelPrivate] = None
+ownTrades: ChannelPrivate = ChannelPrivate()
+openOrders: ChannelPrivate = ChannelPrivate()
 
 
 def private_subscribe(channel_name, loop: asyncio.AbstractEventLoop) -> ChannelPrivate:  # TODO : async or not ? eventloop must be same as for private_subscribed()
     global ownTrades, openOrders
     if channel_name == "ownTrades":
-        if ownTrades is None:
-            ownTrades = ChannelPrivate(loop=loop)
+        ownTrades.subscribe(loop=loop)
         return ownTrades
     elif channel_name == "openOrders":
-        if openOrders is None:
-            openOrders = ChannelPrivate(loop=loop)
+        openOrders.subscribe(loop=loop)
         return openOrders
     else:
         raise NotImplementedError(f"{channel_name} is not implemented for private_subscribe. Ignored.")
@@ -227,9 +239,9 @@ def private_subscribe(channel_name, loop: asyncio.AbstractEventLoop) -> ChannelP
 def private_unsubscribe(channel_name) -> None:
     global ownTrades, openOrders
     if channel_name == "ownTrades":
-        ownTrades = None
+        ownTrades.unsubscribe()
     elif channel_name == "openOrders":
-        openOrders = None
+        openOrders.unsubscribe()
     else:
         raise NotImplementedError(f"{channel_name} is not implemented for private_unsubscribe. Ignored.")
 
