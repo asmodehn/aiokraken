@@ -7,8 +7,11 @@ import hypothesis.strategies as st
 
 @st.composite
 def st_assetpairs(draw):
-    d = draw(st.dictionaries(keys=st.text(min_size=3, max_size=8), values=AssetPairStrategy(), max_size=5))
-    return AssetPairs(assetpairs_as_dict=d)
+    # drawing asset pairs, while guarenteeing unicity of restname and wsname
+    apl = draw(st.lists(elements=AssetPairStrategy(), max_size=5, unique_by=(lambda x: x.restname, lambda x: x.wsname)))
+    # picking restname or wsname for key of dictionnary
+    att = draw(st.sampled_from(["restname", "wsname"]))
+    return AssetPairs(assetpairs_as_dict={getattr(ap, att): ap for ap in apl})
 
 
 if __name__ == '__main__':

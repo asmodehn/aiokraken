@@ -13,4 +13,12 @@ class TestAssetPairs(unittest.TestCase):
     def test_valid(self, assetpairs):
         assert isinstance(assetpairs, AssetPairs)
 
+        # unicity of wsname
+        wsnames = {p.wsname for p in assetpairs.values()}
+        assert len(wsnames) == len(assetpairs)
+
+        # unicity of restname
+        restnames = {p.restname for p in assetpairs.values()}
+        assert len(restnames) == len(assetpairs)
+
         # TODO : add more properties tests

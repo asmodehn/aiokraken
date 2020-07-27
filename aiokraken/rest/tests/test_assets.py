@@ -13,4 +13,8 @@ class TestAssets(unittest.TestCase):
     def test_valid(self, assets):
         assert isinstance(assets, Assets)
 
+        # unicity of restname
+        restnames = {p.restname for p in assets.values()}
+        assert len(restnames) == len(assets)
+
         # TODO : add more properties tests
