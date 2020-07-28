@@ -4,11 +4,12 @@
 import asyncio
 import typing
 
+from aiokraken.websockets.channelstream import SubStreamPrivate
+
+from aiokraken.websockets.channelsubscribe import private_subscribe, private_subscribed, private_unsubscribe
+
 from aiokraken.utils import get_kraken_logger
 
-from aiokraken.websockets.substream import PrivateSubStream
-
-from aiokraken.websockets.channel import channel
 from aiokraken.websockets.schemas.unsubscribe import Unsubscribe
 from aiokraken.websockets.connections import WssConnection
 from aiokraken.websockets.generalapi import API
@@ -29,51 +30,43 @@ private_connection = WssConnection(websocket_url="wss://beta-ws-auth.kraken.com"
 
 class PrivateAPI(API):
 
-    _future_channels: typing.Dict[str, asyncio.Future]
-
     def __init__(self, connect: WssConnection):
         super(PrivateAPI, self).__init__(connect=connect)
 
-        self._future_channels = dict()
-
-    async def subscribe(self, subdata: Subscribe) -> PrivateSubStream:
+    async def subscribe(self, subscription: Subscription, reqid: int) -> SubStreamPrivate:
         #  a simple request response API, unblocking.
         """ add new subscription and return a substream, ready to be used as an async iterator """
 
         # Because subscribe is callable multiple times with the same subdata,
         # but this would trigger "already subscribed" error on kraken side
 
-        if subdata.subscription.name not in self._future_channels:  # match based on name
-            # if we don't have a channel with this name yet, we need to actually subscribe
-            self._future_channels[subdata.subscription.name] = asyncio.get_running_loop().create_future()
-            # we use the exact same subdata here
-            strdata = self.subscribe_schema.dumps(subdata)
+        chanpriv = private_subscribe(channel_name=subscription.name,
+                                            loop=asyncio.get_running_loop())
 
-            await self.connect(strdata)
+        subdata = Subscribe(subscription=subscription, reqid=reqid)
 
-        # retrieving channel tor extract messages from it
-        # possibly awaiting for channel to be created by the future
-        stream = PrivateSubStream(await self._future_channels[subdata.subscription.name])
+        strdata = self.subscribe_schema.dumps(subdata)
+        await self.connect(strdata)
 
-        # storing the stream for this subscribe request
-        self._streams[subdata] = stream
-        # TODO : maybe the whole subdata instead of just the name ???
+        # retrieving all channel_ids for this subscription:
 
-        return stream  # TODO : maybe context manager to cleanup the queue when we dont use it or unsubscribe ?
+        self._streams[subdata] = SubStreamPrivate(channelprivate=chanpriv)
 
-    async def unsubscribe(self, unsubdata: Unsubscribe):
+        # await subscription to be set before returning
+        return await self._streams[subdata]
+        # TODO : maybe context manager to cleanup the queue when we dont use it or unsubscribe ?
+
+    async def unsubscribe(self, subscription: Subscription):
         #  a simple request response API, unblocking.
         """ stops a subscription """
 
-        if unsubdata.subscription.name in self._future_channels:
-
+        private_unsubscribe(channel_name=subscription.name)
+        unsubdata = Unsubscribe(subscription=subscription, pair = [])  # TODO : FIX pair ?
+        if unsubdata:
             strdata = self.unsubscribe_schema.dumps(unsubdata)
-
             await self.connect(strdata)
 
-            # TODO : best place to pop from the list of channels ?? here or callback ??
-
-        # else nothing happens...
+        # TODO : some return or finalization of some kind ?
 
     async def __aiter__(self):
         async for message in super(PrivateAPI, self).__aiter__():
@@ -87,13 +80,9 @@ class PrivateAPI(API):
                 else:  # normal case
                     # based on docs https://docs.kraken.com/websockets/#message-subscriptionStatus
 
-                    # First we need to match channel name
-
                     if data.status == 'subscribed':
                         # setting up channels for data
-                        chan = channel(name=data.channel_name)
-                        # new subscribed event : we set (or replace existing) channel
-                        self._future_channels[chan.channel_name].set_result(chan)
+                        chan = private_subscribed(channel_name=data.channel_name)
 
                         print(f"Channel created: {chan}")
 
@@ -135,14 +124,13 @@ async def ownTrades( restclient = None):
         token = await restclient.websockets_token()
 
     reqid += 1  # leveraging reqid to recognize response
-    subdata = Subscribe(subscription=Subscription(name="ownTrades", token=token), reqid=reqid)
 
     # Note : queue is maybe more internal / lowlevel, keeping the linearity of data. BETTER FIT here when subscribing !
     #        callback implies possible multiplicity (many callbacks => duplication of data).
 
     msgpull()
 
-    msgqueue = await _privateapi.subscribe(subdata)
+    msgqueue = await _privateapi.subscribe(subscription=Subscription(name="ownTrades", token=token), reqid=reqid)
 
     async for msg in msgqueue:
         yield msg
@@ -161,15 +149,14 @@ async def openOrders (restclient = None):
         token = await restclient.websockets_token()
 
     reqid += 1  # leveraging reqid to recognize response
-    subdata = Subscribe(subscription=Subscription(name="openOrders", token=token), reqid=reqid)
 
     # Note : queue is maybe more internal / lowlevel, keeping the linearity of data. BETTER FIT here when subscribing !
     #        callback implies possible multiplicity (many callbacks => duplication of data).
 
     msgpull()
 
-    msgqueue = await _privateapi.subscribe(subdata)
-    # TODO : sometimes we miss the first message here ???
+    msgqueue = await _privateapi.subscribe(subscription=Subscription(name="openOrders", token=token), reqid=reqid)
+
     async for msg in msgqueue:
         yield msg
 

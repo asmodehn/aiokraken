@@ -7,9 +7,10 @@ from typing import Callable
 import aiohttp
 import typing
 
-from aiokraken.utils import get_kraken_logger
+from aiokraken.websockets.channelstream import SubStream
 
-from aiokraken.websockets.substream import PrivateSubStream, PublicSubStream
+from aiokraken.utils import get_kraken_logger
+from aiokraken.websockets.channelsubscribe import subscription_channel_name
 
 from aiokraken.websockets.schemas.pingpong import PingSchema, PongSchema
 
@@ -42,7 +43,7 @@ class KrakenEvent(Enum):
 class API:  # 1 instance per connection
 
     # storing a set of stream for each subscription name
-    _streams: typing.Dict[Subscribe, typing.Union[PrivateSubStream,PublicSubStream]]
+    _streams: typing.Dict[Subscribe, SubStream]
 
     # because we need to have only one schema instance that we can reuse multiple times
     subscribe_schema = SubscribeSchema()
@@ -138,10 +139,19 @@ class API:  # 1 instance per connection
 
             # only receiving unknowns here but mandatory to pull data...
             if isinstance(message, list):
-                for subdata, strm in self._streams.items():
-                    # each stream is responsible to drop the message if it is not for itself.
-                    # format of message (size of list, etc.) is determined by the stream type
-                    await strm(*message)
+                if len(message) == 4:  # public api
+                    channame = message[2]
+                    for subdata, strm in self._streams.items():
+                        if subscription_channel_name(subdata.subscription) == channame:
+                            await strm(chan_id=message[0], data=message[1], channel=message[2], pair=message[3])
+
+                elif len(message) == 2:  # private api
+                    channame = message[1]
+                    for subdata, strm in self._streams.items():
+                        if subscription_channel_name(subdata.subscription) == channame:
+                            await strm(data=message[0], channel=message[1])
+                else:
+                    raise NotImplementedError
 
             elif isinstance(message, dict):
                 # We can always attempt a match on "event" string and decide on the response schema from it.

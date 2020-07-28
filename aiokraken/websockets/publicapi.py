@@ -5,12 +5,19 @@ import asyncio
 
 import typing
 
+from aiokraken.rest import AssetPairs
+
+from aiokraken.websockets.channelstream import SubStream
+
+from aiokraken.websockets.channelsubscribe import (
+    PublicChannelSet, public_subscribe, public_subscribed,
+    public_unsubscribe,
+)
+
 from aiokraken.utils import get_kraken_logger
 
-from aiokraken.websockets.substream import PublicSubStream
 from aiokraken.websockets.schemas.unsubscribe import Unsubscribe, UnsubscribeSchema
 
-from aiokraken.websockets.channel import channel
 from aiokraken.websockets.connections import WssConnection
 from aiokraken.websockets.generalapi import API
 
@@ -30,19 +37,17 @@ LOGGER = get_kraken_logger(__name__)
 
 public_connection = WssConnection(websocket_url="wss://beta-ws.kraken.com")
 
+
 # Notice: get inspiration from PrivateAPI as it is simpler than the public one
 class PublicAPI(API):
 
     # not channels here have one more level of indirection than privateAPI,
     # to effectively take care of the "pair/id" level...
-    _future_channels: typing.Dict[str, asyncio.Future]
 
     def __init__(self, connect: WssConnection):
         super(PublicAPI, self).__init__(connect=connect)
 
-        self._future_channels = dict()
-
-    async def subscribe(self, subdata: Subscribe) -> PublicSubStream:
+    async def subscribe(self, pairs: typing.Iterable[AssetPair], subscription: Subscription, reqid: int) -> SubStream:
         #  a simple request response API, unblocking.
         """ add new subscription and return a substream, ready to be used as an async iterator """
 
@@ -50,56 +55,35 @@ class PublicAPI(API):
         # Beware: channel matching with subscription is relying on SubscribeOne equality!
         # check which pair we should subscribe to (not already subscribed)
 
-        # relative to this subscription name, these are the available pairs
-        available_pairs = set()
+        # creates necessary futures expecting request/response
+        subdata, chanset = public_subscribe(pairs=AssetPairs({p.wsname: p for p in pairs}),
+                                            subscription=subscription,
+                                            loop=asyncio.get_running_loop(), reqid=reqid)
 
-        # creating a dict to store a channel for each requested pair if needed
-        # CAREFUL with special naming...
-        if subdata.subscription.name == "ohlc":
-            subname = f"ohlc-{subdata.subscription.interval}"
-        else:
-            subname = subdata.subscription.name
-        self._future_channels.setdefault(subname, asyncio.get_running_loop().create_future())
-
-        if self._future_channels[subname].done():
-            for pair in self._future_channels[subname].keys():
-                available_pairs.add(pair)
-
-            subscribe_required_pairs = subdata.pair - available_pairs
-        else:
-            subscribe_required_pairs = subdata.pair
-        # otherwise no pair has been received just yet
-
-        if subscribe_required_pairs:
+        if subdata:
             # we use the exact same subdata here
-            strdata = self.subscribe_schema.dumps(
-                Subscribe(subscription=subdata.subscription,
-                          pair=subscribe_required_pairs,
-                          reqid=subdata.reqid)
-            )
-
+            strdata = self.subscribe_schema.dumps(subdata)
             await self.connect(strdata)
 
-        # awaiting all channels and building the subscribe stream
-        stream = PublicSubStream(await self._future_channels[subname], pairs=subdata.pair)
+        # retrieving all channel_ids for this subscription:
 
-        # storing the stream for this subscribe request
-        self._streams[subdata] = stream
-        # TODO : maybe the whole subdata instead of just the name ???
+        self._streams[subdata] = SubStream(channelset=chanset, pairs=AssetPairs({p.wsname: p for p in pairs}))
 
-        return stream  # TODO : maybe context manager to cleanup the queue when we dont use it or unsubscribe ?
+        return await self._streams[subdata]
+        # TODO : maybe context manager to cleanup the queue when we dont use it or unsubscribe ?
 
-    async def unsubscribe(self, unsubdata: Unsubscribe):
+    async def unsubscribe(self, pairs: typing.Iterable[AssetPair], subscription: Subscription, reqid: int):
         #  a simple request response API, unblocking.
         """ stops a subscription """
-        schema = UnsubscribeSchema()
 
-        strdata = schema.dumps(unsubdata)
+        unsubdata, chan = public_unsubscribe(pairs=AssetPairs({p.wsname: p for p in pairs}),
+                            subscription=subscription,
+                            reqid=reqid)
+        if unsubdata:
+            strdata = self.unsubscribe_schema.dumps(unsubdata)
+            await self.connect(strdata)
 
-        # TODO : generate a schema based on what we expect ?
-        # self._expected_event["subscriptionStatus"] += SubscriptionStatus()
-
-        await self.connect(strdata)
+        # TODO : some return or finalization of some kind ?
 
     async def __aiter__(self):
         async for message in super(PublicAPI, self).__aiter__():
@@ -113,19 +97,9 @@ class PublicAPI(API):
                 else:  # normal case
                     # based on docs https://docs.kraken.com/websockets/#message-subscriptionStatus
                     if data.status == 'subscribed':
-                        if data.channel_name in self._future_channels:
-                            # TODO : careful here with concurrency issues !
-                            #  maybe we need some lock when setting result ?
-                            if not self._future_channels[data.channel_name].done():
-                                self._future_channels[data.channel_name].set_result(
-                                    channel(name=data.channel_name)
-                                )
-                                print(f"Channel created: {self._future_channels[data.channel_name].result()}")
-
-                            # matching pair and id on existing channelset
-                            # TODO : leverage global REST client to parse teh datapair in a proper object.
-                            #  currently this works only while kraken is consistent on the pair string returned...
-                            (await self._future_channels[data.channel_name])[data.pair] = data.channel_id
+                        public_subscribed(channel_id=data.channel_id,
+                                          channel_name=data.channel_name,
+                                          pairstr=data.pair)
 
                     elif data.status == 'unsubscribed':
                         raise NotImplementedError  # TODO
@@ -159,14 +133,18 @@ async def ticker(pairs: typing.List[typing.Union[AssetPair, str]], restclient = 
     pairs = [(await restclient.assetpairs)[p] if isinstance(p, str) else p for p in pairs] if pairs else []
 
     reqid += 1  # leveraging reqid to recognize response
-    subdata = Subscribe(pair =[p.wsname for p in pairs], subscription=Subscription(name="ticker"), reqid=reqid)
 
     # Note : queue is maybe more internal / lowlevel, keeping the linearity of data. BETTER FIT here when subscribing !
     #        callback implies possible multiplicity (many callbacks => duplication of data).
 
     msgpull()
 
-    msgqueue = await _publicapi.subscribe(subdata)
+    msgqueue = await _publicapi.subscribe(
+        pairs=pairs,
+        subscription=Subscription(name="ticker"),
+        reqid=reqid)
+
+    await msgqueue  # awaiting al subscription to be set.
 
     async for msg in msgqueue:
         yield msg
@@ -180,15 +158,19 @@ async def ohlc(pairs: typing.List[typing.Union[AssetPair, str]], interval: int =
     pairs = [(await restclient.assetpairs)[p] if isinstance(p, str) else p for p in pairs] if pairs else []
 
     reqid += 1  # leveraging reqid to recognize response
-    subdata = Subscribe(pair =[p.wsname for p in pairs], subscription=Subscription(name="ohlc", interval=interval), reqid=reqid)
 
     # Note : queue is maybe more internal / lowlevel, keeping the linearity of data. BETTER FIT here when subscribing !
     #        callback implies possible multiplicity (many callbacks => duplication of data).
 
     msgpull()
 
-    msgqueue = await _publicapi.subscribe(subdata)
-    # TODO : we need some log here, alike the REST request produce logs on the console...
+    msgqueue = await _publicapi.subscribe(
+        pairs=pairs,
+        subscription=Subscription(name="ohlc", interval=interval),
+        reqid=reqid
+    )
+
+    await msgqueue  # awaiting al subscription to be set.
 
     async for msg in msgqueue:
         yield msg
@@ -201,14 +183,19 @@ async def trade(pairs: typing.List[typing.Union[AssetPair, str]], restclient=Non
     pairs = [(await restclient.assetpairs)[p] if isinstance(p, str) else p for p in pairs] if pairs else []
 
     reqid += 1  # leveraging reqid to recognize response
-    subdata = Subscribe(pair =[p.wsname for p in pairs], subscription=Subscription(name="trade"), reqid=reqid)
 
     # Note : queue is maybe more internal / lowlevel, keeping the linearity of data. BETTER FIT here when subscribing !
     #        callback implies possible multiplicity (many callbacks => duplication of data).
 
     msgpull()
 
-    msgqueue = await _publicapi.subscribe(subdata)
+    msgqueue = await _publicapi.subscribe(
+        pairs=pairs,
+        subscription=Subscription(name="trade"),
+        reqid=reqid
+    )
+
+    await msgqueue  # awaiting al subscription to be set.
 
     async for msg in msgqueue:
         yield msg
@@ -228,38 +215,38 @@ if __name__ == '__main__':
     eth_eur_pair = "ETH/EUR"
     xbt_eur_pair = "XBT/EUR"
 
-    #
-    # async def tkr_connect1():
-    #     # async for msg in ticker([xtz_eur_pair], restclient=client):
-    #     async for msg in ticker([xtz_eur_pair, eth_eur_pair], restclient=client):
-    #         print(f"wss ==> ticker xtz eth: {msg}")
-    #
-    # async def tkr_connect2():
-    #     async for msg in ticker([xbt_eur_pair, xtz_eur_pair], restclient=client):
-    #         print(f"wss ==> ticker xbt xtz: {msg}")
-    #
-    # async def sched():
-    # print(f"Ticker for {xtz_eur_pair} and {eth_eur_pair}")
-    #     await asyncio.gather(
-    #         tkr_connect1(),
-    #         tkr_connect2(),  # Note how xtz messages only should be duplicated in output...
-    #     )
 
-    async def ohlc_connect1():
+    async def tkr_connect1():
         # async for msg in ticker([xtz_eur_pair], restclient=client):
-        async for msg in ohlc([xtz_eur_pair, eth_eur_pair], restclient=client):
-            print(f"wss ==> ohlc xtz eth: {msg}")
+        async for msg in ticker([xtz_eur_pair, eth_eur_pair], restclient=client):
+            print(f"wss ==> ticker xtz eth: {msg}")
 
-    async def ohlc_connect2():
-        async for msg in ohlc([xbt_eur_pair, xtz_eur_pair], restclient=client):
-            print(f"wss ==> ohlc xbt xtz: {msg}")
+    async def tkr_connect2():
+        async for msg in ticker([xbt_eur_pair, xtz_eur_pair], restclient=client):
+            print(f"wss ==> ticker xbt xtz: {msg}")
 
     async def sched():
-        print(f"OHLC for {xtz_eur_pair} and {eth_eur_pair}")
+        print(f"Ticker for {xtz_eur_pair} and {eth_eur_pair}")
         await asyncio.gather(
-            ohlc_connect1(),
-            ohlc_connect2(),  # Note how xtz messages only should be duplicated in output...
+            tkr_connect1(),
+            tkr_connect2(),  # Note how xtz messages only should be duplicated in output...
         )
+
+    # async def ohlc_connect1():
+    #     # async for msg in ticker([xtz_eur_pair], restclient=client):
+    #     async for msg in ohlc([xtz_eur_pair, eth_eur_pair], restclient=client):
+    #         print(f"wss ==> ohlc xtz eth: {msg}")
+    #
+    # async def ohlc_connect2():
+    #     async for msg in ohlc([xbt_eur_pair, xtz_eur_pair], restclient=client):
+    #         print(f"wss ==> ohlc xbt xtz: {msg}")
+    #
+    # async def sched():
+    #     print(f"OHLC for {xtz_eur_pair} and {eth_eur_pair}")
+    #     await asyncio.gather(
+    #         ohlc_connect1(),
+    #         ohlc_connect2(),  # Note how xtz messages only should be duplicated in output...
+    #     )
 
     #
     # async def trade_connect1():

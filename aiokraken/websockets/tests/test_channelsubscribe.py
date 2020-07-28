@@ -79,7 +79,6 @@ class TestPublicChannelSet(unittest.TestCase):
                 # TODO : unsubscribe flow
 
 
-
 class TestNameChannelSubscription(unittest.TestCase):
 
     @given(name=st.sampled_from(["trade", "ticker",
@@ -91,6 +90,10 @@ class TestNameChannelSubscription(unittest.TestCase):
             assert sub == Subscription(name="trade")
         elif name == "ticker":
             assert sub == Subscription(name="ticker")
+        elif name == "ownTrades":
+            assert sub == Subscription(name="ownTrades")
+        elif name == "openOrders":
+            assert sub == Subscription(name="openOrders")
         elif name.startswith("ohlc"):
             assert sub == Subscription(name="ohlc", interval=int(name[5:]))
 
@@ -104,6 +107,10 @@ class TestNameChannelSubscription(unittest.TestCase):
             assert chan is aiokraken.websockets.channelsubscribe.trade
         elif name == "ticker":
             assert chan is aiokraken.websockets.channelsubscribe.ticker
+        elif name == "ownTrades":
+            assert chan is aiokraken.websockets.channelsubscribe.ownTrades
+        elif name == "openOrders":
+            assert chan is aiokraken.websockets.channelsubscribe.openOrders
         elif name.startswith("ohlc"):
             assert chan is aiokraken.websockets.channelsubscribe.ohlc[int(name[5:])]
 

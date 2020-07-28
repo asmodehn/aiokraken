@@ -1,5 +1,6 @@
 import asyncio
 import functools
+import itertools
 from types import MappingProxyType
 
 import typing
@@ -26,7 +27,7 @@ class PublicChannelSet:
         self.subids = dict()
         self.parsers = dict()
 
-    def __contains__(self, item: AssetPair):
+    def __contains__(self, item: typing.Union[AssetPair, int]):
         return item in self.subids.keys() or item in self.parsers.keys()
 
     def __getitem__(self, item: typing.Union[AssetPair, int]):
@@ -98,25 +99,28 @@ def public_subscribe(pairs: AssetPairs, subscription: Subscription, loop: asynci
     if subscription.name == "trade":
         subpairs = trade.subscribe(pairs=pairs, loop=loop)
 
-        return Subscribe(pair=[p.wsname for p in subpairs.values()],
+        subdata = Subscribe(pair=[p.wsname for p in subpairs.values()],
                          subscription=subscription,
-                         reqid=reqid), trade
+                         reqid=reqid) if subpairs else None
+        return subdata, trade
 
     elif subscription.name == "ticker":
         subpairs = ticker.subscribe(pairs=pairs, loop=loop)
 
-        return Subscribe(pair=[p.wsname for p in subpairs.values()],
+        subdata = Subscribe(pair=[p.wsname for p in subpairs.values()],
                          subscription=subscription,
-                         reqid=reqid), ticker
+                         reqid=reqid) if subpairs else None
+        return subdata, ticker
 
     elif subscription.name == "ohlc":
         ohlc_chan = subscription_channel(subscription)
 
         subpairs = ohlc_chan.subscribe(pairs=pairs, loop=loop)
 
-        return Subscribe(pair=[p.wsname for p in subpairs.values()],
+        subdata = Subscribe(pair=[p.wsname for p in subpairs.values()],
                          subscription=subscription,
-                         reqid=reqid), ohlc_chan
+                         reqid=reqid) if subpairs else None
+        return subdata, ohlc_chan
 
     else:
         raise NotImplementedError
@@ -185,12 +189,16 @@ def subscription_channel_name(subscription: Subscription):
         return "ticker"
     elif subscription.name == "ohlc":
         return f"ohlc-{subscription.interval}"
+    elif subscription.name == "ownTrades":
+        return "ownTrades"
+    elif subscription.name == "openOrders":
+        return "openOrders"
     else:
         raise NotImplementedError
 
 
 def channel_name_subscription(channel_name):
-    if channel_name in ["trade", "ticker"]:
+    if channel_name in ["trade", "ticker", "ownTrades", "openOrders"]:
         return Subscription(name=channel_name)
     elif channel_name.startswith("ohlc"):
         return Subscription(name="ohlc", interval=int(channel_name[5:]))
@@ -224,6 +232,7 @@ ownTrades: ChannelPrivate = ChannelPrivate()
 openOrders: ChannelPrivate = ChannelPrivate()
 
 
+# TODO : unify apis : channel_name -> subscription ?
 def private_subscribe(channel_name, loop: asyncio.AbstractEventLoop) -> ChannelPrivate:  # TODO : async or not ? eventloop must be same as for private_subscribed()
     global ownTrades, openOrders
     if channel_name == "ownTrades":
@@ -236,12 +245,14 @@ def private_subscribe(channel_name, loop: asyncio.AbstractEventLoop) -> ChannelP
         raise NotImplementedError(f"{channel_name} is not implemented for private_subscribe. Ignored.")
 
 
-def private_unsubscribe(channel_name) -> None:
+def private_unsubscribe(channel_name) -> ChannelPrivate:
     global ownTrades, openOrders
     if channel_name == "ownTrades":
         ownTrades.unsubscribe()
+        return ownTrades
     elif channel_name == "openOrders":
         openOrders.unsubscribe()
+        return openOrders
     else:
         raise NotImplementedError(f"{channel_name} is not implemented for private_unsubscribe. Ignored.")
 
