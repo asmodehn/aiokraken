@@ -1,7 +1,6 @@
 import unittest
 
-from aiokraken.model.tests.strats.st_asset import AssetModel, AssetStrategy
-from aiokraken.rest.schemas.kasset import AssetSchema, KDictStrategy
+from aiokraken.rest.schemas.kasset import Asset, AssetStrategy, AssetSchema, KDictStrategy
 from hypothesis import given, settings, Verbosity
 
 """
@@ -21,7 +20,7 @@ class TestKAssetSchema(unittest.TestCase):
         KDictStrategy(AssetStrategy()))
     def test_deserialize(self, modeldict):
         a = self.schema.load(modeldict)
-        assert isinstance(a, AssetModel)
+        assert isinstance(a, Asset)
 
     #@settings(verbosity=Verbosity.verbose)
     @given(AssetStrategy())
