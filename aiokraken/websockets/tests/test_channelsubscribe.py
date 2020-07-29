@@ -2,11 +2,13 @@ import asyncio
 import unittest
 from random import randint
 
+from aiokraken.websockets.schemas.unsubscribe import Unsubscribe
+
 from aiokraken.model.timeframe import KTimeFrameModel
 
 from aiokraken.rest.tests.strats.st_assetpairs import st_assetpairs
 
-from aiokraken.websockets.schemas.subscribe import Subscription
+from aiokraken.websockets.schemas.subscribe import Subscribe, Subscription
 
 from aiokraken.model.tests.strats.st_assetpair import AssetPairStrategy
 from hypothesis import given
@@ -125,27 +127,30 @@ class TestPublicChannelSubscribe(unittest.TestCase):
             # Happy path  # TODO : test various possible sequences (concurrency !)
             subscribe, chan1 = public_subscribe(pairs=pairs, subscription=Subscription(name="trade"),
                                                 loop=asyncio.get_running_loop())
+            assert isinstance(subscribe, Subscribe) or not pairs
             assert isinstance(chan1, PublicChannelSet)
             for p in pairs.values():
                 assert p.wsname in subscribe.pair
                 assert isinstance(chan1[p], asyncio.Future)
                 assert not chan1[p].done()
 
-            for p in pairs.values():
-                chan2 = public_subscribed(channel_name="trade", pairstr=p.wsname, channel_id=randint(0, 9999))
-                assert chan2 == chan1  # should be the exact same thing
-                assert chan2[p].done()
-                cid = chan2[p].result()
-                assert cid in chan2 and callable(chan2[cid])
+            # retrieve channel name if we need to confirm the subscription
+            if subscribe:
+                channame = subscription_channel_name(subscribe.subscription)
 
-            for p in pairs.values():
-                assert isinstance(chan1[p], asyncio.Future)
-                assert chan1[p].done()
+                for p in pairs.values():
+                    chan2 = public_subscribed(channel_name=channame, pairstr=p.wsname, channel_id=randint(0, 9999))
+                    assert chan2 == chan1  # should be the exact same thing
+                    assert isinstance(chan2[p], asyncio.Future)
+                    assert chan2[p].done()
+                    cid = chan2[p].result()
+                    assert cid in chan2 and callable(chan2[cid])
 
-            unsubscribe, chan3 = public_unsubscribe(pairs=pairs, subscription=Subscription(name="trade"))
-            for p in pairs.values():
-                assert p.wsname in unsubscribe.pair
-                assert not p in chan3
+                unsubscribe, chan3 = public_unsubscribe(pairs=pairs, subscription=Subscription(name="trade"))
+                assert isinstance(unsubscribe, Unsubscribe) or not pairs
+                for p in pairs.values():
+                    assert p.wsname in unsubscribe.pair
+                    assert not p in chan3
 
         asyncio.run(runner())
 
@@ -156,6 +161,7 @@ class TestPublicChannelSubscribe(unittest.TestCase):
             # Happy path  # TODO : test various possible sequences (concurrency !)
             subscribe, chan1 = public_subscribe(pairs=pairs, subscription=Subscription(name="ticker"),
                                                 loop=asyncio.get_running_loop())
+            assert isinstance(subscribe, Subscribe) or not pairs
             assert isinstance(chan1, PublicChannelSet)
             for p in pairs.values():
                 assert isinstance(chan1[p], asyncio.Future)
@@ -164,21 +170,26 @@ class TestPublicChannelSubscribe(unittest.TestCase):
                 else:
                     assert chan1[p].done()  # already subscribed to it
 
-            for p in pairs.values():
-                cid = randint(0, 9999)
-                chan2 = public_subscribed(channel_name="ticker", pairstr=p.wsname, channel_id=cid)
-                assert chan2 == chan1  # should be the exact same thing
-                assert chan2[p].done()  # this pair is subscribed to
-                assert cid == chan2[p].result()  # we have the cid
-                assert cid in chan2 and callable(chan2[cid])  # we can access the parser
+            # retrieve channel name if we need to confirm the subscription
+            if subscribe:
+                channame = subscription_channel_name(subscribe.subscription)
 
-            unsubscribe, chan3 = public_unsubscribe(pairs=pairs, subscription=Subscription(name="ticker"))
-            assert chan3 == chan1  # still the same thing
-            for p in pairs.values():
-                assert not p in chan3
-                if p.wsname in unsubscribe.pair:
-                    assert p not in chan3
-                assert p.wsname in unsubscribe.pair
+                for p in pairs.values():
+                    cid = randint(0, 9999)
+                    chan2 = public_subscribed(channel_name=channame, pairstr=p.wsname, channel_id=cid)
+                    assert chan2 == chan1  # should be the exact same thing
+                    assert chan2[p].done()  # this pair is subscribed to
+                    assert cid == chan2[p].result()  # we have the cid
+                    assert cid in chan2 and callable(chan2[cid])  # we can access the parser
+
+                unsubscribe, chan3 = public_unsubscribe(pairs=pairs, subscription=Subscription(name="ticker"))
+                assert isinstance(unsubscribe, Unsubscribe) or not pairs
+                assert chan3 == chan1  # still the same thing
+                for p in pairs.values():
+                    assert not p in chan3
+                    if p.wsname in unsubscribe.pair:
+                        assert p not in chan3
+                    assert p.wsname in unsubscribe.pair
 
         asyncio.run(runner())
 
@@ -188,6 +199,7 @@ class TestPublicChannelSubscribe(unittest.TestCase):
         async def runner():
             subscribe, chan1 = public_subscribe(pairs=pairs, subscription=Subscription(name="ohlc", interval=interval),
                                                 loop=asyncio.get_running_loop())
+            assert isinstance(subscribe, Subscribe) or not pairs
             assert isinstance(chan1, PublicChannelSet)
             for p in pairs.values():
                 assert isinstance(chan1[p], asyncio.Future)
@@ -196,24 +208,26 @@ class TestPublicChannelSubscribe(unittest.TestCase):
                 else:
                     assert chan1[p].done()  # already subscribed to it
 
-            # retrieve channel name
-            channame = subscription_channel_name(subscribe.subscription)
+            # retrieve channel name if we need to confirm the subscription
+            if subscribe:
+                channame = subscription_channel_name(subscribe.subscription)
 
-            for p in pairs.values():
-                cid = randint(0, 9999)
-                chan2 = public_subscribed(channel_name=channame, pairstr=p.wsname, channel_id=cid)
-                assert chan2 == chan1  # should be the exact same thing
-                assert chan2[p].done()  # this pair is subscribed to
-                assert cid == chan2[p].result()  # we have the cid
-                assert cid in chan2 and callable(chan2[cid])  # we can access the parser
+                for p in pairs.values():
+                    cid = randint(0, 9999)
+                    chan2 = public_subscribed(channel_name=channame, pairstr=p.wsname, channel_id=cid)
+                    assert chan2 == chan1  # should be the exact same thing
+                    assert chan2[p].done()  # this pair is subscribed to
+                    assert cid == chan2[p].result()  # we have the cid
+                    assert cid in chan2 and callable(chan2[cid])  # we can access the parser
 
-            unsubscribe, chan3 = public_unsubscribe(pairs=pairs, subscription=subscribe.subscription)
-            assert chan3 == chan1  # still the same thing
-            for p in pairs.values():
-                assert not p in chan3
-                if p.wsname in unsubscribe.pair:
-                    assert p not in chan3
-                assert p.wsname in unsubscribe.pair
+                unsubscribe, chan3 = public_unsubscribe(pairs=pairs, subscription=subscribe.subscription)
+                assert isinstance(unsubscribe, Unsubscribe) or not pairs
+                assert chan3 == chan1  # still the same thing
+                for p in pairs.values():
+                    assert not p in chan3
+                    if p.wsname in unsubscribe.pair:
+                        assert p not in chan3
+                    assert p.wsname in unsubscribe.pair
 
         asyncio.run(runner())
 

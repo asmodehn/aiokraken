@@ -152,14 +152,14 @@ def public_unsubscribe(pairs: AssetPairs, subscription: Subscription, # loop: as
 
         return Unsubscribe(pair=[p.wsname for p in subpairs.values()],
                          subscription=subscription,
-                         reqid=reqid), trade
+                         reqid=reqid) if subpairs else None, trade
 
     elif subscription.name == "ticker":
         subpairs = ticker.unsubscribe(pairs=pairs)
 
         return Unsubscribe(pair=[p.wsname for p in subpairs.values()],
                          subscription=subscription,
-                         reqid=reqid), ticker
+                         reqid=reqid)if subpairs else None, ticker
 
     elif subscription.name.startswith("ohlc"):
         chan = subscription_channel(subscription)
@@ -167,7 +167,7 @@ def public_unsubscribe(pairs: AssetPairs, subscription: Subscription, # loop: as
 
         return Unsubscribe(pair=[p.wsname for p in subpairs.values()],
                            subscription=subscription,
-                           reqid=reqid), chan
+                           reqid=reqid)if subpairs else None, chan
     else:
         raise NotImplementedError
 
