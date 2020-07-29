@@ -2,28 +2,28 @@ import unittest
 import pandas as pd
 from datetime import timezone
 
-from aiokraken.model.ledger import Ledger
+from aiokraken.model.ledgerframe import LedgerFrame
 
 from aiokraken.model.time import Time
 
-from aiokraken.model.tests.strats.st_ledger import st_ledger
+from aiokraken.model.tests.strats.st_ledgerframe import st_ledgerframe
 from hypothesis import given, settings, Verbosity, HealthCheck
 from hypothesis.strategies import sampled_from
 
 
 class TestLedger(unittest.TestCase):
 
-    @given(l=st_ledger())
+    @given(l=st_ledgerframe())
     # @settings(verbosity=Verbosity.verbose)
-    def test_init(self, l: Ledger):
+    def test_init(self, l: LedgerFrame):
         # make sure t and next_t is ordered is ordered
         assert l.dataframe.index.is_monotonic_increasing
 
         # TODO : more assert (dtype and more...)
 
-    @given(l=st_ledger(), next_l=st_ledger())
+    @given(l=st_ledgerframe(), next_l=st_ledgerframe())
     # @settings(verbosity=Verbosity.verbose)
-    def test_stitch(self, l: Ledger, next_l: Ledger):
+    def test_stitch(self, l: LedgerFrame, next_l: LedgerFrame):
 
         # make sure t and next_t is ordered is ordered
         assert l.dataframe.index.is_monotonic_increasing

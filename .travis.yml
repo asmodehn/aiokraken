@@ -8,19 +8,11 @@ branches:
 python:
   - '3.8'
 
-
 install:
   - pipenv install --dev --pre --skip-lock --sequential
 
 script:
-  - pytest aiokraken/utils/tests
-  - pytest aiokraken/rest/schemas/tests
-  - pytest aiokraken/rest/tests
-  - pytest aiokraken/websockets/schemas/tests
-  - pytest aiokraken/websockets/tests
-  - pytest aiokraken/model/tests
-  - pytest aiokraken/tests
-  - pytest tests --block-network
+  - pytest --block-network
 
 notifications:
   email: false

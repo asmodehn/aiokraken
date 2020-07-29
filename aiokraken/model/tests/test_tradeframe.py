@@ -2,28 +2,28 @@ import unittest
 import pandas as pd
 from datetime import timezone
 
-from aiokraken.model.tradehistory import TradeHistory
+from aiokraken.model.tradeframe import TradeFrame
 
 from aiokraken.model.time import Time
 
-from aiokraken.model.tests.strats.st_tradehistory import st_tradehistory
+from aiokraken.model.tests.strats.st_tradeframe import st_tradeframe
 from hypothesis import given, settings, Verbosity, HealthCheck
 from hypothesis.strategies import sampled_from
 
 
 class TestTradeHistory(unittest.TestCase):
 
-    @given(t=st_tradehistory())
+    @given(t=st_tradeframe())
     # @settings(verbosity=Verbosity.verbose)
-    def test_init(self, t: TradeHistory):
+    def test_init(self, t: TradeFrame):
         # make sure t and next_t is ordered is ordered
         assert t.dataframe.index.is_monotonic_increasing
 
         # TODO : more assert (dtype and more...)
 
-    @given(t=st_tradehistory(), next_t=st_tradehistory())
+    @given(t=st_tradeframe(), next_t=st_tradeframe())
     # @settings(verbosity=Verbosity.verbose)
-    def test_stitch(self, t: TradeHistory, next_t: TradeHistory):
+    def test_stitch(self, t: TradeFrame, next_t: TradeFrame):
 
         # make sure t and next_t is ordered is ordered
         assert t.dataframe.index.is_monotonic_increasing
