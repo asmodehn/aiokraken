@@ -6,19 +6,21 @@ branches:
     - gh-pages
 
 python:
-  - '3.7'  # on bionic we are already > 3.7.2 no need to specify
-  #- '3.8'
+  - '3.8'
 
 
 install:
   - pipenv install --dev --pre --skip-lock --sequential
 
 script:
-  - python -m aiokraken.model.tests
-  - python -m aiokraken.utils.tests
-  - python -m aiokraken.rest.schemas.tests
-  - python -m aiokraken.tests
-  - pytest -s tests --block-network
+  - pytest aiokraken/utils/tests
+  - pytest aiokraken/rest/schemas/tests
+  - pytest aiokraken/rest/tests
+  - pytest aiokraken/websockets/schemas/tests
+  - pytest aiokraken/websockets/tests
+  - pytest aiokraken/model/tests
+  - pytest aiokraken/tests
+  - pytest tests --block-network
 
 notifications:
   email: false
