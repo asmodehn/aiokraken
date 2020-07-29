@@ -24,10 +24,10 @@ async def test_orders(keyfile):
 
     subhistory = orders[datetime.fromisoformat("2020-07-11 17:00:00+00:00"):datetime.fromisoformat("2020-08-23 06:40:00+00:00")]
     assert isinstance(subhistory, Orders)
-    assert len(subhistory) == 5
+    assert len(subhistory) == 7
     assert datetime.fromisoformat("2020-08-23 07:26:18+00:00") not in subhistory
 
-    dtldg = subhistory[datetime.fromisoformat("2020-08-23 06:38:46+00:00")]
+    dtldg = subhistory[len(subhistory)-1]
     assert isinstance(dtldg, KOpenOrderModel)
 
 if __name__ == '__main__':

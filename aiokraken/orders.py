@@ -97,7 +97,7 @@ class Orders:
 
             model = closedorderframe(closedorders_as_dict=closedorders)
             if model:
-                self.model = model.value
+                self.closed = model.value
             else:
                 raise RuntimeError("Something went wrong")
 
@@ -131,11 +131,11 @@ class Orders:
 
         else:  # anything else : rely on the model
             # TODO : also access per asset or asset list - container-style
-            return self.model[item]
+            return self.closed[item]
 
     def __contains__(self, item):
         if isinstance(item, datetime):
-            return item in self.model
+            return item in self.closed
         else:
             raise NotImplementedError
 
@@ -160,8 +160,8 @@ class Orders:
             yield orders_update
 
     def __len__(self):
-        if self.model is not None:
-            return len(self.model)
+        if self.closed is not None:
+            return len(self.closed)
         else:
             return 0
 
