@@ -191,7 +191,7 @@ class TestOrderDescrSchema(unittest.TestCase):
         expected["pair"] = str(orderdescrmodel.pair)
         expected["type"] = orderdescrmodel.abtype.value
         expected["ordertype"] = orderdescrmodel.ordertype.value
-        expected["leverage"] = "{0:f}".format(orderdescrmodel.leverage)
+        expected["leverage"] = str(orderdescrmodel.leverage)
 
         if orderdescrmodel.close:
             expected["close"] = KOrderDescrCloseSchema().dump(orderdescrmodel.close)

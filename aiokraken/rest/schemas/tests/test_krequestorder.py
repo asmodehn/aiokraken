@@ -10,7 +10,7 @@ from ..krequestorder import (
     RequestOrder,
     RequestOrderNoPriceStrategy,
     RequestOrderOnePriceStrategy,
-    RequestOrderTwoPriceStrategy,
+    RequestOrderStrategy, RequestOrderTwoPriceStrategy,
 
     RequestOrderNoPrice,
     RequestOrderNoPriceFinalized,
@@ -32,7 +32,7 @@ For simple usecase examples, we should rely on doctests.
 
 class TestRequestOrder(unittest.TestCase):
 
-    @given(st.builds(RequestOrder))
+    @given(model=RequestOrderStrategy())
     def test_model(self, model):
         assert isinstance(model, RequestOrder)
         assert hasattr(model, "pair") and isinstance(model.pair, str)
@@ -56,18 +56,18 @@ class TestRequestOrder(unittest.TestCase):
         )
         assert hasattr(model, "settle_position") and callable(model.settle_position)
 
-    @given(st.builds(RequestOrder))
+    @given(RequestOrderStrategy())
     def test_market(self, model):
         m = model.market()
         assert m.descr.ordertype == KOrderTypeModel.market
 
-    @given(st.builds(RequestOrder))
+    @given(RequestOrderStrategy())
     def test_limit(self, model):
         m = model.limit(limit_price=42)
         assert m.descr.ordertype == KOrderTypeModel.limit
         assert m.descr.price == 42
 
-    @given(st.builds(RequestOrder))
+    @given(RequestOrderStrategy())
     def test_stop_loss(self, model):
         m = model.stop_loss(stop_loss_price=51)
         assert m.descr.ordertype == KOrderTypeModel.stop_loss
