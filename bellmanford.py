@@ -3,6 +3,7 @@ Bellman Ford Arbitrage implementation over websocket API.
 """
 from __future__ import annotations
 from collections import namedtuple
+from datetime import datetime
 from decimal import Decimal
 from math import log
 
@@ -20,6 +21,8 @@ from aiokraken.model.asset import Asset
 
 from aiokraken.rest.client import RestClient
 from aiokraken.websockets.publicapi import ticker
+
+import networkx as nx
 
 client = RestClient()
 
@@ -72,8 +75,8 @@ class PriceMatrix:
                 base = self.assets[base].restname
             if not isinstance(quote, Asset):
                 quote = self.assets[quote].restname
-            self.df[base][quote] = ask_price
-            self.df[quote][base] = bid_price
+            self.df[base][quote] = ask_price  # ask price to get: base_curr --sell_price--> quote_curr
+            self.df[quote][base] = 1/bid_price  # bid price to get: quote_curr --buy_price--> base_curr
 
     def __getitem__(self, item):
         if item not in self.df.columns:
@@ -89,12 +92,31 @@ class PriceMatrix:
         return self.df.to_string()
 
     def neglog(self):
+        if not self.assets:
+            return False
         newpm = PriceMatrix(assets=[self.assets[c] for c in self.df.columns])
         # copy all values and take -log()
         for c in self.df.columns:
             # TODO : fix this : is it on row, or columns ? which is best ??
             newpm.df[c] = np.negative(np.log(self.df[c]))
         return newpm
+
+    def to_graph(self):
+        G = nx.from_pandas_adjacency(self.df, create_using=nx.DiGraph)
+
+        # from bokeh.io import output_file, show
+        # from bokeh.plotting import figure, from_networkx
+        #
+        # plot = figure(title="Networkx Integration Demonstration", x_range=(-1.1, 1.1), y_range=(-1.1, 1.1),
+        #               tools="", toolbar_location=None)
+        #
+        # graph = from_networkx(G, nx.spring_layout, scale=2, center=(0, 0))
+        # plot.renderers.append(graph)
+        #
+        # output_file("networkx_graph.html")
+        # show(plot)
+
+        return G
 
 
 def test_pricematrix_mapping():
@@ -130,69 +152,77 @@ async def arbiter(user_assets):
     # observe pricematrix changes
     while True:
         # TODO : efficient TUI lib !
-        print(pmtx)
-        # if bellmanford(pmtx):
-        #     break  # exit and stops the program
+        # print(pmtx)
+
+        # pricegraph = pmtx.to_graph()  # display...
+
+        neglog = pmtx.neglog()
+        if neglog:
+            negcycle = bellmanford(neglog)
+            if len(negcycle):
+                amnt = 1  # arbitrary starting amount
+                pred = negcycle[-1]
+                dscr = f"{amnt} {pred}"
+                for cn in reversed(negcycle[:-1]):
+                    amnt = amnt * pmtx[pred][cn]
+                    pred = cn
+                    dscr = dscr + f" -> {amnt} {pred}"
+                print(f"ARBITRAGE POSSIBLE: {dscr}")
+            # TODO : from these we can extract market making opportunities ??
+
+            # Another way :
+            # negloggraph = neglog.to_graph()
+            #
+            # negcycle = list()
+            #
+            # if nx.negative_edge_cycle(negloggraph):
+            #     # find it !
+            #     print("NEGATIVE CYCLE FOUND !")
+            #
+            #     # Now find it
+            #     print(f"computing cycles... {datetime.now()}")
+            #
+            #     for cycle in nx.simple_cycles(negloggraph):
+            #     # for cycle in nx.cycle_basis(negloggraph):  # NOT implemented !
+            #         # find negative weight sum (cycle need to be more than one node)
+            #         if sum(negloggraph[n][m].get('weight') for n, m in zip(cycle, cycle[1:])) < 0:
+            #             print(f"Found one: {cycle}")
+            #             negcycle.append(cycle)
+            #     print(negcycle)
+            #     print(f"computing cycles DONE ! {datetime.now()}")
         await asyncio.sleep(5)
     # TODO: react !
 
 
-
-# class WeightedPath:
-#
-#     paths:
-#
-#     def __init__(self, source: str):
-#         self.graph = {source: 0}
-#
-#     # one iteration to chose a minimum path
-#     def __call__(self, source, target_weights: typing.Mapping[str, float]):
-#         for tw in target_weights:
-#             if tw > self[source] + pmatrix_neglog[v][w]):
-#                     min_dist[w] = min_dist[v] + pmatrix_neglog[v][w]
-#         pass
-#
-#     def __getitem__(self, item):
-#         # return the total minimal distance to reach this node
-#
-#     def __len__(self):
-#         return len(self.paths)
-
-
-def bellmanford(pmatrix: PriceMatrix, source='ZEUR'):
-
-    pmatrix_neglog = pmatrix.neglog()
+def bellmanford(pmatrix_neglog: PriceMatrix, source='ZEUR'):
 
     n = len(pmatrix_neglog)
-    min_dist = {source: (0,)}
+    min_dist = {source: 0}
+    min_pred = {}
 
     # Relax edges |V - 1| times
     for i in range(n - 1):  # iterations
-        for v in pmatrix_neglog.df.columns:  # vertex
-            for w in pmatrix_neglog.df.columns:  # vertex
-                if sum(min_dist[w]) > sum(*min_dist[v], pmatrix_neglog[v][w]):
-                    min_dist[w] = min_dist[v] + pmatrix_neglog[v][w]
+        for v in pmatrix_neglog.df.columns:  # vertex source
+            if v in min_dist.keys():  # otherwise distance infinite until we know it...
+                for w in pmatrix_neglog.df.columns:  # vertex target
+                     if w not in min_dist.keys() or min_dist[w] > min_dist[v] + pmatrix_neglog[v][w]:
+                        min_dist[w] = min_dist[v] + pmatrix_neglog[v][w]
+                        min_pred[w] = v
 
     # If we can still relax edges, then we have a negative cycle
     for v in pmatrix_neglog.df.columns:
-        for w in pmatrix_neglog.df.columns:
-            if sum(min_dist[w]) > sum(*min_dist[v], pmatrix_neglog[v][w]):
-                print(f"sum({min_dist[w]}) > sum(*{min_dist[v]}, {pmatrix_neglog[v][w]})")
-                print(f" => {min_dist[w]}")
-                return True
-    return False
+        if v in min_dist.keys():  # otherwise node is not yet relevant here
+            for w in pmatrix_neglog.df.columns:
+                if min_dist[w] > min_dist[v] + pmatrix_neglog[v][w]:
+                    # print(f"{min_dist[w]} > {min_dist[v]} + {pmatrix_neglog[v][w]}")
+                    path = (w, min_pred[w])
+                    while len(set(path)) == len(path):  # while no duplicates, cycle is not complete...
+                        path = (*path, min_pred[path[-1]])
 
+                    # First cycle retrieved is *likely* (?) to be the minimal one -> the only one we are interested in
+                    return path[path.index(path[-1]):]
 
-
-
-
-
-
-
-
-
-
-
+    return ()
 
 
 if __name__ == '__main__':
