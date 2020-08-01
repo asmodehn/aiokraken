@@ -29,6 +29,8 @@ class VolumeFeeField(fields.Field):
         :return: The deserialized value.
 
         """
+        if isinstance(value[1], float):
+            value[1] = decimal.Decimal(str(value[1]))  # to fix precision before we use this for computation...
         return VolumeFee(*value)
 
     def _serialize(self, value: typing.Any, attr: str, obj: typing.Any, **kwargs):
