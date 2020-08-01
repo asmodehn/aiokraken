@@ -47,14 +47,25 @@ class AssetPairs(Mapping):
     def __str__(self):
         return str(self.impl)
 
+    def __contains__(self, item):
+        #  We need the list of markets to validate pair string passed in the request
+        return (item in self.impl or
+                item in {p.altname for n, p in self.impl.items()} or
+                item in {p.restname for n, p in self.impl.items()} or
+                item in {p.wsname for n, p in self.impl.items()})
+
+    # TODO : build and cache alternate mapping to optimize ?
     def __getitem__(self, item: str):
         #  We need the list of markets to validate pair string passed in the request
         try:
             assetpair = self.impl[item]
         except KeyError as ke:
+            restname_map = {p.restname: p for n, p in self.impl.items()}
             altname_map = {p.altname: p for n, p in self.impl.items()}
             wsname_map = {p.wsname: p for n, p in self.impl.items()}
-            if item in altname_map.keys():
+            if item in restname_map.keys():
+                assetpair = restname_map[item]  # get the proper type.
+            elif item in altname_map.keys():
                 assetpair = altname_map[item]  # get the proper type.
             elif item in wsname_map.keys():
                 assetpair = wsname_map[item]  # get the proper type.

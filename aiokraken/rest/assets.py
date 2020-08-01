@@ -1,5 +1,5 @@
 
-from collections import Mapping
+from collections.abc import Mapping
 
 import typing
 
@@ -38,7 +38,9 @@ class Assets(Mapping):
     def __contains__(self, item):
         #  We need the list of markets to validate pair string passed in the request
         return (item in self.impl or
-                item in {p.altname for n, p in self.impl.items()})
+                item in {p.altname for n, p in self.impl.items()} or
+                item in {p.restname for n, p in self.impl.items()})
+        # TODO : build and cache alternate mapping to optimize ?
 
     def __getitem__(self, item: str):
         #  We need the list of markets to validate pair string passed in the request
@@ -46,7 +48,10 @@ class Assets(Mapping):
             asset = self.impl[item]
         except KeyError as ke:
             altname_map = {p.altname: p for n, p in self.impl.items()}
-            if item in altname_map.keys():
+            restname_map = {p.restname: p for n, p in self.impl.items()}
+            if item in restname_map.keys():
+                asset = restname_map[item]
+            elif item in altname_map.keys():
                 asset = altname_map[item]  # get the proper type.
             else:
                 raise ke  # TODO also mention addressable via alternative names...
