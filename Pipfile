@@ -1,12 +1,9 @@
 [[source]]
-
 name = "pypi"
 url = "https://pypi.org/simple"
 verify_ssl = true
 
-
 [dev-packages]
-
 pytest-recording = "==0.3.6"    # 0.3.4 is breaking on --block-network it seems
 pytest-asyncio = "==0.10.0"
 pytest-dependency = "*"
@@ -14,17 +11,19 @@ black = "*"
 pytest-click = "*"
 # better to have this here to sync venv between jupyter and custom editor behaviors
 aiokraken = {path = ".",editable = true}
-timecontrol = {path = "../timecontrol",editable = true}
-
+sphinx = "*"
+networkx = "*"
 
 [packages]
-
+bokeh-ta = {editable = true, path = "./../bokeh_ta"}
+livebokeh = {editable = true, path = "../livebokeh"}
+timecontrol = {path = "../timecontrol",editable = true}
 aiohttp = "==3.6.2"
 aiodns = "==2.0.0"
 cchardet = "==2.1.4"
 pytest = "==5.3.2"
 marshmallow = "==3.3.0"
-pandas = "==1.0.1"
+pandas = "==1.0.3"
 parameterized = "==0.7.0"
 marshmallow-dataframe = "==0.1.4"
 ipympl = "==0.3.3"
@@ -33,7 +32,6 @@ pyjanitor = "*"
 hypothesis = "==5.6.0"
 mypy = "*"
 aiounittest = "*"
-timecontrol = "==0.2.2"
 tinydb = "*"
 ipython = "*"
 click = "*"
@@ -42,23 +40,16 @@ result = "*"
 typeclasses = "*"
 aioresponses = "*"
 mplfinance = "*"
-wrapt = "==1.12.2"
-bokeh = "==2.0.1"
+#because we need the latest, at least 1.12.2
+wrapt = {git = "https://github.com/GrahamDumpleton/wrapt"}
+bokeh = "==2.0.2"
 ipykernel = "*"
 async-property = "*"
-
+tornado = "*"
+aiostream = "*"
 
 [requires]
-
-python_version = "3.7"
-
+python_version = "3.8"
 
 [pipenv]
-
 allow_prereleases = true
-
-
-[dev-packages.aiokraken]
-
-path = "."
-editable = true
