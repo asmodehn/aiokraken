@@ -41,14 +41,21 @@ async def ticker_updates(pairs: typing.Union[AssetPairs, typing.Iterable[AssetPa
     for p, tk in tkrs.items():
         # retrieve the actual pair
         pair = properpairs[p]
-        await pmatrix(base=pair.base, quote=pair.quote, ask_price=tk.ask.price, bid_price=tk.bid.price)
+        fee = pair.fees[0].get('fee')
+        # TODO : pick the right fee depending on total traded volume !
+        await pmatrix(base=pair.base, quote=pair.quote, ask_price=tk.ask.price, bid_price=tk.bid.price, fee_pct=fee)
+
+    # TODO : 2 levels :
+    #  - slow updates with wide list of pairs and potential interest (no fees - small data for quick compute)
+    #  - websockets with potential arbitrage (including fees - detailed data & precise compute)
 
     async for upd in ticker(pairs=pairs, restclient=client):
         print(f"wss ==> tick: {upd}")
         # update pricematrix
         base = upd.pairname.base
         quote = upd.pairname.quote
-        await pmatrix(base=base, quote=quote, ask_price=upd.ask.price, bid_price=upd.bid.price)
+        fee = properpairs[upd.pairname].fees[0].get('fee')
+        await pmatrix(base=base, quote=quote, ask_price=upd.ask.price, bid_price=upd.bid.price, fee_pct=fee)
 
 
 class PriceMatrix:
@@ -67,7 +74,7 @@ class PriceMatrix:
         self.df = pd.DataFrame(data={c.restname: {c.restname: None for c in assets} for c in assets}, columns=[c.restname for c in assets], dtype='float64')
         self.assets = None
 
-    async def __call__(self, base: Asset, ask_price: Decimal, quote: Asset, bid_price:Decimal):
+    async def __call__(self, base: Asset, ask_price: Decimal, quote: Asset, bid_price: Decimal, fee_pct: Decimal):
         if self.assets is None:  # retrieve assets for filtering calls params, only once.
             self.assets = await client.retrieve_assets()
         async with self.wlock:  # careful with concurrent control.
@@ -75,8 +82,9 @@ class PriceMatrix:
                 base = self.assets[base].restname
             if not isinstance(quote, Asset):
                 quote = self.assets[quote].restname
-            self.df[base][quote] = ask_price  # ask price to get: base_curr --sell_price--> quote_curr
-            self.df[quote][base] = 1/bid_price  # bid price to get: quote_curr --buy_price--> base_curr
+            # These are done with decimal, but stored as numpy floats for faster compute
+            self.df[quote][base] = bid_price * ((100 - fee_pct) /100)  # bid price to get: quote_curr -- (buy_price - fee) --> base_curr
+            self.df[base][quote] = ((100 - fee_pct)/100) / ask_price   # ask price to get: base_curr -- (sell_price - fee) --> quote_curr
 
     def __getitem__(self, item):
         if item not in self.df.columns:
@@ -148,49 +156,53 @@ async def arbiter(user_assets):
 
     # running ticker updates in background
     bgtsk = asyncio.create_task(ticker_updates(pairs=proper_userpairs, pmatrix=pmtx))
+    try:
+        # observe pricematrix changes
+        while True:
+            # TODO : efficient TUI lib !
+            # print(pmtx)
 
-    # observe pricematrix changes
-    while True:
-        # TODO : efficient TUI lib !
-        # print(pmtx)
+            # pricegraph = pmtx.to_graph()  # display...
 
-        # pricegraph = pmtx.to_graph()  # display...
+            neglog = pmtx.neglog()
+            if neglog:
+                negcycle = bellmanford(neglog)
+                if len(negcycle):
+                    amnt = 1  # arbitrary starting amount
+                    pred = negcycle[-1]
+                    dscr = f"{amnt} {pred}"
+                    for cn in reversed(negcycle[:-1]):
+                        amnt = amnt * pmtx[pred][cn]
+                        pred = cn
+                        dscr = dscr + f" -> {amnt} {pred}"
+                    print(f"ARBITRAGE POSSIBLE: {dscr}")
+                # TODO : from these we can extract market making opportunities ??
 
-        neglog = pmtx.neglog()
-        if neglog:
-            negcycle = bellmanford(neglog)
-            if len(negcycle):
-                amnt = 1  # arbitrary starting amount
-                pred = negcycle[-1]
-                dscr = f"{amnt} {pred}"
-                for cn in reversed(negcycle[:-1]):
-                    amnt = amnt * pmtx[pred][cn]
-                    pred = cn
-                    dscr = dscr + f" -> {amnt} {pred}"
-                print(f"ARBITRAGE POSSIBLE: {dscr}")
-            # TODO : from these we can extract market making opportunities ??
+                # Another way :
+                # negloggraph = neglog.to_graph()
+                #
+                # negcycle = list()
+                #
+                # if nx.negative_edge_cycle(negloggraph):
+                #     # find it !
+                #     print("NEGATIVE CYCLE FOUND !")
+                #
+                #     # Now find it
+                #     print(f"computing cycles... {datetime.now()}")
+                #
+                #     for cycle in nx.simple_cycles(negloggraph):
+                #     # for cycle in nx.cycle_basis(negloggraph):  # NOT implemented !
+                #         # find negative weight sum (cycle need to be more than one node)
+                #         if sum(negloggraph[n][m].get('weight') for n, m in zip(cycle, cycle[1:])) < 0:
+                #             print(f"Found one: {cycle}")
+                #             negcycle.append(cycle)
+                #     print(negcycle)
+                #     print(f"computing cycles DONE ! {datetime.now()}")
+            await asyncio.sleep(5)
+    finally:
+        # in every case cancel the background task now
+        bgtsk.cancel()
 
-            # Another way :
-            # negloggraph = neglog.to_graph()
-            #
-            # negcycle = list()
-            #
-            # if nx.negative_edge_cycle(negloggraph):
-            #     # find it !
-            #     print("NEGATIVE CYCLE FOUND !")
-            #
-            #     # Now find it
-            #     print(f"computing cycles... {datetime.now()}")
-            #
-            #     for cycle in nx.simple_cycles(negloggraph):
-            #     # for cycle in nx.cycle_basis(negloggraph):  # NOT implemented !
-            #         # find negative weight sum (cycle need to be more than one node)
-            #         if sum(negloggraph[n][m].get('weight') for n, m in zip(cycle, cycle[1:])) < 0:
-            #             print(f"Found one: {cycle}")
-            #             negcycle.append(cycle)
-            #     print(negcycle)
-            #     print(f"computing cycles DONE ! {datetime.now()}")
-        await asyncio.sleep(5)
     # TODO: react !
 
 
@@ -227,4 +239,4 @@ def bellmanford(pmatrix_neglog: PriceMatrix, source='ZEUR'):
 
 if __name__ == '__main__':
 
-    asyncio.run(arbiter(user_assets=["XTZ", "ETH", "XBT", "EUR"]))
+    asyncio.run(arbiter(user_assets=["XTZ", "ETH", "XBT", "EUR"]), debug=True)
