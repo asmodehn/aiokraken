@@ -15,8 +15,8 @@ sphinx = "*"
 networkx = "*"
 
 [packages]
-bokeh-ta = {editable = true, path = "./../bokeh_ta"}
-livebokeh = {editable = true, path = "../livebokeh"}
+#bokeh-ta = {editable = true, path = "./../bokeh_ta"}
+#livebokeh = {editable = true, path = "../livebokeh"}
 aiohttp = "==3.6.2"
 aiodns = "==2.0.0"
 cchardet = "==2.1.4"
