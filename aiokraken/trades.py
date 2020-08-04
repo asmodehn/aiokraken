@@ -10,7 +10,7 @@ from types import MappingProxyType
 from aiokraken.websockets.privateapi import ownTrades
 
 from aiokraken.config import load_api_keyfile
-from aiokraken.domain.assetpairs import AssetPairs
+from aiokraken.assetpairs import AssetPairs
 
 from aiokraken.model.tradeframe import TradeFrame, tradeframe
 

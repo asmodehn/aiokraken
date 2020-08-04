@@ -122,7 +122,7 @@ class AssetPairs:
 
     def ohlcv(self, rest: RestClient = None, start: datetime = None, stop: datetime = None): # similar to ledgers for assets
         # late import for convenience function
-        from aiokraken.domain.ohlcv import OHLCV
+        from aiokraken.ohlcv import OHLCV
 
         # deduce tfl from start & stop
         if start > stop:

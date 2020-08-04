@@ -23,7 +23,6 @@ from datetime import datetime, timezone
 import pandas as pd
 # CAREFUL to what we are doing
 pd.set_option('mode.chained_assignment', 'raise')
-import janitor
 
 
 from aiokraken.utils.timeindexeddataframe import TimeindexedDataframe

@@ -29,9 +29,6 @@ from aiokraken.utils import get_kraken_logger, get_nonce
 from aiokraken.rest.api import Server, API
 from timecontrol import calllimiter
 
-# maybe later to help with better logging...
-from timecontrol import eventful
-
 BASE_URL = 'https://api.kraken.com'
 LOGGER = get_kraken_logger(__name__)
 

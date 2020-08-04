@@ -16,7 +16,7 @@ from aiokraken.model.assetpair import AssetPair
 from bokeh.io import output_file
 from bokeh.models import CustomJS, LayoutDOM
 
-from aiokraken.domain.assetpairs import AssetPairs
+from aiokraken.assetpairs import AssetPairs
 
 from aiokraken.rest import RestClient, Server
 from aiokraken.model.timeframe import KTimeFrameModel
@@ -42,7 +42,7 @@ class OHLCV:
         proper_pairs = await rest.retrieve_assetpairs()
         pairs = [p if isinstance(p, AssetPair) else proper_pairs[p] for p in pairs]
 
-        ohlcmodels = {p: await rest.ohlc(pair=p, interval=KTimeFrameModel.one_minute) for p in pairs}
+        ohlcmodels = {p.wsname: await rest.ohlc(pair=p, interval=KTimeFrameModel.one_minute) for p in pairs}
         return OHLCV(pair_ohlcmodels=ohlcmodels, rest=rest, loop=loop)
 
     @classmethod
@@ -215,7 +215,7 @@ class OHLCV:
         # TODO : iterate through the *past* in parallel on all pairs... (in usual time order)
         df = pandas.concat([ohlc.dataframe for ohlc in self.models.values()], axis=1, keys=self.models.keys())
         for ts, s in df.iterrows():  # TODO : somehow merge with / reuse OHLCModel __iter__()
-            yield {idx: OHLCValue(datetime=ts, **s[idx]) for idx in s.index.levels[0]}
+            yield {idx: OHLCValue(datetime=ts, **s[idx].to_dict()) for idx in s.index.levels[0]}
 
     async def __aiter__(self):
         # this is were we leverage our websocket implementation
@@ -252,7 +252,7 @@ if __name__ == '__main__':
     # Client can be global: there is only one.
     rest = RestClient(server=Server())
 
-    from aiokraken.domain.assetpairs import AssetPairs
+    from aiokraken.assetpairs import AssetPairs
 
     async def retrieve_pairs(pairs):
         return await AssetPairs.retrieve(pairs=pairs)

@@ -20,7 +20,6 @@ import pandas.util
 # CAREFUL to what we are doing
 pd.set_option('mode.chained_assignment', 'raise')
 # import pandas_ta as ta
-import janitor
 
 
 OHLCValue = namedtuple("OHLCValue", ["datetime", "open", "high", "low", "close", "vwap", "volume", "count"])
@@ -222,7 +221,7 @@ class OHLC(TimeindexedDataframe):
         # check on len for optimization -> different length => different ohlc.
         return len(self) == len(other) and (self.dataframe == other.dataframe).all().all()  # we need exact match on 2 dimensions
 
-    def __getitem__(self, item):  # TODO : deal with slices as well !!
+    def __getitem__(self, item: slice):
         # TODO : note  this can be used as a filter... on time or other...
         # Here we have to try guessing the user intent...
         # Note : this is always dependent on the precision of the dataframe

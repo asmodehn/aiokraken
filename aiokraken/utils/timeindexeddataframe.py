@@ -49,12 +49,12 @@ class TimeindexedDataframe:
 
     @property
     def begin(self):
-        # reminder : the dataframe is sorted on index
-        return self.dataframe.index.iloc[0]
+        # reminder : the dataframe is sorted on index and the index is a pandas.DateTimeIndex
+        return self.dataframe.index[0]
 
     @property
     def end(self):
-        return self.dataframe.index.iloc[-1]
+        return self.dataframe.index[-1]
 
     # TODO : idea (see datafun / category theory for background):
     #  - TimedSet (unicity of rows) => matches a type instance evolving over time (with implicit equality on attributes)
@@ -93,6 +93,12 @@ class TimeindexedDataframe:
         # TODO : maybe we dont really need this one ? already stored in dataframe at df.index.name...
         #  only useful for stitcher, for now
         self.index_name = self.dataframe.index.name
+
+    # This doesnt seem a good idea
+    # because it can generate unexpected in children classes looking for attr instead of checking super...
+    # def __getattr__(self, item):
+    #     " delegate all unknown attributes to the dataframe "
+    #     return getattr(self.dataframe,item)
 
     def _row_stitcher(self, row: pd.Series, origin_df):
 

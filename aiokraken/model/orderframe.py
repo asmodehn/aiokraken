@@ -8,6 +8,10 @@ import typing
 from decimal import Decimal
 
 import pandas
+from aiokraken.rest.schemas.korderdescr import (
+    KOrderDescr, KOrderDescrNoPriceFinalized, KOrderDescrOnePriceFinalized,
+    KOrderDescrTwoPriceFinalized,
+)
 
 from aiokraken.rest.schemas.kopenorder import KOpenOrderModel
 
@@ -28,7 +32,6 @@ from datetime import datetime, timezone
 import pandas as pd
 # CAREFUL to what we are doing
 pd.set_option('mode.chained_assignment', 'raise')
-import janitor
 
 
 from aiokraken.utils.timeindexeddataframe import TimeindexedDataframe
@@ -83,7 +86,7 @@ class OrderFrame(TimeindexedDataframe):
         else:  # delegate to dataframe
             return item in self.dataframe
 
-    def __getitem__(self, item: typing.Union[AssetPair, typing.List[AssetPair], datetime, slice, str]):
+    def __getitem__(self, item: typing.Union[AssetPair, typing.List[AssetPair], datetime, slice, str, int]):
         if isinstance(item, AssetPair):
             return OrderFrame(
                 dataframe = self.dataframe.loc[self.dataframe['pair'] == item.restname],
@@ -97,8 +100,24 @@ class OrderFrame(TimeindexedDataframe):
                 dataframe = self.dataframe[item],  # let dataframe manage time slices
                 pairs=self.pairs)
         elif isinstance(item, (datetime, str)):
-            # use usual access via key/index, as for a mapping over time...
-            return KClosedOrderModel(**self.dataframe.loc[item])
+            # use usual access via key/index, as for a mapping over time, or over order ids...
+            ordict = unflatten_orderdict(self.dataframe.loc[item].to_dict())
+            if ordict["descr"].get("price2"):
+                descr = KOrderDescrTwoPriceFinalized(**ordict["descr"])
+            elif ordict["descr"].get("price"):
+                descr = KOrderDescrOnePriceFinalized(**ordict["descr"])
+            else:
+                descr = KOrderDescrNoPriceFinalized(**ordict["descr"])
+            return KClosedOrderModel(descr=descr, **{k:v for k, v in ordict.items() if k != "descr"})
+        elif isinstance(item, int):  # for access via simple int index
+            ordict = unflatten_orderdict(self.dataframe.iloc[item].to_dict())
+            if ordict["descr"].get("price2"):
+                descr = KOrderDescrTwoPriceFinalized(**ordict["descr"])
+            elif ordict["descr"].get("price"):
+                descr = KOrderDescrOnePriceFinalized(**ordict["descr"])
+            else:
+                descr = KOrderDescrNoPriceFinalized(**ordict["descr"])
+            return KClosedOrderModel(descr=descr, **{k:v for k, v in ordict.items() if k != "descr"})
         else:
             raise KeyError(f"{item} not found")
 
@@ -126,6 +145,20 @@ def flatten_orderdict(dict_data):
             })
 
     return flatten
+
+
+def unflatten_orderdict(dict_data):
+    unflatten = {"descr": dict()}
+    for k, v in dict_data.items():
+        if k.startswith("descr_"):
+            unflatten["descr"].update({
+                k[k.index('_')+1:]: v
+            })
+        else:
+            unflatten.update({
+                k:v
+            })
+    return unflatten
 
 
 def closedorderframe(closedorders_as_dict: typing.Dict[str, KClosedOrderModel]) -> Result[OrderFrame]:

@@ -21,7 +21,6 @@ import pandas as pd
 # CAREFUL to what we are doing
 pd.set_option('mode.chained_assignment', 'raise')
 # import pandas_ta as ta
-import janitor
 
 
 # TODO : investigate pandas potential replacement for immutable data :

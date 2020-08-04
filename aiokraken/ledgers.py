@@ -6,7 +6,7 @@ import asyncio
 from aiokraken.rest.schemas.kledger import KLedgerInfo
 from bokeh.io import output_file, save
 
-from aiokraken.domain.assets import Assets
+from aiokraken.assets import Assets
 
 from aiokraken.model.asset import Asset
 

@@ -1,13 +1,13 @@
 # TODO : test assets with aioresponses !
 
-import aiounittest
+import unittest
 import aiohttp
 from aioresponses import aioresponses
 
 from aiokraken.assets import Assets
 
 
-class TestAssets(aiounittest.AsyncTestCase):
+class TestAssets(unittest.IsolatedAsyncioTestCase):
     async def test_assets(self):
         with aioresponses() as m:
             m.get(
@@ -32,8 +32,7 @@ class TestAssets(aiounittest.AsyncTestCase):
                 },
             )
 
-            assets = Assets()
-            await assets()  # Optional from the moment we have Local storage
+            assets = await Assets.retrieve()
 
         assert len(assets) == 2
         assert 'XETH' in assets.keys()
@@ -67,8 +66,7 @@ class TestAssets(aiounittest.AsyncTestCase):
                 },
             )
 
-            assets = Assets()
-            await assets()  # Optional from the moment we have Local storage
+            assets = await Assets.retrieve()
 
         assert len(assets) == 2
         assert 'XETH' in assets.keys()

@@ -27,7 +27,6 @@ parameterized = "==0.7.0"
 marshmallow-dataframe = "==0.1.4"
 ipympl = "==0.3.3"
 pandas-ta = "==0.1.36b"
-pyjanitor = "*"
 hypothesis = "==5.6.0"
 mypy = "*"
 aiounittest = "*"
@@ -36,7 +35,6 @@ ipython = "*"
 click = "*"
 dpcontracts = "*"
 result = "*"
-typeclasses = "*"
 aioresponses = "*"
 mplfinance = "*"
 #because we need the latest, at least 1.12.2
@@ -45,7 +43,6 @@ bokeh = "==2.0.2"
 ipykernel = "*"
 async-property = "*"
 tornado = "*"
-aiostream = "*"
 # because we need latest unreleased version
 timecontrol = {git = "https://github.com/asmodehn/timecontrol"}
 
