@@ -1,6 +1,5 @@
 """ Kraken main module """
 from aiokraken.rest.client import RestClient
-from aiokraken.websockets.client import WssClient
 
 """
 aiokraken as a library...
@@ -31,8 +30,12 @@ For example aiokraken.model.OHLC is immutable, but provides a stitch function re
 When the interface is more stable, more advanced graphical GUIs can be created on top.
 """
 
+# AFTER UPDATE :
+"""
+This package contains top-down design concepts for trading with kraken,
+ with dynamic visual outputs mainly for exploration and debugging purposes.
 
-from .assets import Assets, assets
-from .markets import Markets, markets
-from .ohlc import OHLC, ohlc
-from .balance import Balance, balance
+It relies on bokeh and is supposed to be used alone, for generating html reports or webpages -dynamic server version-
+or together with other tools like jupyter.
+"""
+
