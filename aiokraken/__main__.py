@@ -10,13 +10,14 @@ __main__ has only the code required to start IPython and provide interactive int
 """
 
 import click
-from aiokraken.balance import Balance
-
-from aiokraken.markets import Markets
 
 from aiokraken import RestClient
 from aiokraken.assets import Assets
 from aiokraken.rest import Server
+
+# TODO : we should probably have a ipython terminal option (ipywidgets without notebook ?)
+#      Bokeh is also a solution for a server to provide visualization,
+#      AND an aiohttp server option to provide json feeds (like original server, visualized with some js single page app...)
 
 
 def ipshell_embed_setup():
@@ -118,6 +119,8 @@ def assets(ctx):
     return one_shot(assets_run())
 
 
+# For OHLC timeseries display : https://stackoverflow.com/questions/48361554/unknown-error-in-mpl-finance-candlestick-what-to-do
+
 async def markets_run():
 
     rest = RestClient(server=Server())
@@ -191,6 +194,8 @@ if __name__ == '__main__':
         c.InteractiveShell.colors = 'LightBG'
         c.InteractiveShell.confirm_exit = False
         c.TerminalIPythonApp.display_banner = False
+
+        #TODO : %autoawait to easily run requests
 
         # Now we start ipython with our configuration
         import IPython
