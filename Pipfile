@@ -17,7 +17,6 @@ networkx = "*"
 [packages]
 bokeh-ta = {editable = true, path = "./../bokeh_ta"}
 livebokeh = {editable = true, path = "../livebokeh"}
-timecontrol = {path = "../timecontrol",editable = true}
 aiohttp = "==3.6.2"
 aiodns = "==2.0.0"
 cchardet = "==2.1.4"
@@ -47,6 +46,8 @@ ipykernel = "*"
 async-property = "*"
 tornado = "*"
 aiostream = "*"
+# because we need latest unreleased version
+timecontrol = {git = "https://github.com/asmodehn/timecontrol"}
 
 [requires]
 python_version = "3.8"
