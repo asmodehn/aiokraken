@@ -324,7 +324,6 @@ class TestTimeindexedDataframe(unittest.TestCase):
         assert tidf[["open", "high", "low", "close"]][firstdatetime]["low"] == tidf[firstdatetime]["low"]
         assert tidf[["open", "high", "low", "close"]][firstdatetime]["close"] == tidf[firstdatetime]["close"]
 
-
     @parameterized.expand(
         [
             [
@@ -368,7 +367,7 @@ class TestTimeindexedDataframe(unittest.TestCase):
         ]
     )
     def test_iter_ok(self, df):
-        """ Verifying that expected data parses properly """
+        """ Verifying that expected data iterates properly """
         tidf = TimeindexedDataframe(data=df)
 
         import pandas.api.types as ptypes
@@ -409,11 +408,138 @@ class TestTimeindexedDataframe(unittest.TestCase):
             "count": 8,
         })).all()
 
-
-    def test_aiter_ok(self):
-        raise NotImplementedError
-
-
+    # @parameterized.expand(
+    #     [
+    #         [
+    #             pd.DataFrame(  # One with "datetime" column (like internal model)
+    #                 # TODO:   proper Time, proper currencies...
+    #                 [
+    #                     [
+    #                         datetime.fromtimestamp(1567039620, tz=timezone.utc),
+    #                         8746.4,
+    #                         8751.5,
+    #                         8745.7,
+    #                         8745.7,
+    #                         8749.3,
+    #                         0.09663298,
+    #                         8,
+    #                     ],
+    #                     [
+    #                         datetime.fromtimestamp(1567039680, tz=timezone.utc),
+    #                         8745.7,
+    #                         8747.3,
+    #                         8745.7,
+    #                         8747.3,
+    #                         8747.3,
+    #                         0.00929540,
+    #                         1,
+    #                     ],
+    #                 ],
+    #                 # grab that from kraken documentation
+    #                 columns=[
+    #                     "datetime",
+    #                     "open",
+    #                     "high",
+    #                     "low",
+    #                     "close",
+    #                     "vwap",
+    #                     "volume",
+    #                     "count",
+    #                 ],
+    #             ).set_index("datetime")
+    #         ],
+    #     ]
+    # )
+    # def test_aiter_ok(self, df):
+    #     import asyncio
+    #
+    #     clock = [1567039690,1567039750,1567039810,1567039870]
+    #     countcall = iter(clock)
+    #     def timer():
+    #         return datetime.fromtimestamp(next(countcall), tz=timezone.utc)
+    #
+    #     slept = 0
+    #     async def sleeper(secs):
+    #         slept = secs
+    #
+    #     """ Verifying that expected data iterates properly asynchronously """
+    #     tidf = TimeindexedDataframe(data=df, timer=timer, sleeper=sleeper)
+    #
+    #     import pandas.api.types as ptypes
+    #
+    #     num_cols = ["open", "high", "low", "close", "vwap", "volume", "count"]
+    #     assert all(ptypes.is_numeric_dtype(tidf.dataframe[col]) for col in num_cols)
+    #
+    #     assert ptypes.is_datetime64_any_dtype(tidf.dataframe.index)
+    #     assert tidf.dataframe.index.name == "datetime"
+    #     assert tidf.dataframe.index.dtype == DatetimeTZDtype(tz=timezone.utc)
+    #
+    #     sync=asyncio.Lock()
+    #
+    #     async def testrunner():
+    #         idx = 0
+    #
+    #         asyncio.get_running_loop().create_task(provider())
+    #
+    #         async for m in tidf:
+    #             async with sync:
+    #                 if idx == 0:
+    #                     assert m[0] == datetime.fromtimestamp(1567039740, tz=timezone.utc)
+    #                     assert slept == 50
+    #                 elif idx == 1:
+    #                     assert m[0]== datetime.fromtimestamp(1567039800, tz=timezone.utc)
+    #                     assert slept == 50
+    #                 elif idx == 2:
+    #                     assert m[0]== datetime.fromtimestamp(1567039860, tz=timezone.utc)
+    #                     assert slept == 50
+    #                 idx += 1
+    #                 if idx >= 3:
+    #                     break
+    #
+    #     async def provider():
+    #         idx=len(df)
+    #         async with sync:
+    #             # TODO : better way to append data (using __call__ ??)
+    #             tidf.dataframe[idx] = [
+    #                 datetime.fromtimestamp(1567039740, tz=timezone.utc),
+    #                 8745.7,
+    #                 8747.2,
+    #                 8745.8,
+    #                 8747.3,
+    #                 8747.3,
+    #                 0.00929540,
+    #                 1,
+    #             ]
+    #
+    #         idx = idx + 1
+    #         async with sync:
+    #             tidf.dataframe[idx] =  [
+    #                 datetime.fromtimestamp(1567039800, tz=timezone.utc),
+    #                 8745.7,
+    #                 8747.3,
+    #                 8745.7,
+    #                 8747.3,
+    #                 8747.3,
+    #                 0.00929540,
+    #                 1,
+    #             ]
+    #
+    #         idx = idx + 1
+    #         async with sync:
+    #             tidf.dataframe[idx] = [
+    #                 datetime.fromtimestamp(1567039860, tz=timezone.utc),
+    #                 8745.7,
+    #                 8747.3,
+    #                 8745.7,
+    #                 8747.3,
+    #                 8747.3,
+    #                 0.00929540,
+    #                 1,
+    #             ]
+    #
+    #     # Note : even if we use asyncio here for apparent "parallelism" of control flow,
+    #     # the timer and sleeper are test stubs to control syncronicity...
+    #     asyncio.run(testrunner())
 
 
 if __name__ == "__main__":

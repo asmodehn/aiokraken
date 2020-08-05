@@ -65,8 +65,9 @@ class TimeindexedDataframe:
         self,
         data: dataframe = pd.DataFrame(columns=["datetime"]),
         index: typing.Optional[str] = "datetime",
-        tz: timezone = None,  # needed as argument as this definitely depends on context/hyperparams...
-        timer: typing.Callable = None,  # Maybe more part of the contect than the dataframe ?
+        tz: timezone = timezone.utc,  # needed as argument as this definitely depends on context/hyperparams...
+        timer: typing.Callable = None,  # Maybe more part of the context than the dataframe ?
+        sleeper: typing.Callable = None,
     ):
         """
         Dataframe instantiation with explicit time index and datetime human readable equivalent.
@@ -76,7 +77,8 @@ class TimeindexedDataframe:
         :param datetime_colname:
         """
         self.tz = tz  # Note None means local (same default as python, is it really a good idea ?)
-        self.timer = timer if timer is not None else functools.partial(datetime.now, tz=tz)
+        self.timer = timer if timer is not None else functools.partial(datetime.now, tz=self.tz)
+        self.sleeper = sleeper if sleeper is not None else asyncio.sleep
 
         self.dataframe = data.copy(deep=True)  # copy to not modify origin (immutable semantics for generic dataframes)
         # TODO : maybe manage that with contracts instead ?
@@ -192,29 +194,36 @@ class TimeindexedDataframe:
         for r in self.dataframe.iloc[::-1].iterrows():  # we need to reverse the dataframe order (going back in time)...
             yield r
 
-    async def __aiter__(self):
-        """
-        An iterator on the dataframe, bound in (realworld) time.
-        Note : This is linear :
-          Calling iter multiple time will duplicate the data source, and start again from the beginning.
-        :return:
-        """
-        # new iter call always start at the beginning
-        pointer_loc = 0
-
-        # We are tied to external time flow.
-        while pointer_loc < len(self.dataframe):  # since time index is ordered
-            next_pointer = self.dataframe.index[pointer_loc]
-
-            now = self.timer()
-            if next_pointer.to_pydatetime() > now:
-                # we sleep to wait for the next present. we are prevented from going into the future.
-                await asyncio.sleep((next_pointer.to_pydatetime() - now).total_seconds())
-
-            yield self.dataframe.loc[next_pointer]
-
-            # points to next :
-            pointer_loc += 1
+    # async def __call__(self, *args, **kwargs):
+    #     raise NotImplementedError
+    #     # TODO : a syncronized way to append to the dataframe, synchronized with __aiter
+    #
+    # async def __aiter__(self):
+    #     """
+    #     An iterator on the dataframe, bound in (realworld) time.
+    #     Note : This is linear :
+    #       Calling iter multiple time will duplicate the data source, and start again from the beginning.
+    #     :return:
+    #     """
+    #     # new iter call always start at the end (or it is not async)
+    #     pointer_loc = len(self.dataframe) -1
+    #
+    #     # We are tied to dataframe size (who in turn is linked to time flow).
+    #     while pointer_loc >= len(self.dataframe) - 1:
+    #
+    #         last_pointer = self.dataframe.index[pointer_loc]  # current datapoint (aka current state)
+    #         yield (last_pointer.to_pydatetime(), *self.dataframe.loc[last_pointer])
+    #
+    #         # tie the wait to the timeframe ?
+    #         now = self.timer()
+    #         before_pointer = self.dataframe.index[pointer_loc-1]  # and before  # TODO : enforce 2 datapoint minimum in df ?
+    #
+    #         tosleep = (last_pointer - before_pointer) - (now - last_pointer.to_pydatetime())
+    #         # we sleep to wait for the next present. we are prevented from going into the future.
+    #         await self.sleeper(tosleep.total_seconds())
+    #
+    #         last_pointer = self.dataframe.index[pointer_loc]  # previous datapoint
+    #         pointer_loc += 1
 
     def __len__(self):
         return len(self.dataframe)
