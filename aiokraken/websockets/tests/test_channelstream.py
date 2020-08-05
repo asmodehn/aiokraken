@@ -65,8 +65,7 @@ class TestSubStreamPrivate(unittest.TestCase):
             stream = SubStream(channelset=chan, pairs=pairs)
             assert stream == await stream  # waiting for subscribed() called
 
-            rawdata = [v for v in data.values()]  # TODO : post dump ??
-            await stream(chan_id=cid, data=rawdata, channel="trade", pair=pair.wsname)
+            await stream(chan_id=cid, data=data, channel="trade", pair=pair.wsname)
             assert stream.queue.qsize() == 1
 
             chan.unsubscribe(pairs=pairs)

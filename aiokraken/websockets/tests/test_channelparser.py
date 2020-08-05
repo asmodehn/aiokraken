@@ -26,9 +26,7 @@ class TestPublicChannelParser(unittest.TestCase):
         parse = publicchannelparser("trade")
 
         # https://docs.kraken.com/websockets-beta/#message-trade
-        # CAREFUL here we need to pass only a list of values for the data, no keys.
-        raw=[v for v in trade_data.values()]  # TODO : post dump ??
-        parsed = parse(data=raw, pair=pair)
+        parsed = parse(data=trade_data, pair=pair)
 
         assert parsed
         assert isinstance(parsed.value, TradeWS)
