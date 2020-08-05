@@ -1,4 +1,4 @@
-from marshmallow import fields, post_load, pre_load
+from marshmallow import fields, post_dump, post_load, pre_load
 
 from aiokraken.rest.schemas.base import BaseSchema
 
@@ -62,6 +62,10 @@ class TradeWSSchema(BaseSchema):
     @post_load
     def build_model(self, data, **kwargs):
         return TradeWS(**data)
+
+    @post_dump
+    def seriallist(self, data, **kwargs):
+        return [data[k] for k in self.declared_fields.keys()]
 
     @staticmethod
     def strategy():

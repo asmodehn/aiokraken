@@ -26,7 +26,7 @@ class TestSubscribe(unittest.TestCase):
         assert isinstance(sub, Subscribe)
 
         # TODO : replace this with proper mypy typechecks checks + refine
-        assert isinstance(sub.pair, list)
+        assert isinstance(sub.pair, frozenset)
         assert sub.reqid is None or isinstance(sub.reqid, int)
         assert isinstance(sub.subscription, Subscription)
 

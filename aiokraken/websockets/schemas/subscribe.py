@@ -112,9 +112,10 @@ class SubscribeSchema(BaseSchema):
         # removing empty pair list from serialized value (avoid triggering API error)
         if not data['pair']:
             data.pop('pair')
+        # else:
+        #     data['pair'] = ",".join(data['pair'])
 
         return data
-
 
 
 if __name__ == '__main__':

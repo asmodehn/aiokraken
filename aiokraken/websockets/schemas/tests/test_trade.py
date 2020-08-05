@@ -1,8 +1,8 @@
 import unittest
 
-from aiokraken.websockets.schemas.trade import TradeWS, TradeWSSchema
+from ..trade import TradeWS, TradeWSSchema
 from hypothesis import given
-from aiokraken.websockets.schemas.tests.strats.st_trade import st_tradews, st_tradewsdict
+from .strats.st_trade import st_tradews, st_tradewsdict
 
 
 class TestTrade(unittest.TestCase):
@@ -25,7 +25,6 @@ class TestTrade(unittest.TestCase):
         sch = TradeWSSchema()
         inst = sch.load(dtrd)
         assert isinstance(inst, TradeWS)
-
 
 
 if __name__ == '__main__':
