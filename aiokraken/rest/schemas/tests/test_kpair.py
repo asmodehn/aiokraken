@@ -7,8 +7,8 @@ import json
 import marshmallow
 import decimal
 
-from ..kpair import PairModel, PairStrategy, PairStringStrategy, PairField, KCurrency, PairStringAliasStrategy
-from ...exceptions import AIOKrakenException
+from aiokraken.rest.schemas.kpair import PairModel, PairStrategy, PairStringStrategy, PairField, KCurrency, PairStringAliasStrategy
+from aiokraken.rest.exceptions import AIOKrakenException
 from hypothesis import given
 
 """

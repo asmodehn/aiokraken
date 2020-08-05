@@ -10,16 +10,8 @@ import json
 import marshmallow
 import decimal
 
-from ..ktm import TMModel, TimerField
-from ..kabtype import KABTypeModel
-from ..kordertype import KOrderTypeModel
-from ..kopenorder import (KOpenOrderSchema, KOpenOrderModel,
-KOrderDescrNoPriceFinalized,
-KOrderDescrOnePriceFinalized,
-KOrderDescrTwoPriceFinalized,
-    OpenOrderStrategy, OpenOrderDictStrategy)
-from ..korderdescr import KOrderDescrSchema
-from ...exceptions import AIOKrakenException
+from aiokraken.rest.schemas.kabtype import KABTypeModel
+from aiokraken.rest.schemas.kordertype import KOrderTypeModel
 
 """
 Test module.

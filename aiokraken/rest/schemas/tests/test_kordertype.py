@@ -7,8 +7,8 @@ import json
 import marshmallow
 import decimal
 
-from ..kordertype import KOrderTypeModel, KOrderTypeField, KOrderTypeStrategy, KOrderTypeStringStrategy
-from ...exceptions import AIOKrakenException
+from aiokraken.rest.schemas.kordertype import KOrderTypeModel, KOrderTypeField, KOrderTypeStrategy, KOrderTypeStringStrategy
+from aiokraken.rest.exceptions import AIOKrakenException
 from hypothesis import given
 
 """

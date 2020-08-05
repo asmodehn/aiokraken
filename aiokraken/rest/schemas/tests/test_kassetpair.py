@@ -11,8 +11,8 @@ from aiokraken.model.tests.strats.st_assetpair import AssetPair, AssetPairStrate
 from aiokraken.rest.schemas.kassetpair import ( KDictStrategy,
     KAssetPairSchema,
 )
-from ..kabtype import KABTypeModel, KABTypeField, KABTypeStrategy, KABTypeStringStrategy
-from ...exceptions import AIOKrakenException
+from aiokraken.rest.schemas.kabtype import KABTypeModel, KABTypeField, KABTypeStrategy, KABTypeStringStrategy
+from aiokraken.rest.exceptions import AIOKrakenException
 from hypothesis import given, settings, Verbosity
 
 """

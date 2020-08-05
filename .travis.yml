@@ -16,7 +16,7 @@ install:
   - pipenv install --dev --pre --skip-lock --sequential
 
 script:
-  - pytest --block-network
+  - pytest --import-mode=importlib --block-network
 
 notifications:
   email: false

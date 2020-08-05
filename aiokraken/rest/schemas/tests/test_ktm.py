@@ -7,8 +7,8 @@ import json
 import marshmallow
 import decimal
 
-from ..ktm import TMModel, TimerField, TMStrategy, TimerStringStrategy
-from ...exceptions import AIOKrakenException
+from aiokraken.rest.schemas.ktm import TMModel, TimerField, TMStrategy, TimerStringStrategy
+from aiokraken.rest.exceptions import AIOKrakenException
 from hypothesis import given, settings, Verbosity
 
 """

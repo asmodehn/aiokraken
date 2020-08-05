@@ -2,11 +2,11 @@ import unittest
 
 from hypothesis import given, strategies as st, settings, Verbosity
 
-from ..kabtype import KABTypeField
-from ..kordertype import KOrderTypeModel, KOrderTypeField
-from ..korderdescr import KOrderDescrCloseSchema
-from ..ktm import TimerField
-from ..krequestorder import (
+from aiokraken.rest.schemas.kabtype import KABTypeField
+from aiokraken.rest.schemas.kordertype import KOrderTypeModel, KOrderTypeField
+from aiokraken.rest.schemas.korderdescr import KOrderDescrCloseSchema
+from aiokraken.rest.schemas.ktm import TimerField
+from aiokraken.rest.schemas.krequestorder import (
     RequestOrder,
     RequestOrderNoPriceStrategy,
     RequestOrderOnePriceStrategy,

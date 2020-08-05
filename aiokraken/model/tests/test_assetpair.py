@@ -3,7 +3,7 @@ import unittest
 
 from hypothesis import given
 
-from .strats.st_assetpair import AssetPairStrategy
+from aiokraken.model.tests.strats.st_assetpair import AssetPairStrategy
 
 class TestAssetPair(unittest.TestCase):
 

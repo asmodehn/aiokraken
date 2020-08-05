@@ -6,8 +6,8 @@ import marshmallow
 from decimal import Decimal
 from pprint import pprint, pformat
 
-from ..ticker import TickerSchema, Ticker, DailyValue, MinOrder, MinTrade
-from ...exceptions import AIOKrakenException
+from aiokraken.rest.schemas.ticker import TickerSchema, Ticker, DailyValue, MinOrder, MinTrade
+from aiokraken.rest.exceptions import AIOKrakenException
 
 """
 Test module.

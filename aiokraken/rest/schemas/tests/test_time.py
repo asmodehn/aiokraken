@@ -4,8 +4,8 @@ from parameterized import parameterized
 import json
 import marshmallow
 
-from ..time import TimeSchema, Time
-from ...exceptions import AIOKrakenException
+from aiokraken.rest.schemas.time import TimeSchema, Time
+from aiokraken.rest.exceptions import AIOKrakenException
 
 """
 Test module.

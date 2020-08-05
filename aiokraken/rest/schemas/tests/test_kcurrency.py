@@ -7,11 +7,11 @@ import json
 import marshmallow
 import decimal
 
-from ..kcurrency import (
+from aiokraken.rest.schemas.kcurrency import (
     KCurrency, KCurrencyStrategy, KCurrencyField, KCurrencyStringStrategy,
     KCurrencyStringAliasStrategy,
 )
-from ...exceptions import AIOKrakenException
+from aiokraken.rest.exceptions import AIOKrakenException
 from hypothesis import given
 
 """

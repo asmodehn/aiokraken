@@ -7,8 +7,8 @@ import json
 import marshmallow
 import decimal
 
-from ..kabtype import KABTypeModel, KABTypeField, KABTypeStrategy, KABTypeStringStrategy
-from ...exceptions import AIOKrakenException
+from aiokraken.rest.schemas.kabtype import KABTypeModel, KABTypeField, KABTypeStrategy, KABTypeStringStrategy
+from aiokraken.rest.exceptions import AIOKrakenException
 from hypothesis import given
 
 """

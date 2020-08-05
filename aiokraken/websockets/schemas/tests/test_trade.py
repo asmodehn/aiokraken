@@ -1,8 +1,8 @@
 import unittest
 
-from ..trade import TradeWS, TradeWSSchema
+from aiokraken.websockets.schemas.trade import TradeWS, TradeWSSchema
 from hypothesis import given
-from .strats.st_trade import st_tradews, st_tradewsdict
+from aiokraken.websockets.schemas.tests.strats.st_trade import st_tradews, st_tradewsdict
 
 
 class TestTrade(unittest.TestCase):

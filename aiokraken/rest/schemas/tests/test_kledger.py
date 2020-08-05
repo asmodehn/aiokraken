@@ -6,23 +6,12 @@ from decimal import Decimal
 
 from aiokraken.rest.schemas.kledger import KLedgerInfoStrategy, KLedgerInfoSchema, KLedgerInfoDictStrategy, KLedgerInfo
 
-from aiokraken.rest.schemas.ktrade import KTradeStrategy, KTradeSchema, TradeDictStrategy, KTradeModel
 from hypothesis import given
 from parameterized import parameterized
 import json
 import marshmallow
 import decimal
 
-from ..ktm import TMModel, TimerField
-from ..kabtype import KABTypeModel
-from ..kordertype import KOrderTypeModel
-from ..kopenorder import (KOpenOrderSchema, KOpenOrderModel,
-KOrderDescrNoPriceFinalized,
-KOrderDescrOnePriceFinalized,
-KOrderDescrTwoPriceFinalized,
-    OpenOrderStrategy, OpenOrderDictStrategy)
-from ..korderdescr import KOrderDescrSchema
-from ...exceptions import AIOKrakenException
 
 """
 Test module.
