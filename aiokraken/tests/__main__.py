@@ -7,18 +7,17 @@ uses integrated python tools only.
 
 
 # import your test modules
-if __package__ is not None:
-    from . import test_config
-else:
-    import test_config
+if __package__ is None:
+    __package__ = "aiokraken.tests"
+from . import test_config, test_assets
 
 # initialize the test suite
 loader = unittest.TestLoader()
 suite = unittest.TestSuite()
 
 # add tests to the test suite
-#TODO : some rgument to prevent running on CI ?
-#suite.addTests(loader.loadTestsFromModule(test_config))
+suite.addTests(loader.loadTestsFromModule(test_config))
+suite.addTest(loader.loadTestsFromModule(test_assets))
 
 # initialize a runner, pass it your suite and run it
 runner = unittest.TextTestRunner(verbosity=3)
