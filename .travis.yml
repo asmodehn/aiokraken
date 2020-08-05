@@ -6,10 +6,11 @@ branches:
     - gh-pages
 
 python:
-  - '3.8.1'
+  # because that's my (and currently the only) development version
   - '3.8.2'
-  - '3.8.3'
-  - '3.8.4'
+#  - '3.8.3'
+#  - '3.8.4'
+#  - '3.8.5'
 
 install:
   - pipenv install --dev --pre --skip-lock --sequential
