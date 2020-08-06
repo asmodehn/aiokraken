@@ -14,7 +14,7 @@ class Time:
     TODO : Uses rfc 3339 rfc 1123  iso8601 ???
     """
 
-    unixtime: int  # time stamp, number of secs since epoch (ie unix time)
+    unixtime: float  # time stamp, number of secs since epoch (ie unix time)
     timezone: timezone = timezone.utc
 
     def __post_init__(self):
@@ -32,7 +32,8 @@ class Time:
         """ human-centric representation (careful with locale... and timezone)"""
         return self.strftime("%c %Z")
 
-    def __getattr__(self, item):
+    def __getattr__(self, item):  # TODO : maybe better to make that explicit for simplicity...
+        # TODO : rely more on datetime
         """ delegating to a datetime instance"""
         return getattr(datetime.fromtimestamp(self.unixtime, tz=self.timezone), item)
 
