@@ -41,9 +41,9 @@ class TestTimerField(unittest.TestCase):
         self.field = TimerField()
 
     @given(TimerStringStrategy())
-    def test_deserialize(self, ordertypestr):
-        p = self.field.deserialize(ordertypestr)
-        assert isinstance(p, TMModel)
+    def test_deserialize(self, timerstring):
+        p = self.field.deserialize(timerstring)
+        assert isinstance(p, TMModel)  # float)
 
     @given(TMStrategy())
     def test_serialize(self, tmmodel):
