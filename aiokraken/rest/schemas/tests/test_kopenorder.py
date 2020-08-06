@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import time
 import unittest
 
@@ -8,7 +10,7 @@ import json
 import marshmallow
 import decimal
 
-from aiokraken.rest.schemas.ktm import TMModel, TimerField
+from aiokraken.rest.schemas.ktm import TimerField
 from aiokraken.rest.schemas.kopenorder import (KOpenOrderSchema, KOpenOrderModel,
 KOrderDescrNoPriceFinalized,
 KOrderDescrOnePriceFinalized,
@@ -32,12 +34,12 @@ class TestOpenOrderModel(unittest.TestCase):
         assert isinstance(openorder.descr, (KOrderDescrNoPriceFinalized,
            KOrderDescrOnePriceFinalized,
            KOrderDescrTwoPriceFinalized))
-        assert isinstance(openorder.expiretm, TMModel)
+        assert isinstance(openorder.expiretm, datetime)
         assert isinstance(openorder.fee, decimal.Decimal)
         assert isinstance(openorder.limitprice, decimal.Decimal)
-        assert isinstance(openorder.opentm, TMModel)
+        assert isinstance(openorder.opentm, datetime)
         assert isinstance(openorder.price, decimal.Decimal)
-        assert isinstance(openorder.starttm, TMModel)
+        assert isinstance(openorder.starttm, datetime)
         assert isinstance(openorder.stopprice, decimal.Decimal)
         assert isinstance(openorder.vol, decimal.Decimal)
         assert isinstance(openorder.vol_exec, decimal.Decimal)

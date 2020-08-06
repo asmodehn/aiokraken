@@ -1,4 +1,5 @@
 import typing
+from datetime import datetime
 from decimal import Decimal
 
 from enum import (IntEnum)
@@ -12,7 +13,7 @@ if not __package__:
 
 from .base import BaseSchema
 from .kordertype import KOrderTypeModel, KOrderTypeField
-from .ktm import TMModel, TMStrategy, TimerField
+from .ktm import AbsoluteTimeStrategy, TimerField
 from .korderdescr import (KOrderDescrNoPriceFinalized,
            KOrderDescrOnePriceFinalized,
            KOrderDescrTwoPriceFinalized,
@@ -30,7 +31,7 @@ class KClosedOrderModel(KOpenOrderModel):
     # Note :
     # refid likely None
     # userref likely None
-    closetm: TMModel = None  # this must have a default because base class has defaults...
+    closetm: datetime = None  # this must have a default because base class has defaults...
     reason: typing.Optional[str] = None  # Note : might be None # TODO : fix this defaults thing somehow...
 
 
@@ -43,9 +44,9 @@ def ClosedOrderStrategy(draw,
                           KOrderDescrFinalizeStrategy(strategy=KOrderDescrTwoPriceStrategy())
                       ]),
                       status= st.text(max_size=5),  # TODO
-                      starttm= TMStrategy(),
-                      opentm= TMStrategy(),
-                      expiretm= TMStrategy(),
+                      starttm= AbsoluteTimeStrategy(),
+                      opentm= AbsoluteTimeStrategy(),
+                      expiretm= AbsoluteTimeStrategy(),
                       # CAreful here : consistency with descr content ???
                       price= st.decimals(allow_nan=False, allow_infinity=False),
                       limitprice= st.decimals(allow_nan=False, allow_infinity=False),
@@ -65,7 +66,7 @@ def ClosedOrderStrategy(draw,
 
                         trades=st.lists(st.text(max_size=5), max_size=5),
 
-                        closetm=TMStrategy(),
+                        closetm=AbsoluteTimeStrategy(),
                         reason=st.one_of(st.none(), st.text(max_size=5))
 
 ):
@@ -119,9 +120,9 @@ def ClosedOrderDictStrategy(draw,
                               KOrderDescrFinalizeStrategy(strategy=KOrderDescrTwoPriceStrategy())
                           ]),
                           status= st.text(max_size=5),  # TODO
-                          starttm= TMStrategy(),
-                          opentm= TMStrategy(),
-                          expiretm= TMStrategy(),
+                          starttm= AbsoluteTimeStrategy(),
+                          opentm= AbsoluteTimeStrategy(),
+                          expiretm= AbsoluteTimeStrategy(),
 
                           price= st.decimals(allow_nan=False, allow_infinity=False),
                           limitprice= st.decimals(allow_nan=False, allow_infinity=False),
@@ -141,7 +142,7 @@ def ClosedOrderDictStrategy(draw,
 
                             trades=st.lists(st.text(max_size=5), max_size=5),
 
-                            closetm= TMStrategy(),
+                            closetm= AbsoluteTimeStrategy(),
                             reason=st.one_of(st.none(), st.text(max_size=5))
                           ):
     model = draw(ClosedOrderStrategy(descr= descr,
