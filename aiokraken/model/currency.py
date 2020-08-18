@@ -24,78 +24,75 @@ To use types to filter out what we are not interested in.
 """
 
 
-class Currency(Enum):
+#TODO : merge with asset somehow (same in/out datatype - domain translation done by schemas)
+
+# Enum to store accepted currencies.
+# Unknown currencies will be ignored
+# Ref : https://support.kraken.com/hc/en-us/articles/360000678446
+# Ref : https://support.kraken.com/hc/en-us/articles/360001185506
+class KCurrency(Enum):
+    """
+    >>> KCurrency('EUR')
+    EUR
+
+    >>> KCurrency('XBT')
+    XBT
+
+    Careful, aliases are not handled when parsing
+    >>> KCurrency('BTC')
+    Traceback (most recent call last):
+        ...
+    ValueError: 'BTC' is not a valid KCurrency
+
+    However:
+    >>> KCurrency.BTC
+    XBT
+
+    Similarly:
+    >>> KCurrency('XXBT')
+    Traceback (most recent call last):
+        ...
+    ValueError: 'XXBT' is not a valid KCurrency
+
+    >>> KCurrency.XBT == KCurrency.BTC
+    True
+
+    str() returns the value for serializing
+    >>> str(KCurrency.BTC)
+    'XBT'
+
+    repr() returns the (first in the list) name for internal usage
+    >>> repr(KCurrency.BTC)
+    'XBT'
+
+    """
+    # Fiat
+    EUR = 'EUR'
+    USD = 'USD'
+    CAD = 'CAD'
+    KRW = 'KRW'
+    JPY = 'JPY'
+    # Crypto (name aliases allowed. value must be unique, as per the desired semantic)
+    # Maybe ? https://www.notinventedhere.org/articles/python/how-to-use-strings-as-name-aliases-in-python-enums.html
+    XBT = 'XBT'
+    BTC = 'XBT'
+    ETC = 'ETC'
+    ETH = 'ETH'
+    XRP = 'XRP'
+    EOS = 'EOS'
+    BCH = 'BCH'
+    ADA = 'ADA'
+    XTZ = 'XTZ'
+    BSV = 'BSV'
+
     def __str__(self) -> str:
-        return f'{self.name}'
+        """Kraken default representation for sending data."""
+        return f'{self.value}'
 
     def __repr__(self) -> str:
+        """Internal representation, unique."""
         return f'{self.name}'
 
-
-# Enums to store accepted currencies.
-# Unknown currencies will be ignored
-class Fiat(Currency):
-    """
-    >>> Fiat('EUR')
-    EUR
-    """
-    EUR= 'EUR'
-    USD= 'USD'
-    CAD= 'CAD'
-    KRW= 'KRW'
-    JPY= 'JPY'
-
-
-class Crypto(Currency):
-    """
-    >>> Crypto('BTC')
-    BTC
-    """
-    BTC= 'BTC'
-    ETH= 'ETH'
-
-
-class Alt(Currency):
-    """
-    >>> Alt("XRP")
-    XRP
-    """
-    XRP= 'XRP'
-
-
-def currency(c: str) -> typing.Optional[Currency]:
-    """
-    >>> c = currency('EUR')
-    >>> type(c)
-    <enum 'Fiat'>
-    >>> c
-    EUR
-
-    >>> c = currency('BTC')
-    >>> type(c)
-    <enum 'Crypto'>
-    >>> c
-    BTC
-
-    >>> c = currency('XRP')
-    >>> type(c)
-    <enum 'Alt'>
-    >>> c
-    XRP
-
-    """
-    if c in Fiat.__members__:
-        return getattr(Fiat, c)
-    elif c in Crypto.__members__:
-        return getattr(Crypto, c)
-    elif c in Alt.__members__:
-        return getattr(Alt, c)
-    else:
-        raise CurrencyError
-
-
-# TODO : the distinction between the  different types of currency seem superflous.
-#  YAGNI. we should probably get rid of it and just have a currency model...
 
 if __name__ == "__main__":
     import pytest

@@ -1,0 +1,79 @@
+interactions:
+- request:
+    body:
+      end: 1588168800
+      nonce: 1594887757052
+      start: 1572888300
+    headers: {}
+    method: POST
+    uri: https://api.kraken.com/0/private/TradesHistory
+  response:
+    body:
+      string: '{"error":[],"result":{"trades":{
+        "T5MQPO-PBBX3-3KFPJQ":{"ordertxid":"OREZPT-2HL3Z-L4EQ23","postxid":"TKH2SE-M7EF5-CFI7LT","pair":"XTZEUR","time":1598167578.4956,"type":"sell","ordertype":"stop market","price":"2.600000","cost":"259.999999","fee":"0.676000","vol":"100.00000000","margin":"0.000000","misc":""},
+        "TDJJHO-NDT7P-Y2XABT":{"ordertxid":"OYRL7K-ISETH-HXGI6D","postxid":"TKH2SE-M7WF5-CFI7LT","pair":"XTZEUR","time":1598164726.41,"type":"buy","ordertype":"limit","price":"2.620000","cost":"262.000000","fee":"0.419200","vol":"100.00000000","margin":"0.000000","misc":""},
+        "TQB7VO-WUUVC-UYDB3P":{"ordertxid":"OYBVOA-AJ6F5-S7L3WJ","postxid":"TUPCEA-WES2M-EUQSKP","pair":"XTZEUR","time":1597290628.6479,"type":"buy","ordertype":"stop market","price":"2.128200","cost":"425.640000","fee":"1.106664","vol":"200.00000000","margin":"212.820000","misc":"closing"},
+        "TUPCEA-WJP2M-EUQSKP":{"ordertxid":"OSTQ5S-KASI3-CJ4R24","postxid":"TKH2SE-M7GF5-CFI7LT","posstatus":"closed","pair":"XTZEUR","time":1597283581.333,"type":"sell","ordertype":"market","price":"2.107694","cost":"421.538796","fee":"1.180309","vol":"200.00000000","margin":"210.769398","misc":""},
+        "TNRHWL-OHM5L-FPBZJX":{"ordertxid":"OSMZFY-TMTKL-LOAOBJ","postxid":"TBNL5G-VZDYR-7JQHMF","pair":"XTZEUR","time":1595845267.9719,"type":"sell","ordertype":"stop market","price":"1.607000","cost":"321.400000","fee":"0.835640","vol":"200.00000000","margin":"160.700000","misc":"closing"},
+        "TBNL5G-VUFYR-7JQHMF":{"ordertxid":"O6P6OY-64RBK-X3GIYI","postxid":"TKH2SE-M7DF5-CFI7LT","posstatus":"closed","pair":"XTZEUR","time":1595842714.7553,"type":"buy","ordertype":"market","price":"1.600000","cost":"320.000000","fee":"0.896000","vol":"200.00000000","margin":"160.000000","misc":""}
+      },"count":14}}'
+    headers:
+      CF-Cache-Status: DYNAMIC
+      CF-RAY: 5b3a5101fc08cda7-CDG
+      Connection: keep-alive
+      Content-Type: application/json; charset=utf-8
+      Date: Thu, 16 Jul 2020 08:22:37 GMT
+      Expect-CT: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      Server: cloudflare
+      Set-Cookie: __cfduid=d5d91e9bcebfd7d7dad462bc51e9d586b1594887757; expires=Sat,
+        15-Aug-20 08:22:37 GMT; path=/; domain=.kraken.com; HttpOnly; SameSite=Lax
+      Transfer-Encoding: chunked
+      cf-request-id: 03f850f5380000cda7931cf200000001
+      content-encoding: gzip
+      strict-transport-security: max-age=15768000
+      vary: Accept-Encoding
+    status:
+      code: 200
+      message: OK
+    url: https://api.kraken.com/0/private/TradesHistory
+- request:
+    body:
+      end: 1588168800
+      nonce: 1594887767061
+      ofs: 50
+      start: 1572888300
+    headers: {}
+    method: POST
+    uri: https://api.kraken.com/0/private/TradesHistory
+  response:
+    body:
+      string: '{"error":[],"result":{"trades":{
+        "TYTR6W-ABTLT-AUHQW5":{"ordertxid":"OCHSIN-P77CD-2X6OBE","postxid":"T3PETT-46KV-BMCU2V","pair":"XETHZEUR","time":1593765455.2576,"type":"buy","ordertype":"limit","price":"174.00000","cost":"174.00000","fee":"0.27840","vol":"1.00000000","margin":"87.00000","misc":"closing"},
+        "TMTFW4-LBSOR-BWZY4M":{"ordertxid":"O4LMMR-7VVBW-V3LRLS","postxid":"TKGZOG-PRXKU-HVOIXY","pair":"XTZEUR","time":1593755130.748,"type":"buy","ordertype":"limit","price":"2.150000","cost":"215.000000","fee":"0.344000","vol":"100.00000000","margin":"107.500000","misc":"closing"},
+        "TKGZOG-PSXKU-HVOIXY":{"ordertxid":"OQJWXC-JJARN-OXDNKQ","postxid":"TKH2SE-MGIF5-CFI7LT","posstatus":"closed","pair":"XTZEUR","time":1593746944.2613,"type":"sell","ordertype":"market","price":"2.250000","cost":"225.000000","fee":"0.630000","vol":"100.00000000","margin":"112.500000","misc":""},
+        "T3PETT-4HRKV-BMCU2V":{"ordertxid":"OPEPUE-E6YSE-PAAFRB","postxid":"TKH2SE-M2IF5-CFI7LT","posstatus":"closed","pair":"XETHZEUR","time":1593746923.0348,"type":"sell","ordertype":"market","price":"179.73000","cost":"179.73000","fee":"0.50324","vol":"1.00000000","margin":"89.86500","misc":""},
+        "TOED6F-HANMW-TMFQLN":{"ordertxid":"OVHOHD-PUPTX-TD7A5R","postxid":"TB7ASE-UHP2R-XFBEQQ","pair":"XTZEUR","time":1593689256.2846,"type":"buy","ordertype":"stop market","price":"2.527591","cost":"252.759074","fee":"0.657173","vol":"100.00000000","margin":"126.379537","misc":"closing"},
+        "TB7ASE-UYP2R-XFBEQQ":{"ordertxid":"O5LZ4D-Z323P-DF5JYC","postxid":"TKH2SE-MWIF5-CFI7LT","posstatus":"closed","pair":"XTZEUR","time":1593688666.0084,"type":"sell","ordertype":"market","price":"2.481496","cost":"248.149581","fee":"0.694818","vol":"100.00000000","margin":"124.074791","misc":""},
+        "TFIJBA-NSTYS-OV4UNS":{"ordertxid":"OVPGLB-PO4SZ-TXUXIE","postxid":"TKH2SE-M4IF5-CFI7LT","pair":"XTZEUR","time":1591125966.9632,"type":"sell","ordertype":"stop market","price":"1.970000","cost":"885.164164","fee":"2.301427","vol":"449.32191083","margin":"0.000000","misc":""},
+        "TWSXUZ-YHBCM-XFU2FG":{"ordertxid":"OSFLKN-U4KGK-RVLQI4","postxid":"TKH2SE-MDIF5-CFI7LT","pair":"XTZEUR","time":1586170084.3365,"type":"buy","ordertype":"market","price":"1.551184","cost":"774.189467","fee":"2.012893","vol":"499.09588111","margin":"0.000000","misc":""}
+      },"count":14}}'
+    headers:
+      CF-Cache-Status: DYNAMIC
+      CF-RAY: 5b3a51407d046918-CDG
+      Connection: keep-alive
+      Content-Type: application/json; charset=utf-8
+      Date: Thu, 16 Jul 2020 08:22:47 GMT
+      Expect-CT: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      Server: cloudflare
+      Set-Cookie: __cfduid=d24078dc31ea0eedbb6c33085f605e0321594887767; expires=Sat,
+        15-Aug-20 08:22:47 GMT; path=/; domain=.kraken.com; HttpOnly; SameSite=Lax
+      Transfer-Encoding: chunked
+      cf-request-id: 03f8511c4e0000691823996200000001
+      content-encoding: gzip
+      strict-transport-security: max-age=15768000
+      vary: Accept-Encoding
+    status:
+      code: 200
+      message: OK
+    url: https://api.kraken.com/0/private/TradesHistory
+version: 1

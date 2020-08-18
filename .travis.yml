@@ -1,4 +1,5 @@
-dist: xenial
+version: ~> 1.0
+dist: bionic
 language: python
 
 branches:
@@ -6,19 +7,17 @@ branches:
     - gh-pages
 
 python:
-  - '3.7'
-  #- '3.8'
-
+  # because that's my (and currently the only) development version
+  - '3.8.2'
+#  - '3.8.3'
+#  - '3.8.4'
+#  - '3.8.5'
 
 install:
   - pipenv install --dev --pre --skip-lock --sequential
 
 script:
-  - python -m aiokraken.model.tests
-  - python -m aiokraken.utils.tests
-  - python -m aiokraken.rest.schemas.tests
-  - python -m aiokraken.tests
-  - pytest -s tests --block-network
+  - pytest --import-mode=importlib --block-network
 
 notifications:
   email: false

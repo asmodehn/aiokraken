@@ -10,45 +10,8 @@ from aiokraken.rest.schemas.base import BaseSchema
 
 from hypothesis import strategies as st
 
-
-class KAssetClass(Enum):
-    """
-
-    """
-    # currency
-    currency = 'currency'
-
-    def __str__(self) -> str:
-        """Kraken default representation for sending data."""
-        return f'{self.value}'
-
-    def __repr__(self) -> str:
-        """Internal representation, unique."""
-        return f'{self.name}'
-
-
-# Using partial call here to delay evaluation (and get same semantics as potentially more complex strategies)
-KAssetClassStrategy = functools.partial(st.sampled_from, KAssetClass)
-
-
-@dataclass
-class KAsset:
-    #name: str  # name
-    altname: str  # alternate name
-    aclass: str  # asset class
-    decimals: int  # scaling decimal places for record keeping
-    display_decimals: int  # scaling decimal places for output display
-
-
-@st.composite
-def KAssetStrategy(draw):
-
-    return KAsset(
-        altname= draw(st.text(max_size=5)),
-        aclass = draw(st.text(max_size=5)),
-        decimals= draw(st.integers()),
-        display_decimals= draw(st.integers())
-    )
+from ...model.asset import AssetClass, Asset
+from ...model.tests.strats.st_asset import AssetClassStrategy, AssetStrategy
 
 
 class AssetSchema(BaseSchema):
@@ -70,10 +33,10 @@ class AssetSchema(BaseSchema):
 
     @post_load
     def build_model(self, data, **kwargs):
-        a = KAsset(altname= data.get('altname'),
-                   aclass= data.get('aclass'),
-                   decimals= data.get('decimals'),
-                   display_decimals = data.get('display_decimals'))
+        a = Asset(altname= data.get('altname'),
+                  aclass= data.get('aclass'),
+                  decimals= data.get('decimals'),
+                  display_decimals = data.get('display_decimals'))
         return a
 
     @post_dump
@@ -82,7 +45,7 @@ class AssetSchema(BaseSchema):
 
 
 @st.composite
-def KDictStrategy(draw, strategy= KAssetStrategy()):
+def KDictStrategy(draw, strategy= AssetStrategy()):
     """
     :param draw:
     :return:

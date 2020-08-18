@@ -1,8 +1,10 @@
 # https://www.kraken.com/features/websocket-api#message-ticker
 
 from collections import namedtuple
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from decimal import Decimal
+
+import typing
 
 """ A common data structure for a Ticker """
 
@@ -12,7 +14,7 @@ MinTrade = namedtuple('MinTrade', ['price', 'lot_volume'])
 DailyValue = namedtuple('DailyValue', ['today', 'last_24_hours'])
 # TODO : data validation of these ?
 
-
+# TODO : ticker timeindexed frame ?
 @dataclass(frozen=True, init=True)
 class Ticker:
     ask: MinOrder
@@ -24,6 +26,7 @@ class Ticker:
     number_of_trades: DailyValue
     low: DailyValue
     todays_opening: Decimal
+    pairname: typing.Optional[str] = field(default=None)  # this will be set a bit after initialization
 
     # def __init__(self, b, a, l, p, h, c, o, t, v):
     #     self.ask = MinOrder(*a)
@@ -45,6 +48,11 @@ class Ticker:
     # l = low array(<today>, <last 24 hours>),
     # h = high array(<today>, <last 24 hours>),
     # o = today's opening price
+
+    def __call__(self, pairname):  # for late naming
+        newdata = asdict(self)
+        newdata.update({'pairname': pairname})
+        return Ticker(**newdata)
 
     def __repr__(self):
         # TODO : refine...

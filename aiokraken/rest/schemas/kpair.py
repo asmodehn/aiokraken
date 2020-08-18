@@ -6,61 +6,17 @@ from dataclasses import dataclass
 
 from marshmallow import fields, pre_load, post_load
 
+from aiokraken.model.pair import PairModel
+from aiokraken.model.tests.strats.st_pair import PairStrategy
+
 if not __package__:
     __package__ = 'aiokraken.rest.schemas'
 
 from .base import BaseSchema
 from ..exceptions import AIOKrakenException
-from .kcurrency import KCurrency, KCurrencyStrategy, KCurrencyField
+from ...model.tests.strats.st_currency import KCurrency, KCurrencyStrategy
+from .kcurrency import KCurrencyField
 from hypothesis import given, strategies as st
-
-
-@dataclass(frozen=True)
-class PairModel:
-    """
-    >>> p=PairModel(base=KCurrency("XBT"), quote=KCurrency("EUR"))
-    >>> p.base
-    XBT
-    >>> p.quote
-    EUR
-    """
-
-    base: KCurrency
-    quote: KCurrency
-
-    # def __post_init__(self):
-    #     if self.base == self.quote:
-    #         raise ValueError(f"Pair cannot have base {self.base} and quote {self.quote}")
-
-    def __repr__(self):
-        return f"{repr(self.base)}/{repr(self.quote)}"
-
-    def __str__(self):
-        # or using .value ?? see other stringenums like ordertype...
-        return f"{self.base}{self.quote}"
-
-
-@st.composite
-def PairStrategy(draw):
-    """
-
-    :param draw:
-    :return:
-
-    """
-    base = draw(KCurrencyStrategy())
-    quote= draw(KCurrencyStrategy().filter(lambda c: c != base))
-    return PairModel(base=base, quote=quote)
-
-
-# This makes hypothesis blow up because of inability to shrink...
-# @st.composite
-# def PairStrategy(draw, base=KCurrencyStrategy(), quote=KCurrencyStrategy()):
-#     b = draw(base)
-#     q = draw(quote)
-#     while q == b:
-#         q = draw(quote)
-#     return PairModel(base=b, quote=q)
 
 
 class PairField(fields.Field):

@@ -4,10 +4,10 @@ from parameterized import parameterized
 import json
 import marshmallow
 
-from ..payload import PayloadSchema
-from ...exceptions import AIOKrakenServerError, AIOKrakenSchemaValidationException
+from aiokraken.rest.schemas.payload import PayloadSchema
+from aiokraken.rest.exceptions import AIOKrakenServerError, AIOKrakenSchemaValidationException
 
-from ..base import BaseSchema
+from aiokraken.rest.schemas.base import BaseSchema
 
 
 # TODO : mock a schema ?

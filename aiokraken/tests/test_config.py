@@ -11,6 +11,8 @@ else:
 # Need to test user environment (and not CI)
 class TestLoadKeyFile(unittest.TestCase):
 
+    @unittest.skipIf(load_api_keyfile() is None,
+                     "keyfile not detected")
     def test_load_api_keyfile(self):
         r = load_api_keyfile()
         assert 'key' in r

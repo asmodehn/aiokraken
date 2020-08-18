@@ -1,41 +1,16 @@
 import functools
+from datetime import datetime, timedelta, timezone
+
 import time
 import typing
 from marshmallow import fields
 from hypothesis import strategies as st
 
-
-class TMModel:
-
-    def __init__(self, value: int, relative: bool=True):
-        # Note : this can accept past times...
-        # casting to prevent later problems...
-        self.relative = bool(relative)
-        self.value = int(value)
-
-    def __repr__(self):
-        return str(self)
-
-    def __str__(self)-> str:
-        return ("+" if self.relative else "") + str(self.value)
-
-    def __bool__(self) -> bool:
-        # truthy if meaningful ( != not expired )
-        if self.relative:
-            return self.value > 0
-        else:
-            return bool(self.value)  # any value here is meaningful
-
-    def expired(self) -> bool:
-        if self.relative:
-            return self.value <= 0  # TODO This requires a reference time...
-        else:
-            return self.value > int(time.time())
-
-
 # Using partial call here to delay evaluation (and get same semantics as potentially more complex strategies)
-TMStrategy = functools.partial(st.one_of, st.builds(TMModel, value=st.integers(min_value=0), relative=st.sampled_from([True])),
-                                          st.builds(TMModel, value=st.integers(min_value=int(time.time())), relative=st.sampled_from([False])))
+# TODO : maybe we also need floats here ??
+RelativeTimeStrategy = functools.partial(st.timedeltas, min_value=timedelta(seconds=0))
+AbsoluteTimeStrategy = st.datetimes
+TimeStrategy = functools.partial(st.one_of, AbsoluteTimeStrategy(), RelativeTimeStrategy())
 
 
 class TimerField(fields.Field):
@@ -56,7 +31,15 @@ class TimerField(fields.Field):
         :return: The deserialized value.
 
         """
-        return TMModel(value)
+        if isinstance(value, (int, float)):
+            return datetime.fromtimestamp(value, tz=timezone.utc)
+        elif isinstance(value, str):
+            if value.startswith('+'):  # relative from now as a timedelta
+                return timedelta(seconds=float(value[1:]))
+            else:
+                return datetime.fromtimestamp(float(value), tz=timezone.utc)
+        else:
+            raise NotImplementedError
 
     def _serialize(self, value: typing.Any, attr: str, obj: typing.Any, **kwargs):
         """Serializes ``value`` to a basic Python datatype. Noop by default.
@@ -68,15 +51,21 @@ class TimerField(fields.Field):
         :param dict kwargs: Field-specific keyword arguments.
         :return: The serialized value
         """
-        if value is not None:
-            return str(value)
-        else:
-            return ''  # meaningless string value
 
+        if isinstance(value, datetime):
+            return datetime.timestamp(value)  # outputting timestamp
+        elif isinstance(value, timedelta):
+            return f"+{value.total_seconds()}"  # outputting str
 
 @st.composite
-def TimerStringStrategy(draw):
-    model = draw(TMStrategy())
+def RelativeTimeSerializedStrategy(draw):
+    model = draw(RelativeTimeStrategy())
     field = TimerField()
     return field.serialize('a', {'a': model})
 
+
+@st.composite
+def AbsoluteTimeSerializedStrategy(draw):
+    model = draw(AbsoluteTimeStrategy())
+    field = TimerField()
+    return field.serialize('a', {'a': model})

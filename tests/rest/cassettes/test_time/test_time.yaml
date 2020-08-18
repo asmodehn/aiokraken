@@ -1,0 +1,34 @@
+interactions:
+- request:
+    body: null
+    headers:
+      User-Agent:
+      - Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML,
+        like Gecko) Chrome/74.0.3729.131 Safari/537.36
+    method: GET
+    uri: https://api.kraken.com/0/public/Time
+  response:
+    body:
+      string: '{"error":[],"result":{"unixtime":1577873240,"rfc1123":"Wed,  1 Jan
+        20 10:07:20 +0000"}}'
+    headers:
+      CF-Cache-Status: MISS
+      CF-RAY: 54e3af8b3a1dcdd7-CDG
+      Cache-Control: no-cache,max-age=0
+      Connection: keep-alive
+      Content-Encoding: gzip
+      Content-Type: application/json; charset=utf-8
+      Date: Wed, 01 Jan 2020 10:07:21 GMT
+      Expect-CT: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      Server: cloudflare
+      Set-Cookie: __cf_bm=2284fda627fe85f031e101eae62a7917871045c7-1577873241-1800-Aca7NdvYVwKL/89lkkMR498LKbAl8zz8hKlfzbF0DZFOK1tEoz9LbCceqRr/DsIeRuT47xqCT1pEKhxj4aU58xk=;
+        path=/; expires=Wed, 01-Jan-20 10:37:21 GMT; domain=.kraken.com; HttpOnly;
+        Secure
+      Transfer-Encoding: chunked
+      Vary: Accept-Encoding
+      strict-transport-security: max-age=15768000
+    status:
+      code: 200
+      message: OK
+    url: https://api.kraken.com/0/public/Time
+version: 1

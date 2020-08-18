@@ -8,7 +8,7 @@ import marshmallow
 import decimal
 
 from aiokraken.rest.schemas.balance import BalanceStrategy, BalanceSchema, KDictStrategy, Balance
-from ...exceptions import AIOKrakenException
+from aiokraken.rest.exceptions import AIOKrakenException
 from hypothesis import given, settings, Verbosity
 
 """

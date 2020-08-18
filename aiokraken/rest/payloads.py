@@ -1,3 +1,5 @@
+from aiokraken.rest.schemas.kledger import KLedgerInfoSchema
+
 from aiokraken.rest.schemas.kasset import AssetSchema
 from aiokraken.rest.schemas.kassetpair import KAssetPairSchema
 from aiokraken.rest.schemas.ohlc import PairOHLCSchema
@@ -24,15 +26,33 @@ class TickerPayloadSchema(PayloadBaseSchema):
     #  => requires human understanding and should probably be part of a "formal" modeling layer instead...
     result= fields.Dict(keys = fields.String(), values = fields.Nested(TickerSchema))
 
+    @post_load()
+    def register_name(self, data, many, partial):
+        for n in data.keys():
+            data[n] = data[n](pairname=n)
+        return data
+
 
 class AssetPayloadSchema(PayloadBaseSchema):
 
     result= fields.Dict(keys = fields.String(), values = fields.Nested(AssetSchema))
 
+    @post_load()
+    def register_name(self, data, many, partial):
+        for n in data.keys():
+            data[n] = data[n](restname=n)
+        return data
+
 
 class AssetPairPayloadSchema(PayloadBaseSchema):
 
     result= fields.Dict(keys = fields.String(), values = fields.Nested(KAssetPairSchema))
+
+    @post_load()
+    def register_name(self, data, many, partial):
+        for n in data.keys():
+            data[n] = data[n](restname=n)
+        return data
 
 
 # Ref : https://stevenloria.com/dynamic-schemas-in-marshmallow/

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import time
 import unittest
 
@@ -8,16 +10,14 @@ import json
 import marshmallow
 import decimal
 
-from ..ktm import TMModel, TimerField
-from ..kabtype import KABTypeModel
-from ..kordertype import KOrderTypeModel
-from ..kclosedorder import (KClosedOrderSchema, KClosedOrderModel,
+from aiokraken.rest.schemas.ktm import TimerField
+from aiokraken.rest.schemas.kclosedorder import (KClosedOrderSchema, KClosedOrderModel,
 KOrderDescrNoPriceFinalized,
 KOrderDescrOnePriceFinalized,
 KOrderDescrTwoPriceFinalized,
     ClosedOrderStrategy, ClosedOrderDictStrategy)
-from ..korderdescr import KOrderDescrSchema
-from ...exceptions import AIOKrakenException
+from aiokraken.rest.schemas.korderdescr import KOrderDescrSchema
+from aiokraken.rest.exceptions import AIOKrakenException
 
 """
 Test module.
@@ -34,12 +34,12 @@ class TestClosedOrderModel(unittest.TestCase):
         assert isinstance(closedorder.descr, (KOrderDescrNoPriceFinalized,
                                               KOrderDescrOnePriceFinalized,
                                               KOrderDescrTwoPriceFinalized))
-        assert isinstance(closedorder.expiretm, TMModel)
+        assert isinstance(closedorder.expiretm, datetime)
         assert isinstance(closedorder.fee, decimal.Decimal)
         assert isinstance(closedorder.limitprice, decimal.Decimal)
-        assert isinstance(closedorder.opentm, TMModel)
+        assert isinstance(closedorder.opentm, datetime)
         assert isinstance(closedorder.price, decimal.Decimal)
-        assert isinstance(closedorder.starttm, TMModel)
+        assert isinstance(closedorder.starttm, datetime)
         assert isinstance(closedorder.stopprice, decimal.Decimal)
         assert isinstance(closedorder.vol, decimal.Decimal)
         assert isinstance(closedorder.vol_exec, decimal.Decimal)
@@ -89,7 +89,6 @@ class TestOpenOrderSchema(unittest.TestCase):
         oo = self.schema.load(model)
         assert isinstance(oo, KClosedOrderModel)
 
-
     def test_load_fail(self):
         # corrupted data:
         wrg_orderstr = '{"refid": null, "userref": 0, "status": "open", "opentm": 1571150298.798, ' \
@@ -98,6 +97,6 @@ class TestOpenOrderSchema(unittest.TestCase):
                        '"vol":"0.01000000","vol_exec":"0.00000000","cost":"0.00000","fee":"0.00000","price":"0.00000","stopprice":"0.00000","limitprice":"0.00000","misc":"","oflags":"fciq"}}}}'
         # checking it actually fails
         with self.assertRaises(Exception) as e:
-            self.schema.load(wrg_orderstr)
+            self.schema.loads(wrg_orderstr)
 
     # TODO : add more tests for specific errors we want to cover...

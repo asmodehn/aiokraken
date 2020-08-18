@@ -1,0 +1,33 @@
+interactions:
+- request:
+    body: null
+    headers:
+      User-Agent:
+      - Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_4) AppleWebKit/537.36 (KHTML,
+        like Gecko) Chrome/74.0.3729.131 Safari/537.36
+    method: GET
+    uri: https://api.kraken.com/0/public/Assets?asset=XBT
+  response:
+    body:
+      string: '{"error":[],"result":{"XXBT":{"aclass":"currency","altname":"XBT","decimals":10,"display_decimals":5}}}'
+    headers:
+      CF-Cache-Status: MISS
+      CF-RAY: 561469274931bd59-CDG
+      Cache-Control: public,max-age=60,smaxage=60
+      Connection: keep-alive
+      Content-Encoding: gzip
+      Content-Type: application/json; charset=utf-8
+      Date: Fri, 07 Feb 2020 09:41:54 GMT
+      Expect-CT: max-age=604800, report-uri="https://report-uri.cloudflare.com/cdn-cgi/beacon/expect-ct"
+      Server: cloudflare
+      Set-Cookie: __cf_bm=2c1f946b03844c55ca86e47911b382bcac49d7df-1581068514-1800-AeoJ9uW5Cqt94NaEcYtLor//6ls4q+FUc6RDuNZyWHnAO43fEL/kofRU/oRC75Hk3wuSFQ4qbxKgZy4BmAAgJHo=;
+        path=/; expires=Fri, 07-Feb-20 10:11:54 GMT; domain=.kraken.com; HttpOnly;
+        Secure; SameSite=None
+      Transfer-Encoding: chunked
+      Vary: Accept-Encoding
+      strict-transport-security: max-age=15768000
+    status:
+      code: 200
+      message: OK
+    url: https://api.kraken.com/0/public/Assets?asset=XBT
+version: 1

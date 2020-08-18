@@ -7,8 +7,8 @@ import json
 import marshmallow
 import decimal
 
-from ..kpair import PairModel, PairStrategy, PairStringStrategy, PairField, KCurrency, PairStringAliasStrategy
-from ...exceptions import AIOKrakenException
+from aiokraken.rest.schemas.kpair import PairModel, PairStrategy, PairStringStrategy, PairField, KCurrency, PairStringAliasStrategy
+from aiokraken.rest.exceptions import AIOKrakenException
 from hypothesis import given
 
 """
@@ -16,17 +16,6 @@ Test module.
 This is intended for extensive testing, using parameterized, hypothesis or similar generation methods
 For simple usecase examples, we should rely on doctests.
 """
-
-
-class TestPairModel(unittest.TestCase):
-
-    @given(PairStrategy())
-    def test_repr(self, model):
-        assert repr(model) == f"{repr(model.base)}/{repr(model.quote)}"
-
-    @given(PairStrategy())
-    def test_str(self, model):
-        assert str(model) == f"{model.base}{model.quote}"
 
 
 class TestPairField(unittest.TestCase):

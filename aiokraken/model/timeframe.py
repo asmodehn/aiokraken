@@ -1,8 +1,8 @@
-
-
+from __future__ import annotations
 
 # in Minutes : 1 (default), 5, 15, 30, 60, 240, 1440, 10080, 21600
 import functools
+from datetime import timedelta
 from enum import Enum
 
 import typing
@@ -44,11 +44,44 @@ class KTimeFrameModel(Enum):
     def secs(self):
         return self.value * 60
 
+    def to_timedelta(self):
+        return timedelta(minutes=self.value)
+
+    @classmethod
+    def from_timedelta(cls, td: timedelta):
+        for tf in reversed(cls):  # reverse order to find tf just under td !
+            if td.total_seconds() / 60 >= tf.value:
+                break
+        return tf
+
     def __str__(self):
         return self.name
 
     def __int__(self):
         return self.value
+
+    # Note  DO NOT DEFINE THIS. It breaks enum hashability and we need it.
+    # def __eq__(self, other):
+
+    def __lt__(self, other: typing.Union[KTimeFrameModel, timedelta]):
+        if isinstance(other, timedelta):
+            return self.value < other.total_seconds() / 60
+        return self.value < other.value
+
+    def __gt__(self, other: typing.Union[KTimeFrameModel, timedelta]):
+        if isinstance(other, timedelta):
+            return self.value > other.total_seconds() / 60
+        return self.value > other.value
+
+    def __le__(self, other: typing.Union[KTimeFrameModel, timedelta]):
+        if isinstance(other, timedelta):
+            return self.value <= other.total_seconds() / 60
+        return self.value <= other.value
+
+    def __ge__(self, other: typing.Union[KTimeFrameModel, timedelta]):
+        if isinstance(other, timedelta):
+            return self.value >= other.total_seconds() / 60
+        return self.value >= other.value
 
 
 # Using partial call here to delay evaluation (and get same semantics as potentially more complex strategies)

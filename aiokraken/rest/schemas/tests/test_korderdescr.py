@@ -4,9 +4,9 @@ from dataclasses import asdict
 
 from hypothesis import given, settings, Verbosity, strategies as st
 
-from ..kabtype import KABTypeModel
-from ..kordertype import KOrderTypeModel
-from ..korderdescr import (
+from aiokraken.rest.schemas.kabtype import KABTypeModel
+from aiokraken.rest.schemas.kordertype import KOrderTypeModel
+from aiokraken.rest.schemas.korderdescr import (
     KOrderDescr,
     KOrderDescrStrategy,
     KOrderDescrNoPrice,
@@ -191,7 +191,7 @@ class TestOrderDescrSchema(unittest.TestCase):
         expected["pair"] = str(orderdescrmodel.pair)
         expected["type"] = orderdescrmodel.abtype.value
         expected["ordertype"] = orderdescrmodel.ordertype.value
-        expected["leverage"] = "{0:f}".format(orderdescrmodel.leverage)
+        expected["leverage"] = str(orderdescrmodel.leverage)
 
         if orderdescrmodel.close:
             expected["close"] = KOrderDescrCloseSchema().dump(orderdescrmodel.close)

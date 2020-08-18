@@ -6,7 +6,6 @@ from marshmallow import fields, pre_load, post_load
 from ..exceptions import AIOKrakenException
 from .base import BaseSchema
 from .errors import ErrorsField
-from .ohlc import OHLCDataFrameSchema
 from .time import TimeSchema
 """ Helper functions for dynamically building Schemas for payload"""
 

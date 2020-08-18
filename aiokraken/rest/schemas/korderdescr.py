@@ -4,6 +4,7 @@ from decimal import Decimal
 
 from dataclasses import dataclass, field
 
+from aiokraken.rest.schemas.kleverage import Leverage, LeverageField, LeverageStrategy
 from marshmallow import fields, post_load, pre_dump, post_dump, pre_load
 from hypothesis import strategies as st
 
@@ -53,7 +54,7 @@ class KOrderDescrNoPriceFinalized(KOrderDescrNoPriceData):
             KOrderDescrNoPriceData, KOrderDescrOnePriceData, KOrderDescrTwoPriceData
         ]
     ]
-    leverage: Decimal = field(default=Decimal(0))
+    leverage: typing.Optional[Leverage] = field(default=None)
 
 
 @dataclass(frozen=True, init=True)
@@ -64,7 +65,7 @@ class KOrderDescrOnePriceFinalized(KOrderDescrOnePriceData):
             KOrderDescrNoPriceData, KOrderDescrOnePriceData, KOrderDescrTwoPriceData
         ]
     ]
-    leverage: Decimal = field(default=Decimal(0))
+    leverage: typing.Optional[Leverage] = field(default=None)
 
 
 @dataclass(frozen=True, init=True)
@@ -75,7 +76,7 @@ class KOrderDescrTwoPriceFinalized(KOrderDescrTwoPriceData):
             KOrderDescrNoPriceData, KOrderDescrOnePriceData, KOrderDescrTwoPriceData
         ]
     ]
-    leverage: Decimal = field(default=Decimal(0))
+    leverage:  typing.Optional[Leverage] = field(default=None)
 
 
 class KOrderDescrNoPrice(KOrderDescrNoPriceData):
@@ -417,7 +418,7 @@ def KOrderDescrTwoPriceStrategy(
 def KOrderDescrFinalizeStrategy(
     draw,
     strategy,  # CAREFUL here ... how about typing strategies ???
-    leverage=st.decimals(allow_nan=False, allow_infinity=False, min_value=0),
+    leverage=LeverageStrategy(),
     close=st.one_of(
         KOrderDescrNoPriceStrategy(),
         KOrderDescrOnePriceStrategy(),
@@ -467,9 +468,7 @@ class KOrderDescrSchema(BaseSchema):
     ordertype = KOrderTypeField(required=True)
     price = fields.Decimal(required=False, as_string=True)
     price2 = fields.Decimal(required=False, as_string=True)
-    leverage = fields.Decimal(
-        required=False, as_string=True
-    )  # Kraken returns 'none' on this (cf cassettes)...
+    leverage = LeverageField()  # Kraken returns 'none' on this (cf cassettes)...
     order = fields.String()  # TODO ??? idea : should be isomorphic to repr()
     close = fields.Nested(nested=KOrderDescrCloseSchema(), required=False)
 

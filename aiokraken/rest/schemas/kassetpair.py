@@ -2,25 +2,13 @@ import decimal
 from dataclasses import dataclass
 
 import typing
+
+from aiokraken.model.assetpair import VolumeFee, AssetPair
 from hypothesis import strategies as st
 from marshmallow import fields, post_load, post_dump
 from marshmallow.schema import BaseSchema
 
-from aiokraken.rest.schemas.kasset import KAssetStrategy, KAssetClass
-
-
-@dataclass
-class VolumeFee:
-    volume: decimal.Decimal  # unit ??
-    fee: decimal.Decimal  # pct
-
-
-@st.composite
-def VolumeFeeStrategy(draw, ):
-    return VolumeFee(draw(st.decimals(allow_nan=False, allow_infinity=False)),
-                     draw(st.decimals(allow_nan=False, allow_infinity=False))
-                          )
-
+from aiokraken.model.tests.strats.st_assetpair import AssetPairStrategy
 
 
 class VolumeFeeField(fields.Field):
@@ -41,6 +29,8 @@ class VolumeFeeField(fields.Field):
         :return: The deserialized value.
 
         """
+        if isinstance(value[1], float):
+            value[1] = decimal.Decimal(str(value[1]))  # to fix precision before we use this for computation...
         return VolumeFee(*value)
 
     def _serialize(self, value: typing.Any, attr: str, obj: typing.Any, **kwargs):
@@ -54,58 +44,6 @@ class VolumeFeeField(fields.Field):
         :return: The serialized value
         """
         return [value.volume, value.fee]
-
-
-@dataclass
-class KAssetPair:
-
-    altname: str  # alternate pair name
-    wsname: str   # WebSocket pair name (if available)
-    aclass_base: KAssetClass  # asset class of base component
-    base: str  # asset id of base component
-    aclass_quote: str  # asset class of quote component
-    quote: str  # asset id of quote component
-    lot: str  # volume lot size
-    pair_decimals: int  # scaling decimal places for pair
-    lot_decimals: int  # scaling decimal places for volume
-    lot_multiplier: int  # amount to multiply lot volume by to get currency volume
-    leverage_buy: list  # array of leverage amounts available when buying
-    leverage_sell: list  # array of leverage amounts available when selling
-    fees: list  # fee schedule array in [volume, percent fee] tuples
-    fees_maker: list  # maker fee schedule array in [volume, percent fee] tuples (if on maker/taker)
-    fee_volume_currency: str  # volume discount currency
-    margin_call: int  # margin call level
-    margin_stop: int  # stop-out/liquidation margin level
-
-
-@st.composite
-def KAssetPairStrategy(draw):
-
-    return KAssetPair(
-        altname= draw(st.text(max_size=5)),
-        wsname= draw(st.text(max_size=5)),
-
-        aclass_base = draw(st.text(max_size=5)),
-        base = draw(st.text(max_size=5)),
-        aclass_quote = draw(st.text(max_size=5)),
-        quote = draw(st.text(max_size=5)),
-
-        lot = draw(st.decimals(allow_nan=False, allow_infinity=False)),
-        pair_decimals= draw(st.integers(max_value=255)),
-        lot_decimals= draw(st.integers(max_value=255)),
-        lot_multiplier= draw(st.integers(max_value=255)),
-
-        leverage_buy=draw(st.lists(st.integers(max_value=255), max_size=5 )),
-        leverage_sell= draw(st.lists(st.integers(max_value=255), max_size=5 )),
-
-        fees = draw(st.lists(VolumeFeeStrategy(), max_size=5 )),
-        fees_maker = draw(st.lists(VolumeFeeStrategy(), max_size=5 )),
-        fee_volume_currency = draw(st.text(max_size=5)),
-
-        margin_call = draw(st.integers(max_value=255)),
-        margin_stop = draw(st.integers(max_value=255))
-
-    )
 
 
 class KAssetPairSchema(BaseSchema):
@@ -150,9 +88,11 @@ class KAssetPairSchema(BaseSchema):
     margin_call= fields.Integer()  # margin call level
     margin_stop= fields.Integer()  # stop-out/liquidation margin level
 
+    ordermin=fields.Decimal()  # RECENT addition : TODO TESTING !
+
     @post_load
     def build_model(self, data, **kwargs):
-        a = KAssetPair(altname= data.get('altname'),
+        a = AssetPair(altname= data.get('altname'),
             wsname = data.get('wsname'),  # WebSocket pair name (if available)
             aclass_base = data.get('aclass_base'),  # asset class of base component
             base = data.get('base'),  # asset id of base component
@@ -178,7 +118,7 @@ class KAssetPairSchema(BaseSchema):
 
 
 @st.composite
-def KDictStrategy(draw, strategy= KAssetPairStrategy()):
+def KDictStrategy(draw, strategy= AssetPairStrategy()):
     """
     :param draw:
     :return:

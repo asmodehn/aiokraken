@@ -1,0 +1,5 @@
+FIND A WAY !!
+
+Apparently VCRpy is not going to help us here: https://github.com/kevin1024/vcrpy/issues/539
+
+Maybe there are solutions with a somewhat "higher-level" mock ??

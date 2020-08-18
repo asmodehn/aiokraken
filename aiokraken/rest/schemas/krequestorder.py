@@ -1,4 +1,5 @@
 import typing
+from datetime import timedelta
 from decimal import Decimal
 
 from dataclasses import dataclass
@@ -9,7 +10,7 @@ from hypothesis import strategies as st
 if not __package__:
     __package__ = 'aiokraken.rest.schemas'
 from .base import BaseSchema
-from .ktm import TMModel, TimerField
+from .ktm import TimerField
 from .kabtype import KABTypeModel, KABTypeField
 from .kordertype import KOrderTypeModel, KOrderTypeField
 
@@ -119,8 +120,8 @@ class RequestOrderFinalizedMixin(RequestOrderMixin):
 
     volume: Decimal
 
-    relative_starttm: typing.Optional[TMModel]
-    relative_expiretm: typing.Optional[TMModel]
+    relative_starttm: typing.Optional[timedelta]
+    relative_expiretm: typing.Optional[timedelta]
 
     # False by default to prevent accidental orders...
     validate: bool
@@ -134,7 +135,7 @@ class RequestOrderFinalizedMixin(RequestOrderMixin):
         object.__setattr__(self, "relative_expiretm", None)
         super(RequestOrderFinalizedMixin, self).__init__(**kwargs)
 
-    def delay(self, relative_starttm: TMModel = TMModel(0), relative_expiretm: TMModel = TMModel(0)):
+    def delay(self, relative_starttm: timedelta= timedelta(0), relative_expiretm: timedelta = timedelta(0)):
         object.__setattr__(self, "relative_starttm", relative_starttm)
         object.__setattr__(self, "relative_expiretm", relative_expiretm)
         return self

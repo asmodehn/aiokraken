@@ -7,8 +7,8 @@ import json
 import marshmallow
 import decimal
 
-from ..kordertype import KOrderTypeModel, KOrderTypeField, KOrderTypeStrategy, KOrderTypeStringStrategy
-from ...exceptions import AIOKrakenException
+from aiokraken.rest.schemas.kordertype import KOrderTypeModel, KOrderTypeField, KOrderTypeStrategy, KOrderTypeStringStrategy
+from aiokraken.rest.exceptions import AIOKrakenException
 from hypothesis import given
 
 """
@@ -28,6 +28,8 @@ class TestOrderTypeModel(unittest.TestCase):
     def test_enum(self, model):
         assert model.value in [
             'market',
+            'stop market',
+            'touched market',
             'limit',
             'stop-loss',
             'take-profit',

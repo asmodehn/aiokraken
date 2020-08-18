@@ -1,7 +1,16 @@
 import types
 
+import typing
+
+from aiokraken.rest.schemas.kledger import KLedgersResponseSchema
+
+from aiokraken.rest.schemas.ktrade import TradeResponseSchema
+
+from aiokraken.model.timeframe import KTimeFrameModel
+
 from aiokraken.rest.payloads import TickerPayloadSchema, AssetPayloadSchema, AssetPairPayloadSchema
 from aiokraken.rest.schemas.kclosedorder import ClosedOrdersResponseSchema
+from .schemas.websockettoken import KWebSocketTokenResponseSchema
 
 if not __package__:
     __package__ = 'aiokraken.rest'
@@ -19,6 +28,16 @@ from .schemas.krequestorder import (
 )
 from .response import Response
 
+from ..model.assetpair import AssetPair
+from ..model.asset import Asset
+
+# TODO : simplify :
+#  Ref: https://support.kraken.com/hc/en-us/articles/360025174872-How-to-create-the-krakenapi-py-file
+
+
+"""
+Intent : strictness of the API (types and all...)
+"""
 
 class API:
 
@@ -108,7 +127,6 @@ def private(api: API, key, secret):
     return api
 
 
-
 class Server:
     # TODO : LOG actual requests. Important for usage and for testing...
 
@@ -128,7 +146,7 @@ class Server:
     def url(self):
         return self.API.url
 
-    ###SHORTCUTS FOR CLIENT
+    ### SHORTCUTS FOR CLIENT
     @property
     def public(self):
         return self.API['0']['public']
@@ -137,24 +155,32 @@ class Server:
     def private(self):
         return self.API['0']['private']
 
-    ### REquests
+    ### Requests
     def time(self):
-        return self.public.request('Time', data=None, expected=Response(status=200, schema=PayloadSchema(TimeSchema)))
+        return self.public.request('Time', data=None, expected=Response(status=200, schema=PayloadSchema(TimeSchema())))
 
-    def assets(self, assets=None): # TODO : use a model to typecheck pair symbols
+    def assets(self, assets: typing.Optional[typing.List[typing.Union[Asset, str]]]=None):
+        # Here we allow asset type to update existing partial/old knowledge.
+        # But also str type, to request info on something we have no knowledge of
+        if assets:
+            assetlist = [a.restname if isinstance(a, Asset) else str(a) for a in assets]
         return self.public.request('Assets',
                                    data={
                                        # info = info to retrieve (optional):
                                        #     info = all info (default)
                                        # aclass = asset class (optional):
                                        #     currency (default)
-                                       'asset': ",".join([str(a) for a in assets])
+                                       'asset': ",".join(assetlist)
                                     } if assets else {},
                                    expected=Response(status=200,
                                                      schema=AssetPayloadSchema())
         )
 
-    def assetpair(self, assets=None): # TODO : use a model to typecheck pair symbols
+    def assetpair(self, pairs: typing.Optional[typing.List[typing.Union[AssetPair, str]]]=None):  # TODO : info param: info / leverage/ fee/ margin
+        # Here we allow assetpair type to update existing partial/old knowledge.
+        # But also str type, to request info on something we have no knowledge of
+        if pairs:
+            pairlist = [a.restname if isinstance(a, AssetPair) else str(a) for a in pairs]
         return self.public.request('AssetPairs',
                                    data={
                                        # info = info to retrieve (optional):
@@ -162,21 +188,20 @@ class Server:
                                        #     leverage = leverage info
                                        #     fees = fees schedule
                                        #     margin = margin info
-                                       'pair':   ",".join([str(a) for a in assets])  # comma delimited list of asset pairs to get info on (optional.  default = all)
-                                   } if assets else {},
+                                       'pair':   ",".join(pairlist)  # comma delimited list of asset pairs to get info on (optional.  default = all)
+                                   } if pairs else {},
                                    expected=Response(status=200,
                                                      schema=AssetPairPayloadSchema())
         )
 
-
-    def ohlc(self, pair='XBTEUR'):  # TODO : use a model to typecheck pair symbols
-        pair_alias ='XXBTZEUR' # TODO : fix this hardcoded stuff !!!!
+    def ohlc(self, pair: AssetPair, interval: KTimeFrameModel):
+        pairstr = pair.restname
         return self.public.request('OHLC',
-                                   data={'pair': pair},
+                                   data={'pair': pairstr, 'interval': int(interval)},
                                    expected=Response(status=200,
                                                      schema=PayloadSchema(
                                                         result_schema=PairOHLCSchema(
-                                                            pair=pair_alias)
+                                                            pair=pairstr)
                                                         )
                                                      )
                                    )
@@ -186,7 +211,7 @@ class Server:
                                     data=None,
                                     expected=Response(status=200,
                                                       schema=PayloadSchema(
-                                                          result_schema=BalanceSchema
+                                                          result_schema=BalanceSchema()
                                                       ))
                                     )
 
@@ -200,14 +225,14 @@ class Server:
                                     },
                                     expected=Response(status=200,
                                                       schema=PayloadSchema(
-                                                          result_schema=TradeBalanceSchema
+                                                          result_schema=TradeBalanceSchema()
                                                       ))
                                     )
 
-    def ticker(self, pairs=['XBTEUR']):  # TODO : use a model to typecheck pair symbols
-        pair_alias = 'XXBTZEUR'  # TODO : fix this hardcoded stuff !!!!
+    def ticker(self, pairs: typing.Optional[typing.List[typing.Union[AssetPair, str]]]):
+        pairlist = [a.restname if isinstance(a, AssetPair) else str(a) for a in pairs]
         return self.public.request('Ticker',
-                                   data={'pair': ",".join(pairs)},
+                                   data={'pair': ",".join(pairlist)},
                                    expected=Response(status=200,
                                                      schema=TickerPayloadSchema()
                                                      )
@@ -221,12 +246,12 @@ class Server:
                                    data=data,
                                    expected=Response(status=200,
                                                      schema=PayloadSchema(
-                                                        result_schema=OpenOrdersResponseSchema
+                                                        result_schema=OpenOrdersResponseSchema()
                                                         )
                                                      )
                                    )
 
-    def closedorders(self, trades=False, userref=None):
+    def closedorders(self, trades=False,  start: typing.Optional[int] = None, end: typing.Optional[int] = None, offset=0, userref=None):
         data = {'trades': trades}
 
         # trades = whether or not to include trades in output (optional.  default = false)
@@ -238,18 +263,23 @@ class Server:
         #     open
         #     close
         #     both (default)
-
+        data = dict()
+        if offset > 0:
+            data.update({'ofs': offset})
+        if start is not None:
+            data.update({'start': start})
+        if end is not None:
+            data.update({'end': end})
         if userref is not None:
             data.update({'userref': userref})
         return self.private.request('ClosedOrders',
                                    data=data,
                                    expected=Response(status=200,
                                                      schema=PayloadSchema(
-                                                        result_schema=ClosedOrdersResponseSchema
+                                                        result_schema=ClosedOrdersResponseSchema()
                                                         )
                                                      )
                                    )
-
 
     def addorder(self, order: RequestOrderFinalized):
         data = RequestOrderSchema().dump(order)
@@ -258,7 +288,7 @@ class Server:
                                     data=data,
                                     expected=Response(status=200,
                                                       schema=PayloadSchema(
-                                                          result_schema=AddOrderResponseSchema
+                                                          result_schema=AddOrderResponseSchema()
                                                       ))
                                     )
 
@@ -268,7 +298,7 @@ class Server:
                                     data={'txid': txid_userref},  # TODO : produce dict from marshmallow...
                                     expected = Response(status=200,
                                                         schema=PayloadSchema(
-                                                            result_schema=CancelOrderResponseSchema
+                                                            result_schema=CancelOrderResponseSchema()
                                                         ))
                                 )
 
@@ -277,11 +307,74 @@ class Server:
     #     pass
     #
     #
-    # def trades_history(self):
-    #     pass
+    def trades_history(self, type = None, trades: bool = False, start: typing.Optional[int] = None, end: typing.Optional[int] = None, offset=0):
+        # type = type of trade (optional)
+        #     all = all types (default)
+        #     any position = any position (open or closed)
+        #     closed position = positions that have been closed
+        #     closing position = any trade closing all or part of a position
+        #     no position = non-positional trades
+        # trades = whether or not to include trades related to position in output (optional.  default = false)
+        # start = starting unix timestamp or trade tx id of results (optional.  exclusive)
+        # end = ending unix timestamp or trade tx id of results (optional.  inclusive)
+        # ofs = result offset
+
+        data = dict()
+        if offset > 0:
+            data.update({'ofs': offset})
+        if start is not None:
+            data.update({'start': start})
+        if end is not None:
+            data.update({'end': end})
+        return self.private.request('TradesHistory',
+                                    data=data,
+                                    expected=Response(status=200,
+                                                      schema=PayloadSchema(
+                                                          result_schema=TradeResponseSchema()
+                                                      ))
+                                    )
     #
     # def query_trades(self):
     #     pass
+
+    def ledgers(self, asset: typing.Optional[typing.List[Asset]] =None, offset=0, type = None, start: typing.Optional[int] = None, end: typing.Optional[int] = None):
+        # aclass = asset class (optional):
+        #     currency (default)
+        # asset = comma delimited list of assets to restrict output to (optional.  default = all)
+        # type = type of ledger to retrieve (optional):
+        #     all (default)
+        #     deposit
+        #     withdrawal
+        #     trade
+        #     margin
+        # start = starting unix timestamp or ledger id of results (optional.  exclusive)
+        # end = ending unix timestamp or ledger id of results (optional.  inclusive)
+        # ofs = result offset
+        # TODO : integration tests !!!
+        data = dict()
+        if offset > 0:
+            data.update({'ofs': offset})
+        if asset is not None:
+            data.update({'asset': ",".join(a.restname for a in asset)})
+        if start is not None:
+            data.update({'start': start})
+        if end is not None:
+            data.update({'end': end})
+
+        return self.private.request('Ledgers',
+                                    data=data,
+                                    expected=Response(status=200,
+                                                      schema=PayloadSchema(
+                                                          result_schema=KLedgersResponseSchema()
+                                                      ))
+                                    )
+
+    def websocket_token(self):
+        return self.private.request('GetWebSocketsToken',
+                                    expected=Response(status=200,
+                                                      schema=PayloadSchema(
+                                                          result_schema=KWebSocketTokenResponseSchema()
+                                                      )))
 
 # API DEFINITION - TODO
 

@@ -1,4 +1,5 @@
 import typing
+from datetime import datetime
 from decimal import Decimal
 
 from enum import (IntEnum)
@@ -13,7 +14,7 @@ if not __package__:
 
 from .base import BaseSchema
 from .kordertype import KOrderTypeModel, KOrderTypeField
-from .ktm import TMModel, TMStrategy, TimerField
+from .ktm import AbsoluteTimeStrategy, TimerField
 from .korderdescr import (KOrderDescrNoPriceFinalized,
            KOrderDescrOnePriceFinalized,
            KOrderDescrTwoPriceFinalized,
@@ -32,9 +33,9 @@ class KOpenOrderModel:
            KOrderDescrTwoPriceFinalized, ]
 
     status: str  # TODO
-    starttm: TMModel
-    opentm: TMModel
-    expiretm: TMModel
+    starttm: datetime
+    opentm: datetime
+    expiretm: datetime
 
     price: Decimal
     limitprice: Decimal
@@ -63,9 +64,9 @@ def OpenOrderStrategy(draw,
                           KOrderDescrFinalizeStrategy(strategy=KOrderDescrTwoPriceStrategy())
                       ]),
                       status= st.text(max_size=5),  # TODO
-                      starttm= TMStrategy(),
-                      opentm= TMStrategy(),
-                      expiretm= TMStrategy(),
+                      starttm= AbsoluteTimeStrategy(),
+                      opentm= AbsoluteTimeStrategy(),
+                      expiretm= AbsoluteTimeStrategy(),
                       # CAreful here : consistency with descr content ???
                       price= st.decimals(allow_nan=False, allow_infinity=False),
                       limitprice= st.decimals(allow_nan=False, allow_infinity=False),
@@ -160,9 +161,9 @@ def OpenOrderDictStrategy(draw,
                               KOrderDescrFinalizeStrategy(strategy=KOrderDescrTwoPriceStrategy())
                           ]),
                           status= st.text(max_size=5),  # TODO
-                          starttm= TMStrategy(),
-                          opentm= TMStrategy(),
-                          expiretm= TMStrategy(),
+                          starttm= AbsoluteTimeStrategy(),
+                          opentm= AbsoluteTimeStrategy(),
+                          expiretm= AbsoluteTimeStrategy(),
 
                           price= st.decimals(allow_nan=False, allow_infinity=False),
                           limitprice= st.decimals(allow_nan=False, allow_infinity=False),

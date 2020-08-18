@@ -41,6 +41,18 @@ def load_api_keyfile():
         return {'key': f[0].strip(), 'secret': f[1].strip()}
 
 
+def save_api_keyfile(apikey, secret):
+    """Save the Kraken API keyfile"""
+
+    f = open(KRAKEN_API_KEYFILE, mode="wt", encoding="utf-8")
+    f.writelines([
+        apikey+"\n",
+        secret+"\n"
+    ])
+
+    return load_api_keyfile()  # return what we just saved for verification.
+
+
 def load_persist():
     """Load persistance layer"""
 
