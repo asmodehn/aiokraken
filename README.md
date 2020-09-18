@@ -64,8 +64,8 @@ Here are some guidelines that makes everything easier for everybody:
 
 https://www.kraken.com/features/api
 
-## Licence
+## License
 
-The MIT License (MIT)
+The GNU General Public License v3.0
 
-TODO : Change to GPL (NB: Dan is okay)
+https://www.gnu.org/licenses/gpl-3.0.html
