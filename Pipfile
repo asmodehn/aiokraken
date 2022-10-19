@@ -4,50 +4,45 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-pytest = "==6.0.1"
-pytest-recording = "==0.3.6"    # 0.3.4 is breaking on --block-network it seems
-pytest-asyncio = "==0.14.0"
-pytest-dependency = "*"
 black = "*"
-pytest-click = "*"
-# better to have this here to sync venv between jupyter and custom editor behaviors
-aiokraken = {path = ".",editable = true}
-sphinx = "*"
 networkx = "*"
+pytest = "==6.0.1"
+pytest-asyncio = "==0.14.0"
+pytest-click = "*"
+pytest-dependency = "*"
+pytest-recording = "==0.3.6"
+sphinx = "*"
+aiokraken = {editable = true,path = "."}
 
 [packages]
-#bokeh-ta = {editable = true, path = "./../bokeh_ta"}
-#livebokeh = {editable = true, path = "../livebokeh"}
-aiohttp = "==3.6.2"
 aiodns = "==2.0.0"
-cchardet = "==2.1.4"
-marshmallow = "==3.3.0"
-pandas = "==1.0.3"
-parameterized = "==0.7.0"
-marshmallow-dataframe = "==0.1.4"
-ipympl = "==0.3.3"
-pandas-ta = "==0.1.36b"
-hypothesis = "==5.6.0"
-mypy = "*"
+aiohttp = "==3.6.2"
+aioresponses = "*"
 aiounittest = "*"
-tinydb = "*"
-ipython = "*"
+async-property = "*"
+bokeh = "==2.0.2"
+cchardet = "==2.1.4"
 click = "*"
 dpcontracts = "*"
-result = "*"
-aioresponses = "*"
-mplfinance = "*"
-#because we need the latest, at least 1.12.2
-wrapt = {git = "https://github.com/GrahamDumpleton/wrapt"}
-bokeh = "==2.0.2"
+hypothesis = "==5.6.0"
 ipykernel = "*"
-async-property = "*"
+ipympl = "==0.3.3"
+ipython = "*"
+marshmallow = "==3.3.0"
+marshmallow-dataframe = "==0.1.4"
+mplfinance = "*"
+mypy = "*"
+pandas = "==1.5.1"
+pandas-ta = "==0.1.36b"
+parameterized = "==0.7.0"
+result = "*"
+tinydb = "*"
 tornado = "*"
-# because we need latest unreleased version
 timecontrol = {git = "https://github.com/asmodehn/timecontrol"}
-
-[requires]
-python_version = "3.8"
+wrapt = {git = "https://github.com/GrahamDumpleton/wrapt"}
 
 [pipenv]
 allow_prereleases = true
+
+[requires]
+python_version = "3.8"
